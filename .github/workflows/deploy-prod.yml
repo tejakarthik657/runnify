@@ -1,0 +1,29 @@
+name: Deploy Production
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - run: cd frontend && npm ci
+      - run: cd frontend && npm run build
+      - name: Deploy to Vercel
+        run: echo "Deploy frontend to Vercel"
+        # Add your Vercel deployment command here
+  
+  deploy-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - run: cd backend && npm ci
+      - name: Deploy to Railway/Render
+        run: echo "Deploy backend to production"
+        # Add your backend deployment command here

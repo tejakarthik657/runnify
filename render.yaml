@@ -1,0 +1,141 @@
+# render.yaml — TerritoryRun deployment config for Render.com
+# Defines: 1 web service (API) + 5 cron jobs
+# Deploy by connecting your GitHub repo to Render and pointing to this file.
+
+services:
+
+  # ── Main API (Production) ─────────────────────────────────
+  - type: web
+    name: territory-run-api
+    runtime: node
+    plan: free                        # upgrade to Starter ($7/mo) at 500+ DAU
+    branch: main
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: MONGODB_URI
+        sync: false                   # set manually in Render dashboard
+      - key: JWT_SECRET
+        sync: false
+      - key: UPSTASH_REDIS_URL
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: SOLANA_RPC_URL
+        value: https://api.mainnet-beta.solana.com
+      - key: SOLANA_PRIVATE_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: APPLE_CLIENT_ID
+        sync: false
+      - key: APPLE_TEAM_ID
+        sync: false
+      - key: APPLE_KEY_ID
+        sync: false
+      - key: FRONTEND_URL
+        value: https://territoryrun.com
+      - key: API_BASE_URL
+        value: https://territory-run-api.onrender.com
+
+  # ── Staging API ────────────────────────────────────────────
+  - type: web
+    name: territory-run-api-staging
+    runtime: node
+    plan: free
+    branch: develop
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: staging
+      - key: PORT
+        value: 4000
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: UPSTASH_REDIS_URL
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: SOLANA_RPC_URL
+        value: https://api.devnet.solana.com
+      - key: FRONTEND_URL
+        value: https://staging.territoryrun.com
+
+  # ── Cron: Decay (nightly 01:00 UTC) ───────────────────────
+  - type: cron
+    name: territory-run-decay
+    runtime: node
+    plan: free
+    branch: main
+    rootDir: backend
+    buildCommand: npm install
+    schedule: "0 1 * * *"            # 01:00 UTC every day
+    startCommand: npm run cron:decay
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: UPSTASH_REDIS_URL
+        sync: false
+
+  # ── Cron: Leaderboard (every 5 minutes) ───────────────────
+  - type: cron
+    name: territory-run-leaderboard
+    runtime: node
+    plan: free
+    branch: main
+    rootDir: backend
+    buildCommand: npm install
+    schedule: "*/5 * * * *"          # every 5 minutes
+    startCommand: npm run cron:leaderboard
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: UPSTASH_REDIS_URL
+        sync: false
+
+  # ── Cron: Blockchain Anchor (00:05 UTC daily) ─────────────
+  - type: cron
+    name: territory-run-blockchain
+    runtime: node
+    plan: free
+    branch: main
+    rootDir: backend
+    buildCommand: npm install
+    schedule: "5 0 * * *"            # 00:05 UTC — after midnight rollover
+    startCommand: npm run cron:blockchain
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: SOLANA_RPC_URL
+        value: https://api.mainnet-beta.solana.com
+      - key: SOLANA_PRIVATE_KEY
+        sync: false
+
+  # ── Cron: RAG Ingest (02:00 UTC daily) ────────────────────
+  - type: cron
+    name: territory-run-rag-ingest
+    runtime: node
+    plan: free
+    branch: main
+    rootDir: backend
+    buildCommand: npm install
+    schedule: "0 2 * * *"            # 02:00 UTC — after decay run
+    startCommand: npm run cron:rag
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false

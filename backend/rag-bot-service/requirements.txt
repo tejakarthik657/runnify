@@ -1,0 +1,12 @@
+langchain
+langchain-groq
+langchain-community
+faiss-cpu
+sentence-transformers
+pymongo
+python-dotenv
+schedule
+httpx
+pydantic
+fastapi
+uvicorn
