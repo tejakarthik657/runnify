@@ -99,8 +99,19 @@ const cache = {
 // Test connection on startup
 testConnection();
 
+async function connectRedis() {
+  await testConnection();
+  return redis;
+}
+
+function getRedis() {
+  return redis;
+}
+
 module.exports = {
   redis,
   cache,
-  testConnection
+  testConnection,
+  connectRedis,
+  getRedis
 };

@@ -1,237 +1,230 @@
-/**
- * Solana/Anchor Blockchain Synchronization Service
- * Handles daily territory proof commitments to Solana blockchain
- */
-const { Connection, Keypair, PublicKey } = require('@solana/web3.js');
-const { AnchorProvider, Program, web3 } = require('@project-serum/anchor');
+const fs = require('fs');
+const path = require('path');
 const bs58 = require('bs58');
-const crypto = require('crypto');
-const mongoose = require('mongoose');
-const { DailyProof } = require('./proof.model');
+const anchor = require('@coral-xyz/anchor');
+const { Connection, Keypair, PublicKey, clusterApiUrl } = require('@solana/web3.js');
+const { User, Run, Territory, DailyProof } = require('../core/schema');
+const { buildLeaf, buildMerkleTree } = require('./merkle');
 const logger = require('../utils/logger');
-require('dotenv').config();
 
-/**
- * Initialize Solana connection
- */
-function initializeSolana() {
-  const connection = new Connection(
-    process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com',
-    'confirmed'
+const SOLANA_NETWORK = process.env.SOLANA_NETWORK || 'devnet';
+const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL || clusterApiUrl('devnet');
+
+function resolveWalletKeypair() {
+  const keypairJson = process.env.SOLANA_WALLET_KEYPAIR;
+  if (keypairJson) {
+    const parsed = JSON.parse(keypairJson);
+    return Keypair.fromSecretKey(Uint8Array.from(parsed));
+  }
+
+  const base58PrivateKey = process.env.SOLANA_WALLET_PRIVATE_KEY;
+  if (base58PrivateKey) {
+    return Keypair.fromSecretKey(bs58.decode(base58PrivateKey));
+  }
+
+  throw new Error('Missing wallet key: set SOLANA_WALLET_KEYPAIR (json array) or SOLANA_WALLET_PRIVATE_KEY (base58)');
+}
+
+function resolveIdlPath() {
+  const candidates = [
+    path.join(__dirname, '../contracts/target/idl/territory_proof.json'),
+    path.join(__dirname, '../contracts/idl/territory_proof.json'),
+  ];
+  return candidates.find((candidate) => fs.existsSync(candidate));
+}
+
+function getProvider() {
+  const connection = new Connection(SOLANA_RPC_URL, 'confirmed');
+  const keypair = resolveWalletKeypair();
+  return new anchor.AnchorProvider(connection, new anchor.Wallet(keypair), {
+    commitment: 'confirmed',
+  });
+}
+
+async function getProgram() {
+  const programId = process.env.SOLANA_PROGRAM_ID;
+  if (!programId) {
+    throw new Error('Missing SOLANA_PROGRAM_ID in environment');
+  }
+
+  const idlPath = resolveIdlPath();
+  if (!idlPath) {
+    throw new Error('Anchor IDL not found. Expected contracts/target/idl/territory_proof.json');
+  }
+
+  const provider = getProvider();
+  anchor.setProvider(provider);
+  const idl = JSON.parse(fs.readFileSync(idlPath, 'utf8'));
+  return new anchor.Program(idl, new PublicKey(programId), provider);
+}
+
+function getProofStorePda(programId) {
+  const [pda, bump] = PublicKey.findProgramAddressSync([Buffer.from('proof_store')], programId);
+  return { pda, bump };
+}
+
+function getDailyProofPda(dateStr, programId) {
+  const [pda, bump] = PublicKey.findProgramAddressSync(
+    [Buffer.from('daily_proof'), Buffer.from(dateStr)],
+    programId
   );
-  
-  // Load wallet from private key
-  const privateKey = process.env.SOLANA_WALLET_PRIVATE_KEY;
-  const wallet = Keypair.fromSecretKey(bs58.decode(privateKey));
-  
-  return { connection, wallet };
+  return { pda, bump };
 }
 
-/**
- * Generate Merkle root from territory data
- */
-function generateMerkleRoot(territories) {
-  if (!territories || territories.length === 0) {
-    return crypto.createHash('sha256').update('EMPTY').digest('hex');
-  }
-  
-  // Create leaf hashes from territory data
-  const leaves = territories.map(territory => {
-    const data = JSON.stringify({
-      hexId: territory.hexId,
-      owner: territory.owner,
-      credits: territory.credits,
-      lastUpdated: territory.lastUpdated
-    });
-    return crypto.createHash('sha256').update(data).digest('hex');
-  });
-  
-  // Build Merkle tree (simple implementation)
-  while (leaves.length > 1) {
-    const newLevel = [];
-    for (let i = 0; i < leaves.length; i += 2) {
-      const left = leaves[i];
-      const right = leaves[i + 1] || left; // Duplicate if odd
-      const combined = crypto.createHash('sha256')
-        .update(left + right)
-        .digest('hex');
-      newLevel.push(combined);
-    }
-    leaves.splice(0, leaves.length, ...newLevel);
-  }
-  
-  return leaves[0];
-}
+async function initializeProofStore() {
+  const program = await getProgram();
+  const authority = program.provider.wallet.publicKey;
+  const { pda } = getProofStorePda(program.programId);
 
-/**
- * Create audit hash from daily stats
- */
-function createAuditHash(stats) {
-  const data = JSON.stringify({
-    totalTerritories: stats.totalTerritories,
-    totalPlayers: stats.totalPlayers,
-    totalRuns: stats.totalRuns,
-    merkleRoot: stats.merkleRoot,
-    timestamp: stats.timestamp
-  });
-  
-  return crypto.createHash('sha256').update(data).digest('hex');
-}
-
-/**
- * Generate and commit daily proof to Solana
- */
-async function generateDailyProof() {
-  const startTime = Date.now();
-  logger.info('📊 Generating daily territory proof...');
-  
   try {
-    // Connect to MongoDB
-    const Territory = mongoose.model('Territory');
-    const User = mongoose.model('User');
-    const Run = mongoose.model('Run');
-    
-    // Fetch current state
-    const territories = await Territory.find({}).lean();
-    const userCount = await User.countDocuments();
-    const runCount = await Run.countDocuments({
-      startTime: { $gte: Date.now() - 86400000 } // Last 24h
-    });
-    
-    // Generate Merkle root
-    const merkleRoot = generateMerkleRoot(territories);
-    
-    // Compile stats
-    const stats = {
-      totalTerritories: territories.length,
-      totalPlayers: userCount,
-      totalRuns: runCount,
-      merkleRoot,
-      timestamp: new Date()
-    };
-    
-    // Create audit hash
-    const auditHash = createAuditHash(stats);
-    
-    logger.info('📝 Proof data prepared:', {
-      merkleRoot: merkleRoot.substring(0, 16) + '...',
-      auditHash: auditHash.substring(0, 16) + '...',
-      territories: territories.length
-    });
-    
-    // Initialize Solana connection
-    const { connection, wallet } = initializeSolana();
-    
-    // For now, we'll simulate the transaction
-    // In production, this would interact with your Anchor program
-    const txSignature = await simulateSolanaTransaction(
-      connection,
-      wallet,
-      merkleRoot,
-      auditHash
+    const existing = await program.account.proofStore.fetch(pda);
+    logger.info(`[Blockchain] ProofStore already exists. Authority=${existing.authority.toString()}`);
+    return pda.toString();
+  } catch {
+    const tx = await program.methods
+      .initialize(authority)
+      .accounts({ proofStore: pda, payer: authority })
+      .rpc();
+    logger.info(`[Blockchain] ProofStore initialized. TX=${tx}`);
+    return pda.toString();
+  }
+}
+
+async function writeDailyProof(dateStr) {
+  const targetDate = dateStr || new Date().toISOString().split('T')[0];
+  logger.info(`[Blockchain] Building daily proof for ${targetDate}`);
+
+  const existing = await DailyProof.findOne({ date: targetDate, status: 'confirmed' });
+  if (existing) {
+    logger.info(`[Blockchain] Already confirmed for ${targetDate}. TX=${existing.txSignature}`);
+    return existing;
+  }
+
+  await DailyProof.findOneAndUpdate(
+    { date: targetDate },
+    { $set: { status: 'computing', date: targetDate }, $inc: { anchorAttempts: 1 } },
+    { upsert: true, new: true }
+  );
+
+  try {
+    const users = await User.find({ isBanned: false })
+      .sort('_id')
+      .select('_id credits hexesOwned stats.totalKm')
+      .lean();
+
+    const leaves = users.map((user) =>
+      buildLeaf(
+        user._id.toString(),
+        user.credits || 0,
+        user.hexesOwned || 0,
+        user.stats?.totalKm || 0,
+        targetDate
+      )
     );
-    
-    // Save proof to MongoDB
-    const proof = new DailyProof({
-      date: new Date(),
-      merkleRoot: `0x${merkleRoot}`,
-      auditHash: `0x${auditHash}`,
-      transactionHash: txSignature,
-      territoryCount: territories.length,
-      playerCount: userCount,
-      runCount: runCount,
-      blockchainNetwork: 'solana-devnet',
-      status: 'CONFIRMED'
-    });
-    
-    await proof.save();
-    
-    const duration = Date.now() - startTime;
-    logger.info(`✅ Daily proof committed in ${duration}ms`, {
-      txHash: txSignature,
-      proofId: proof._id
-    });
-    
-    return {
-      proofId: proof._id,
-      merkleRoot: proof.merkleRoot,
-      auditHash: proof.auditHash,
-      transactionHash: txSignature,
-      territories: territories.length,
-      duration
-    };
-    
+
+    const { root } = buildMerkleTree(leaves);
+
+    const start = new Date(targetDate);
+    const end = new Date(start.getTime() + 86400000);
+
+    const [totalHexes, runsToday, activeUsers] = await Promise.all([
+      Territory.countDocuments(),
+      Run.countDocuments({ startedAt: { $gte: start, $lt: end }, isProcessed: true }),
+      Run.distinct('userId', { startedAt: { $gte: start, $lt: end }, isProcessed: true }).then((ids) => ids.length),
+    ]);
+
+    await DailyProof.findOneAndUpdate(
+      { date: targetDate },
+      {
+        $set: {
+          merkleRoot: root.toString('hex'),
+          leafCount: leaves.length,
+          totalUsers: users.length,
+          activeUsers,
+          totalHexesClaimed: totalHexes,
+          totalRunsCompleted: runsToday,
+          status: 'anchoring',
+          network: SOLANA_NETWORK,
+        },
+      }
+    );
+
+    const program = await getProgram();
+    const authority = program.provider.wallet.publicKey;
+    const { pda: proofStorePda } = getProofStorePda(program.programId);
+    const { pda: dailyProofPda } = getDailyProofPda(targetDate, program.programId);
+
+    const tx = await program.methods
+      .writeDailyProof(
+        targetDate,
+        Array.from(root),
+        users.length,
+        new anchor.BN(totalHexes),
+        runsToday
+      )
+      .accounts({
+        dailyProof: dailyProofPda,
+        proofStore: proofStorePda,
+        authority,
+      })
+      .rpc();
+
+    const connection = new Connection(SOLANA_RPC_URL, 'confirmed');
+    const blockhash = await connection.getLatestBlockhash();
+    await connection.confirmTransaction({ signature: tx, ...blockhash }, 'confirmed');
+    const txInfo = await connection.getTransaction(tx, { commitment: 'confirmed' });
+
+    const finalDoc = await DailyProof.findOneAndUpdate(
+      { date: targetDate },
+      {
+        $set: {
+          txSignature: tx,
+          blockHeight: txInfo?.slot || 0,
+          anchoredAt: new Date(),
+          status: 'confirmed',
+          anchorError: null,
+          network: SOLANA_NETWORK,
+        },
+      },
+      { new: true }
+    );
+
+    logger.info(`[Blockchain] Daily proof confirmed. date=${targetDate} tx=${tx}`);
+    return finalDoc;
   } catch (error) {
-    logger.error('❌ Daily proof generation failed:', error);
+    await DailyProof.findOneAndUpdate(
+      { date: targetDate },
+      { $set: { status: 'failed', anchorError: error.message } }
+    );
+    logger.error(`[Blockchain] Daily proof failed for ${targetDate}: ${error.message}`);
     throw error;
   }
 }
 
-/**
- * Simulate Solana transaction (replace with actual Anchor program call)
- */
-async function simulateSolanaTransaction(connection, wallet, merkleRoot, auditHash) {
-  // This is a placeholder - replace with your Anchor program interaction
-  logger.info('🔗 Submitting to Solana blockchain...');
-  
+async function fetchProofFromChain(dateStr) {
   try {
-    // Example: Send a memo transaction as proof of concept
-    const transaction = new web3.Transaction().add(
-      new web3.TransactionInstruction({
-        keys: [],
-        programId: new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'),
-        data: Buffer.from(`TerritoryRun:${merkleRoot.substring(0, 32)}:${auditHash.substring(0, 32)}`)
-      })
-    );
-    
-    const signature = await web3.sendAndConfirmTransaction(
-      connection,
-      transaction,
-      [wallet]
-    );
-    
-    logger.info('✅ Transaction confirmed:', signature);
-    return signature;
-    
-  } catch (error) {
-    logger.error('❌ Solana transaction failed:', error);
-    // For development, return a mock signature
-    return 'mock_' + crypto.randomBytes(32).toString('hex');
-  }
-}
+    const program = await getProgram();
+    const { pda } = getDailyProofPda(dateStr, program.programId);
+    const proof = await program.account.dailyProof.fetch(pda);
 
-/**
- * Verify a historical proof
- */
-async function verifyProof(proofId) {
-  const proof = await DailyProof.findById(proofId);
-  
-  if (!proof) {
-    throw new Error('Proof not found');
-  }
-  
-  // Verify on-chain data
-  const { connection } = initializeSolana();
-  
-  try {
-    const txInfo = await connection.getTransaction(proof.transactionHash);
     return {
-      valid: !!txInfo,
-      proof,
-      onChainData: txInfo
+      dateStr: proof.dateStr,
+      merkleRoot: Buffer.from(proof.merkleRoot).toString('hex'),
+      totalUsers: proof.totalUsers,
+      totalHexes: proof.totalHexes.toString(),
+      writtenAt: new Date(Number(proof.writtenAt) * 1000).toISOString(),
+      authority: proof.authority.toString(),
+      pda: pda.toString(),
     };
-  } catch (error) {
-    return {
-      valid: false,
-      proof,
-      error: error.message
-    };
+  } catch {
+    return null;
   }
 }
 
 module.exports = {
-  generateDailyProof,
-  verifyProof,
-  generateMerkleRoot,
-  createAuditHash
+  initializeProofStore,
+  writeDailyProof,
+  fetchProofFromChain,
+  getDailyProofPda,
+  getProofStorePda,
 };

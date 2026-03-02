@@ -1,33 +1,113 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-:root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
-  }
-}
+    --sage-green: 168 213 186;
+    /* #A8D5BA */
+    --deep-green: 108 200 154;
+    /* #6CC89A */
+    --dark-green: 46 125 82;
+    /* #2E7D52 */
+    --soft-rose: 244 184 193;
+    /* #F4B8C1 */
+    --rose-deep: 232 155 165;
+    /* #E89BA5 */
+    --lavender: 195 177 225;
+    /* #C3B1E1 */
+    --lavender-deep: 165 148 211;
+    /* #A594D3 */
+    --warm-peach: 255 214 165;
+    /* #FFD6A5 */
+    --sky-blue: 181 213 245;
+    /* #B5D5F5 */
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+    --background: 244 247 244;
+    /* #F4F7F4 */
+    --foreground: 26 26 46;
+    /* #1a1a2e */
+    --card: 255 255 255;
+    --border: 0 0 0 / 0.05;
+  }
+
+  body {
+    background-color: #F4F7F4;
+    color: #1a1a2e;
+    font-family: 'Nunito', sans-serif;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+  }
+
+  .font-brand {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 900;
+  }
 }
 
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  .animate-scanline {
+    animation: scanline 8s linear infinite;
   }
+
+  .animate-grid-drift {
+    animation: grid-drift 20s linear infinite;
+  }
+
+  .tactical-glow {
+    box-shadow: 0 0 15px rgba(0, 200, 150, 0.2);
+  }
+
+  .tactical-glow-red {
+    box-shadow: 0 0 15px rgba(255, 34, 68, 0.3);
+  }
+}
+
+@keyframes scanline {
+  0% {
+    transform: translateY(-100%);
+  }
+
+  100% {
+    transform: translateY(100vh);
+  }
+}
+
+@keyframes grid-drift {
+  0% {
+    background-position: 0 0;
+  }
+
+  100% {
+    background-position: 40px 40px;
+  }
+}
+
+/* Hide scrollbars globally across all components and maps */
+* {
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+}
+
+::-webkit-scrollbar {
+  display: none;
+  /* Chrome, Safari and Opera */
+}
+
+/* Base Tactical Grid */
+.bg-tactical-grid {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
 }

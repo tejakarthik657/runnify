@@ -13,16 +13,20 @@ const JWT_SECRET = process.env.JWT_SECRET;
  */
 function authenticateJWT(req, res, next) {
   const authHeader = req.headers.authorization;
-  
+
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'No token provided' });
   }
-  
+
   const token = authHeader.substring(7);
-  
+
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
+    req.userId = decoded.userId || decoded.sub;
+    req.username = decoded.username;
+    req.userColor = decoded.color;
+    req.avatarUrl = decoded.avatarUrl;
     next();
   } catch (error) {
     logger.warn('JWT verification failed:', error.message);
@@ -36,37 +40,37 @@ function authenticateJWT(req, res, next) {
  */
 function authenticateWallet(req, res, next) {
   const { address, message, signature } = req.body;
-  
+
   if (!address || !message || !signature) {
-    return res.status(400).json({ 
-      error: 'Missing required fields: address, message, signature' 
+    return res.status(400).json({
+      error: 'Missing required fields: address, message, signature'
     });
   }
-  
+
   try {
     // Verify the signature
     const recoveredAddress = ethers.verifyMessage(message, signature);
-    
+
     if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
       return res.status(401).json({ error: 'Invalid signature' });
     }
-    
+
     // Check message timestamp (prevent replay attacks)
     const messageData = JSON.parse(message);
     const timestamp = new Date(messageData.timestamp).getTime();
     const now = Date.now();
     const fiveMinutes = 5 * 60 * 1000;
-    
+
     if (now - timestamp > fiveMinutes) {
       return res.status(401).json({ error: 'Signature expired' });
     }
-    
+
     // Attach wallet info to request
     req.wallet = {
       address: recoveredAddress,
       verified: true
     };
-    
+
     next();
   } catch (error) {
     logger.warn('Wallet authentication failed:', error.message);
@@ -79,7 +83,7 @@ function authenticateWallet(req, res, next) {
  */
 function optionalAuth(req, res, next) {
   const authHeader = req.headers.authorization;
-  
+
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.substring(7);
     try {
@@ -89,7 +93,7 @@ function optionalAuth(req, res, next) {
       logger.debug('Optional auth token invalid');
     }
   }
-  
+
   next();
 }
 
@@ -100,9 +104,12 @@ function generateToken(userId, email, options = {}) {
   const payload = {
     userId,
     email,
+    username: options.username,
+    color: options.color,
+    avatarUrl: options.avatarUrl,
     iat: Math.floor(Date.now() / 1000)
   };
-  
+
   return jwt.sign(payload, JWT_SECRET, {
     expiresIn: options.expiresIn || '7d'
   });
@@ -114,7 +121,7 @@ function generateToken(userId, email, options = {}) {
 function generateRefreshToken(userId) {
   const payload = { userId, type: 'refresh' };
   const secret = process.env.JWT_REFRESH_SECRET || JWT_SECRET;
-  
+
   return jwt.sign(payload, secret, {
     expiresIn: '30d'
   });
@@ -122,6 +129,7 @@ function generateRefreshToken(userId) {
 
 module.exports = {
   authenticateJWT,
+  requireAuth: authenticateJWT,
   authenticateWallet,
   optionalAuth,
   generateToken,

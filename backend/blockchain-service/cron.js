@@ -1,43 +1,59 @@
-/**
- * Daily Blockchain Proof Cron Job
- * Runs at 00:00 UTC to commit daily territory proofs to Solana
- */
 const cron = require('node-cron');
-const { generateDailyProof } = require('./anchor.sync');
+const { writeDailyProof } = require('./anchor.sync');
+const DailyProof = require('./proof.model');
 const logger = require('../utils/logger');
 
-/**
- * Schedule daily proof generation
- * Runs at midnight UTC every day
- */
-function startDailyCron() {
-  // Run at 00:00 UTC every day
+function registerBlockchainCrons() {
   cron.schedule('0 0 * * *', async () => {
-    logger.info('🕐 Starting daily blockchain proof generation...');
-    
+    const dateStr = new Date().toISOString().split('T')[0];
+    logger.info(`🕐 Midnight blockchain proof job started for ${dateStr}`);
     try {
-      const result = await generateDailyProof();
-      logger.info('✅ Daily proof committed:', result);
+      await writeDailyProof(dateStr);
     } catch (error) {
-      logger.error('❌ Daily proof generation failed:', error);
-      // Send alert/notification here
+      logger.error(`❌ Midnight blockchain proof job failed: ${error.message}`);
     }
   }, {
-    timezone: 'UTC'
+    timezone: 'UTC',
   });
-  
-  logger.info('📅 Daily blockchain cron job initialized (00:00 UTC)');
+
+  cron.schedule('0 2 * * *', async () => {
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    const today = new Date().toISOString().split('T')[0];
+
+    try {
+      const failed = await DailyProof.find({
+        date: { $in: [yesterday, today] },
+        status: { $in: ['failed', 'anchoring'] },
+        anchorAttempts: { $lt: 3 },
+      });
+
+      for (const proof of failed) {
+        logger.warn(`🔁 Retrying blockchain proof for ${proof.date}`);
+        await writeDailyProof(proof.date).catch((error) => {
+          logger.error(`❌ Retry failed for ${proof.date}: ${error.message}`);
+        });
+      }
+    } catch (error) {
+      logger.error(`❌ Retry cron failed: ${error.message}`);
+    }
+  }, {
+    timezone: 'UTC',
+  });
+
+  logger.info('✅ Blockchain crons registered (00:00 UTC + 02:00 UTC retry)');
 }
 
-/**
- * Manual trigger for testing
- */
 async function triggerManually() {
-  logger.info('🔧 Manual proof generation triggered');
-  return await generateDailyProof();
+  const dateStr = new Date().toISOString().split('T')[0];
+  logger.info(`🔧 Manual blockchain proof trigger for ${dateStr}`);
+  return writeDailyProof(dateStr);
 }
 
 module.exports = {
-  startDailyCron,
-  triggerManually
+  registerBlockchainCrons,
+  triggerManually,
 };
+
+if (require.main === module) {
+  registerBlockchainCrons();
+}

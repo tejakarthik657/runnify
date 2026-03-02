@@ -1,0 +1,8 @@
+Starting Supabase Diagnostic with Service Role...
+URL: https://ofvclyckqpwmsxkhvpmo.supabase.co
+Bucket: territory-run-storage
+Using Service Role Key: true
+Uploading to: https://ofvclyckqpwmsxkhvpmo.supabase.co/storage/v1/object/territory-run-storage/profiles/diag-service-role-1772459337322.txt
+Status: 200
+Response: {"Key":"territory-run-storage/profiles/diag-service-role-1772459337322.txt","Id":"c8da9d4b-94dc-487b-badf-58c7edb84a82"}
+✅ SUCCESS: Service Role bypass worked!

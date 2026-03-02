@@ -19,19 +19,19 @@ const {
 // CONSTANTS
 // ─────────────────────────────────────────────────────────────────────
 
-const H3_RES             = 9;
-const CREDITS_PER_CLAIM  = 10;
+const H3_RES = 9;
+const CREDITS_PER_CLAIM = 10;
 const CREDITS_PER_INVASION = 25;
-const CREDITS_PER_RETOUCH  = 2;
+const CREDITS_PER_RETOUCH = 2;
 const INVASION_CREDIT_LOSS = 15;   // victim loses per hex invaded
-const PEAK_HOURS         = [[6, 9], [17, 20]];  // 6-9am, 5-8pm
-const PEAK_MULTIPLIER    = 1.5;
-const DECAY_RATE         = 0.98;   // per 24h of inactivity
+const PEAK_HOURS = [[6, 9], [17, 20]];  // 6-9am, 5-8pm
+const PEAK_MULTIPLIER = 1.5;
+const DECAY_RATE = 0.98;   // per 24h of inactivity
 const MAX_RUN_DURATION_H = 4;
-const MAX_GPS_POINTS     = 500;
-const MAX_RUNS_PER_DAY   = 3;
+const MAX_GPS_POINTS = 500;
+const MAX_RUNS_PER_DAY = 3;
 const GPS_ACCURACY_LIMIT = 50;     // metres
-const MAX_SPEED_KMH      = 45;     // anti-cheat: flag runs with GPS > this
+const MAX_SPEED_KMH = 45;     // anti-cheat: flag runs with GPS > this
 
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -62,9 +62,10 @@ const UserService = {
     });
     // Create city chat room for user's city if it doesn't exist
     if (city) {
+      const roomId = `city:${city.toLowerCase()}`;
       await ChatRoom.updateOne(
-        { type: 'city', city },
-        { $set: { type: 'city', name: city, city } },
+        { roomId },
+        { $set: { roomId, type: 'city', name: city, city } },
         { upsert: true }
       );
     }
@@ -83,13 +84,13 @@ const UserService = {
   /** Update stats after a run completes */
   async updateStatsAfterRun(userId, run) {
     const inc = {
-      'stats.totalKm':            run.distanceKm,
-      'stats.totalRuns':          1,
-      'stats.totalHexesClaimed':  run.hexesClaimed.length,
-      'stats.totalHexesInvaded':  run.hexesInvaded.length,
+      'stats.totalKm': run.distanceKm,
+      'stats.totalRuns': 1,
+      'stats.totalHexesClaimed': run.hexesClaimed.length,
+      'stats.totalHexesInvaded': run.hexesInvaded.length,
       'stats.totalCreditsEarned': run.creditsEarned,
-      credits:                    run.creditsEarned,
-      hexesOwned:                 run.hexesClaimed.length, // net: invasions handled separately
+      credits: run.creditsEarned,
+      hexesOwned: run.hexesClaimed.length, // net: invasions handled separately
     };
 
     const user = await User.findByIdAndUpdate(userId, {
@@ -134,7 +135,7 @@ const UserService = {
       $set: {
         'stats.currentStreak': newStreak,
         'stats.longestStreak': longestStreak,
-        'stats.lastRunDate':   new Date(),
+        'stats.lastRunDate': new Date(),
       }
     });
   },
@@ -157,8 +158,8 @@ const UserService = {
       $or: [{ username: regex }, { hashcode: regex }],
       isBanned: false,
     })
-    .select('username hashcode color credits globalRank city isPrestige')
-    .limit(limit);
+      .select('username hashcode color credits globalRank city isPrestige')
+      .limit(limit);
   },
 };
 
@@ -239,9 +240,9 @@ const CreditEngine = {
   /** Calculate credits for a completed run */
   calculate({ hexesClaimed, hexesInvaded, hexesRetouched }) {
     const multiplier = CreditEngine.isPeakHour() ? PEAK_MULTIPLIER : 1.0;
-    const fromClaims   = hexesClaimed.length   * CREDITS_PER_CLAIM;
-    const fromInvasions= hexesInvaded.length   * CREDITS_PER_INVASION;
-    const fromRetouch  = hexesRetouched.length * CREDITS_PER_RETOUCH;
+    const fromClaims = hexesClaimed.length * CREDITS_PER_CLAIM;
+    const fromInvasions = hexesInvaded.length * CREDITS_PER_INVASION;
+    const fromRetouch = hexesRetouched.length * CREDITS_PER_RETOUCH;
     const total = Math.floor((fromClaims + fromInvasions + fromRetouch) * multiplier);
     return { total, fromClaims, fromInvasions, fromRetouch, multiplier };
   },
@@ -254,9 +255,9 @@ const CreditEngine = {
 
     for (const territory of stale) {
       const hoursInactive = (Date.now() - territory.lastActiveAt) / 3600000;
-      const daysInactive  = Math.floor(hoursInactive / 24);
+      const daysInactive = Math.floor(hoursInactive / 24);
       const newDecayFactor = Math.pow(DECAY_RATE, daysInactive);
-      const creditLoss    = Math.floor(territory.creditValue * (1 - newDecayFactor));
+      const creditLoss = Math.floor(territory.creditValue * (1 - newDecayFactor));
 
       if (creditLoss > 0) {
         await Territory.findByIdAndUpdate(territory._id, {
@@ -265,14 +266,14 @@ const CreditEngine = {
         });
         await User.findByIdAndUpdate(territory.ownerId, { $inc: { credits: -creditLoss } });
         await CreditLedger.create({
-          userId:      territory.ownerId,
-          amount:      -creditLoss,
+          userId: territory.ownerId,
+          amount: -creditLoss,
           balanceAfter: 0, // filled in properly in prod
-          type:        'decay',
-          hexIds:      [territory.hexId],
-          hexCount:    1,
-          note:        `Decay after ${daysInactive} inactive days`,
-          occurredAt:  new Date(),
+          type: 'decay',
+          hexIds: [territory.hexId],
+          hexCount: 1,
+          note: `Decay after ${daysInactive} inactive days`,
+          occurredAt: new Date(),
           schemaVersion: SCHEMA_VERSION,
         });
         totalDecayed += creditLoss;
@@ -298,24 +299,54 @@ const RunService = {
       startedAt: { $gte: today },
       isActive: false,
     });
-    const active = await Run.findOne({ userId, isActive: true });
-    if (active) throw new Error('A run is already in progress');
+
+    // Auto-cleanup: force-end any stale active runs (older than 6 hours)
+    const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
+    const staleRun = await Run.findOne({
+      userId,
+      isActive: true,
+      startedAt: { $lt: sixHoursAgo }
+    });
+
+    if (staleRun) {
+      await Run.updateOne(
+        { _id: staleRun._id },
+        {
+          $set: {
+            isActive: false,
+            endedAt: new Date(),
+            isProcessed: true,
+            processedAt: new Date()
+          }
+        }
+      );
+    } else {
+      // Check for recent active run (not stale)
+      const active = await Run.findOne({ userId, isActive: true });
+      if (active) throw new Error('A run is already in progress');
+    }
+
     if (count >= MAX_RUNS_PER_DAY) throw new Error(`Daily run limit of ${MAX_RUNS_PER_DAY} reached`);
     return true;
   },
 
   /** Start a new run session */
   async startRun(userId, { lat, lng, city }) {
+    // Validate GPS coordinates
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      throw new Error('Valid GPS coordinates required to start a run');
+    }
+
     await RunService.canStartRun(userId);
     const user = await User.findById(userId).select('username color');
     const run = await Run.create({
       userId,
-      username:    user.username,
-      userColor:   user.color,
-      startedAt:   new Date(),
+      username: user.username,
+      userColor: user.color,
+      startedAt: new Date(),
       startLocation: { type: 'Point', coordinates: [lng, lat] },
       city,
-      isActive:    true,
+      isActive: true,
       schemaVersion: SCHEMA_VERSION,
     });
     return run;
@@ -337,14 +368,14 @@ const RunService = {
       toInsert.push({
         runId: run._id,
         userId,
-        seq:       pt.seq,
-        location:  { type: 'Point', coordinates: [pt.lng, pt.lat] },
-        accuracy:  pt.accuracy,
-        altitude:  pt.altitude || null,
-        speed:     pt.speed || null,
-        hexId:     pt.isValid ? H3Service.latLngToHex(pt.lat, pt.lng) : null,
+        seq: pt.seq,
+        location: { type: 'Point', coordinates: [pt.lng, pt.lat] },
+        accuracy: pt.accuracy,
+        altitude: pt.altitude || null,
+        speed: pt.speed || null,
+        hexId: pt.isValid ? H3Service.latLngToHex(pt.lat, pt.lng) : null,
         recordedAt: new Date(pt.timestamp),
-        isValid:   pt.isValid,
+        isValid: pt.isValid,
       });
       if (pt.isValid) prev = pt;
     }
@@ -377,8 +408,8 @@ const RunService = {
       .select('hexId ownerId ownerUsername ownerColor creditValue');
     const existingMap = new Map(existingTerritories.map(t => [t.hexId, t]));
 
-    const hexesClaimed   = [];
-    const hexesInvaded   = [];
+    const hexesClaimed = [];
+    const hexesInvaded = [];
     const hexesRetouched = [];
     const invasionEvents = [];
 
@@ -529,10 +560,10 @@ const RunService = {
         credits: credits.total,
         hexesOwned: hexesClaimed.length,
         'stats.totalCreditsEarned': credits.total,
-        'stats.totalHexesClaimed':  hexesClaimed.length,
-        'stats.totalHexesInvaded':  hexesInvaded.length,
-        'stats.totalKm':            distanceKm,
-        'stats.totalRuns':          1,
+        'stats.totalHexesClaimed': hexesClaimed.length,
+        'stats.totalHexesInvaded': hexesInvaded.length,
+        'stats.totalKm': distanceKm,
+        'stats.totalRuns': 1,
       },
       $set: { lastActiveAt: new Date(), lastRunAt: new Date() },
     }, { new: true });
@@ -679,6 +710,28 @@ const MapService = {
 // ═══════════════════════════════════════════════════════════════════════
 
 const LeaderboardService = {
+  /** Get global aggregate stats for landing page */
+  async getGlobalStats() {
+    const totalUsers = await User.countDocuments({ isBanned: false });
+    const totalHexes = await Territory.countDocuments({});
+
+    // Summing credits is heavier, use aggregation
+    const creditsAgg = await User.aggregate([
+      { $match: { isBanned: false } },
+      { $group: { _id: null, total: { $sum: '$credits' } } }
+    ]);
+    const totalCredits = creditsAgg[0]?.total || 0;
+
+    // Count active runs in last 24h
+    const activeSorties = await Run.countDocuments({ startedAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } });
+
+    return {
+      totalUsers,
+      totalHexes,
+      totalCredits,
+      activeSorties,
+    };
+  },
 
   /** Build and cache global leaderboard (top 100) */
   async buildGlobal() {
@@ -767,10 +820,10 @@ const NotificationService = {
     if (!victim?.notifications?.invasionAlerts) return;
 
     await Notification.create({
-      userId:     victimId,
-      type:       'invasion_alert',
-      title:      '⚠ Territory invaded!',
-      body:       `${invaderUsername} just took ${hexCount} hex${hexCount > 1 ? 'es' : ''} in ${city || 'your territory'}`,
+      userId: victimId,
+      type: 'invasion_alert',
+      title: '⚠ Territory invaded!',
+      body: `${invaderUsername} just took ${hexCount} hex${hexCount > 1 ? 'es' : ''} in ${city || 'your territory'}`,
       actionType: 'open_map',
       actionData: { invasionId },
       triggeredBy: null,
@@ -786,13 +839,13 @@ const NotificationService = {
     if (!user?.notifications?.rankChanges) return;
 
     const delta = rankAfter - rankBefore;
-    const isUp  = delta < 0;
+    const isUp = delta < 0;
 
     await Notification.create({
       userId,
-      type:       isUp ? 'rank_up' : 'rank_drop',
-      title:      isUp ? '📈 Rank up!' : '📉 Rank dropped',
-      body:       `You moved from #${rankBefore} to #${rankAfter}`,
+      type: isUp ? 'rank_up' : 'rank_drop',
+      title: isUp ? '📈 Rank up!' : '📉 Rank dropped',
+      body: `You moved from #${rankBefore} to #${rankAfter}`,
       actionType: 'open_leaderboard',
       actionData: { leaderboardScope: 'global' },
       rankBefore, rankAfter,
@@ -804,9 +857,9 @@ const NotificationService = {
   async createStreakReminder(userId, currentStreak) {
     await Notification.create({
       userId,
-      type:       'streak_reminder',
-      title:      `🔥 Keep your streak alive!`,
-      body:       `You've run ${currentStreak} days in a row. Don't break it today.`,
+      type: 'streak_reminder',
+      title: `🔥 Keep your streak alive!`,
+      body: `You've run ${currentStreak} days in a row. Don't break it today.`,
       actionType: 'open_dashboard',
       schemaVersion: SCHEMA_VERSION,
     });
@@ -843,13 +896,13 @@ const AchievementService = {
 
     const stats = user.stats || {};
     const metricMap = {
-      totalRuns:          stats.totalRuns        || 0,
-      totalHexesClaimed:  stats.totalHexesClaimed|| 0,
-      totalHexesInvaded:  stats.totalHexesInvaded|| 0,
-      currentStreak:      stats.currentStreak    || 0,
-      totalKm:            stats.totalKm          || 0,
-      cityRank:           user.cityRank          || 999,
-      rivals:             (user.rivals || []).filter(r => r.named).length,
+      totalRuns: stats.totalRuns || 0,
+      totalHexesClaimed: stats.totalHexesClaimed || 0,
+      totalHexesInvaded: stats.totalHexesInvaded || 0,
+      currentStreak: stats.currentStreak || 0,
+      totalKm: stats.totalKm || 0,
+      cityRank: user.cityRank || 999,
+      rivals: (user.rivals || []).filter(r => r.named).length,
     };
 
     for (const def of defs) {
@@ -860,7 +913,7 @@ const AchievementService = {
       let met = false;
       if (def.condition.operator === 'gte') met = val >= def.condition.value;
       if (def.condition.operator === 'lte') met = val <= def.condition.value;
-      if (def.condition.operator === 'eq')  met = val === def.condition.value;
+      if (def.condition.operator === 'eq') met = val === def.condition.value;
 
       if (met) {
         await UserAchievement.create({
@@ -884,7 +937,7 @@ const AchievementService = {
         await Notification.create({
           userId, type: 'achievement_unlocked',
           title: `🏆 Achievement unlocked!`,
-          body:  `${def.icon} ${def.name} — ${def.description}`,
+          body: `${def.icon} ${def.name} — ${def.description}`,
           actionType: 'open_profile',
           creditDelta: def.creditReward || 0,
           schemaVersion: SCHEMA_VERSION,
@@ -989,13 +1042,13 @@ const BlockchainService = {
       {
         $set: {
           date: dateStr,
-          totalUsers:         users.length,
-          activeUsers:        today.length,
+          totalUsers: users.length,
+          activeUsers: today.length,
           totalRunsCompleted: today.length,
-          totalKmRun:         Math.round(totalKm * 10) / 10,
-          totalHexesClaimed:  await Territory.countDocuments(),
-          topUserId:          crypto.createHash('sha256').update(topUser._id.toString()).digest('hex'),
-          topUserCredits:     topUser.credits,
+          totalKmRun: Math.round(totalKm * 10) / 10,
+          totalHexesClaimed: await Territory.countDocuments(),
+          topUserId: crypto.createHash('sha256').update(topUser._id.toString()).digest('hex'),
+          topUserCredits: topUser.credits,
           merkleRoot, leafCount: leaves.length,
           status: 'anchoring', anchorAttempts: 1,
           schemaVersion: SCHEMA_VERSION,
@@ -1021,7 +1074,7 @@ const BlockchainService = {
     while (level.length > 1) {
       const next = [];
       for (let i = 0; i < level.length; i += 2) {
-        const left  = level[i];
+        const left = level[i];
         const right = level[i + 1] || left;
         next.push(crypto.createHash('sha256').update(left + right).digest('hex'));
       }
@@ -1059,7 +1112,7 @@ const CityStatsService = {
     ]);
 
     const dominance = await MapService.getCityDominance(city);
-    const dominant  = dominance[0] || {};
+    const dominant = dominance[0] || {};
 
     await CityStats.findOneAndUpdate(
       { city },
@@ -1072,8 +1125,8 @@ const CityStatsService = {
             userId: u._id, username: u.username, color: u.color,
             credits: u.credits, hexes: u.hexesOwned,
           })),
-          dominantUser:  dominant.username || null,
-          dominantColor: dominant.color    || null,
+          dominantUser: dominant.username || null,
+          dominantColor: dominant.color || null,
           computedAt: new Date(), schemaVersion: SCHEMA_VERSION,
         }
       },
