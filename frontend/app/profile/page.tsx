@@ -159,32 +159,32 @@ export default function ProfilePage() {
         <div className="min-h-screen pb-20 font-['Nunito']">
             <div className="max-w-5xl mx-auto space-y-8">
                 {/* Header */}
-                <div className="flex items-center justify-between mb-8">
-                    <div className="flex items-center gap-6">
-                        <Link href="/dashboard" className="p-4 bg-white rounded-2xl border border-black/5 shadow-sm hover:shadow-md transition-all active:scale-95">
-                            <ArrowLeft size={24} className="text-[#1a1a2e]" />
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
+                    <div className="flex items-center gap-3 sm:gap-4 w-full">
+                        <Link href="/dashboard" className="p-2 sm:p-4 bg-white rounded-2xl border border-black/5 shadow-sm hover:shadow-md transition-all active:scale-95 flex-shrink-0">
+                            <ArrowLeft size={18} className="sm:w-6 sm:h-6 text-[#1a1a2e]" />
                         </Link>
-                        <div>
-                            <h1 className="text-3xl font-black text-[#1a1a2e]">Profile Settings</h1>
+                        <div className="min-w-0">
+                            <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-[#1a1a2e] truncate">Profile Settings</h1>
                             <div className="flex items-center gap-2 mt-1">
-                                <Badge variant="sage">Operator Active</Badge>
-                                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Protocol v4.0</span>
+                                <Badge variant="sage" className="text-[10px] sm:text-xs">Operator Active</Badge>
+                                <span className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-widest hidden sm:inline">v4.0</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 sm:gap-8">
                     {/* Left Column: Bio & Core Info */}
-                    <div className="lg:col-span-4 space-y-8">
-                        <div className="bg-white rounded-[40px] border border-black/5 p-8 shadow-sm relative overflow-hidden">
+                    <div className="md:col-span-4 space-y-6 sm:space-y-8">
+                        <div className="bg-white rounded-[40px] border border-black/5 p-6 sm:p-8 shadow-sm relative overflow-hidden">
                             {/* User Banner Decor */}
                             <div
                                 className="absolute top-0 left-0 right-0 h-32 bg-opacity-10 pointer-events-none"
                                 style={{ backgroundColor: currentUser?.color || '#A8D5BA' }}
                             />
 
-                            <div className="relative pt-12 flex flex-col items-center">
+                            <div className="relative pt-8 sm:pt-12 flex flex-col items-center">
                                 <div className="relative group cursor-pointer" onClick={() => document.getElementById('avatar-upload')?.click()}>
                                     {isUploading && (
                                         <div className="absolute inset-0 z-10 bg-black/40 rounded-[48px] flex items-center justify-center backdrop-blur-sm">

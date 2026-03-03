@@ -28,27 +28,27 @@ export default function LeaderboardPage() {
             <div className="max-w-5xl mx-auto space-y-8">
 
                 {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-4">
-                    <div className="flex items-center gap-6">
-                        <Link href="/dashboard" className="p-4 bg-white rounded-2xl border border-black/5 shadow-sm hover:shadow-md transition-all active:scale-95">
-                            <ArrowLeft size={24} className="text-[#1a1a2e]" />
+                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4 mb-4">
+                    <div className="flex items-center gap-3 sm:gap-4">
+                        <Link href="/dashboard" className="p-2 sm:p-4 bg-white rounded-2xl border border-black/5 shadow-sm hover:shadow-md transition-all active:scale-95 flex-shrink-0">
+                            <ArrowLeft size={20} className="sm:w-6 sm:h-6 text-[#1a1a2e]" />
                         </Link>
-                        <div>
-                            <h1 className="text-3xl md:text-4xl font-black tracking-tight text-[#1a1a2e]">Hall of Fame</h1>
-                            <div className="flex items-center gap-2 mt-1">
-                                <Badge variant="sage">Competitive Season 1</Badge>
-                                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Active Rankings</span>
+                        <div className="min-w-0">
+                            <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black tracking-tight text-[#1a1a2e] truncate">Hall of Fame</h1>
+                            <div className="flex items-center gap-1 sm:gap-2 mt-1 flex-wrap">
+                                <Badge variant="sage" className="text-[10px] sm:text-xs">Season 1</Badge>
+                                <span className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-widest hidden sm:inline">Active Rankings</span>
                             </div>
                         </div>
                     </div>
 
                     {/* Tab Selector */}
-                    <div className="flex bg-white rounded-2xl border border-black/5 p-1.5 shadow-sm self-start">
+                    <div className="flex bg-white rounded-2xl border border-black/5 p-1 sm:p-1.5 shadow-sm self-start">
                         {(['global', 'city'] as const).map((s) => (
                             <button
                                 key={s}
                                 onClick={() => setScope(s)}
-                                className={`px-8 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${scope === s
+                                className={`px-3 sm:px-6 md:px-8 py-2 sm:py-2.5 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${scope === s
                                         ? 'bg-[#A8D5BA] text-white shadow-md'
                                         : 'text-gray-400 hover:text-[#1a1a2e]'
                                     }`}
@@ -63,10 +63,10 @@ export default function LeaderboardPage() {
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="relative overflow-hidden rounded-[40px] bg-white border border-black/5 p-8 md:p-10 shadow-sm"
+                    className="relative overflow-hidden rounded-[40px] bg-white border border-black/5 p-4 sm:p-6 md:p-8 lg:p-10 shadow-sm"
                 >
-                    <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
-                        <div className="flex items-center gap-6">
+                    <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 md:gap-8">
+                        <div className="flex items-center gap-3 sm:gap-4 md:gap-6">
                             <div className="relative">
                                 {user?.avatarUrl ? (
                                     <div className="w-20 h-20 rounded-[28px] overflow-hidden shadow-inner border-2 border-white">

@@ -55,25 +55,25 @@ export default function DashboardPage() {
             </div>
 
             {/* Greeting Banner */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-2 sm:gap-3 md:gap-4">
                 <div>
-                    <h1 className="text-3xl md:text-4xl font-black tracking-tight text-[#1a1a2e]">
+                    <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black tracking-tight text-[#1a1a2e]">
                         Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 18 ? 'Afternoon' : 'Evening'}, {currentUser?.username || 'Player'} 👋
                     </h1>
-                    <div className="flex items-center gap-3 mt-2">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 mt-2">
                         <Badge variant="sage" pulse>Active Status: Tactical</Badge>
-                        <span className="text-sm font-bold text-gray-400">
+                        <span className="text-xs sm:text-sm font-bold text-gray-400">
                             Current Location: <span className="text-[#1a1a2e]">{currentUser?.city || 'Sector_01'}</span>
                         </span>
                     </div>
                 </div>
-                <div className="bg-white p-4 rounded-2xl border border-black/5 shadow-sm flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-[#F0F7F4] flex items-center justify-center text-[#2E7D52]">
-                        <Layers size={20} />
+                <div className="bg-white p-3 sm:p-4 rounded-2xl border border-black/5 shadow-sm flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
+                    <div className="w-9 sm:w-10 h-9 sm:h-10 rounded-xl bg-[#F0F7F4] flex items-center justify-center text-[#2E7D52] flex-shrink-0">
+                        <Layers size={18} className="sm:w-5 sm:h-5" />
                     </div>
-                    <div>
-                        <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Territory Control</div>
-                        <div className="text-sm font-extrabold text-[#1a1a2e]">12% of Sector 7</div>
+                    <div className="min-w-0">
+                        <div className="text-[8px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest">Territory Control</div>
+                        <div className="text-xs sm:text-sm font-extrabold text-[#1a1a2e] truncate">12% of Sector 7</div>
                     </div>
                 </div>
             </div>
@@ -84,7 +84,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4 lg:gap-6">
                 <StatCard
                     label="Global Rank"
                     value={`#${rankData?.rank || '---'}`}

@@ -98,32 +98,32 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-6 relative font-['Nunito'] bg-[#F4F7F4] overflow-hidden">
+        <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 py-6 relative font-['Nunito'] bg-[#F4F7F4] overflow-hidden">
             {/* Background Accents */}
-            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#A8D5BA] opacity-[0.05] rounded-full -mr-48 -mt-48 blur-3xl p-10 pointer-events-none" />
-            <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-[#C3B1E1] opacity-[0.05] rounded-full -ml-48 -mb-48 blur-3xl p-10 pointer-events-none" />
+            <div className="absolute top-0 right-0 w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-[#A8D5BA] opacity-[0.05] rounded-full -mr-24 sm:-mr-48 -mt-24 sm:-mt-48 blur-3xl p-10 pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-[#C3B1E1] opacity-[0.05] rounded-full -ml-24 sm:-ml-48 -mb-24 sm:-mb-48 blur-3xl p-10 pointer-events-none" />
 
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="w-full max-w-[480px] z-10"
             >
-                <div className="bg-white rounded-[48px] p-10 md:p-14 shadow-xl border border-black/5 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 bg-[#A8D5BA] opacity-[0.03] w-32 h-32 rounded-full -mr-10 -mt-10 blur-xl" />
+                <div className="bg-white rounded-[40px] sm:rounded-[48px] p-6 sm:p-10 md:p-14 shadow-xl border border-black/5 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 bg-[#A8D5BA] opacity-[0.03] w-24 sm:w-32 h-24 sm:h-32 rounded-full -mr-6 sm:-mr-10 -mt-6 sm:-mt-10 blur-xl" />
 
-                    <div className="text-center mb-12">
-                        <div className="inline-flex items-center justify-center w-20 h-20 rounded-[28px] bg-[#F0F7F4] text-[#A8D5BA] mb-6 shadow-inner border border-[#A8D5BA]/10">
-                            {isLogin ? <Shield size={36} /> : <Sparkles size={36} />}
+                    <div className="text-center mb-8 sm:mb-12">
+                        <div className="inline-flex items-center justify-center w-16 sm:w-20 h-16 sm:h-20 rounded-[28px] bg-[#F0F7F4] text-[#A8D5BA] mb-4 sm:mb-6 shadow-inner border border-[#A8D5BA]/10">
+                            {isLogin ? <Shield size={28} className="sm:w-9 sm:h-9" /> : <Sparkles size={28} className="sm:w-9 sm:h-9" />}
                         </div>
-                        <h1 className="text-4xl font-black text-[#1a1a2e] tracking-tight mb-3">
+                        <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-[#1a1a2e] tracking-tight mb-2 sm:mb-3">
                             {isLogin ? 'Hello again!' : 'Join the Race'}
                         </h1>
-                        <p className="text-sm font-bold text-gray-400 max-w-[280px] mx-auto leading-relaxed">
+                        <p className="text-xs sm:text-sm font-bold text-gray-400 max-w-[280px] mx-auto leading-relaxed">
                             {isLogin ? 'Securely access your territory management suite.' : 'Create your unique runner profile and start claiming hexes.'}
                         </p>
                     </div>
 
-                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
                         <AnimatePresence mode="wait">
                             {!isLogin && (
                                 <motion.div
