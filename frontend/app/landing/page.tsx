@@ -119,17 +119,17 @@ function FeatureCard({ icon: Icon, title, desc, color, delay }: any) {
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay }}
             whileHover={{ y: -10, scale: 1.02 }}
-            className="p-10 bg-white border border-black/5 rounded-[48px] shadow-sm hover:shadow-2xl hover:shadow-green-100/50 transition-all group relative overflow-hidden"
+            className="p-6 sm:p-8 md:p-10 bg-white border border-black/5 rounded-[32px] sm:rounded-[40px] md:rounded-[48px] shadow-sm hover:shadow-2xl hover:shadow-green-100/50 transition-all group relative overflow-hidden"
         >
-            <div className={`absolute top-0 right-0 w-32 h-32 opacity-5 rounded-bl-[100px] transition-transform group-hover:scale-110`} style={{ backgroundColor: color }} />
+            <div className={`absolute top-0 right-0 w-24 sm:w-28 md:w-32 h-24 sm:h-28 md:h-32 opacity-5 rounded-bl-[100px] transition-transform group-hover:scale-110`} style={{ backgroundColor: color }} />
             <div
-                className="w-16 h-16 rounded-3xl flex items-center justify-center mb-8 shadow-lg transition-transform group-hover:rotate-6 group-hover:scale-110 border-2 border-white"
+                className="w-12 sm:w-14 md:w-16 h-12 sm:h-14 md:h-16 rounded-2xl sm:rounded-[28px] md:rounded-3xl flex items-center justify-center mb-4 sm:mb-6 md:mb-8 shadow-lg transition-transform group-hover:rotate-6 group-hover:scale-110 border-2 border-white"
                 style={{ backgroundColor: `${color}15`, color: color }}
             >
-                <Icon size={32} strokeWidth={2.5} />
+                <Icon size={24} className="sm:w-7 sm:h-7 md:w-8 md:h-8" strokeWidth={2.5} />
             </div>
-            <h3 className="font-['Syne'] font-extrabold text-2xl mb-4 text-[#1A1A2E] tracking-tight">{title}</h3>
-            <p className="text-slate-400 font-bold text-sm leading-relaxed">{desc}</p>
+            <h3 className="font-['Syne'] font-extrabold text-lg sm:text-xl md:text-2xl mb-2 sm:mb-3 md:mb-4 text-[#1A1A2E] tracking-tight">{title}</h3>
+            <p className="text-slate-400 font-bold text-xs sm:text-sm leading-relaxed">{desc}</p>
         </motion.div>
     );
 }
@@ -166,34 +166,33 @@ export default function LandingPage() {
         <div className="min-h-screen bg-[#F4F7F4] font-['Nunito'] text-[#1A1A2E] overflow-x-hidden selection:bg-[#A8D5BA]/30">
 
             {/* ─── NAVIGATION ─── */}
-            <nav className="fixed top-0 left-0 right-0 z-[100] h-24 px-6 md:px-12 flex items-center justify-between pointer-events-none">
+            <nav className="fixed top-0 left-0 right-0 z-[100] h-16 sm:h-20 md:h-24 px-4 sm:px-6 md:px-12 flex items-center justify-between pointer-events-none">
                 <motion.div
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className="flex items-center gap-4 bg-white/90 backdrop-blur-2xl px-6 py-3 rounded-2xl border border-white shadow-xl shadow-green-900/5 pointer-events-auto"
+                    className="flex items-center gap-2 sm:gap-3 md:gap-4 bg-white/90 backdrop-blur-2xl px-4 sm:px-5 md:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl md:rounded-2xl border border-white shadow-lg sm:shadow-xl shadow-green-900/5 pointer-events-auto"
                 >
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#A8D5BA] to-[#6CC89A] flex items-center justify-center text-white shadow-lg shadow-green-200">
-                        <Hexagon size={22} fill="currentColor" fillOpacity={0.2} />
+                    <div className="w-8 sm:w-9 md:w-10 h-8 sm:h-9 md:h-10 rounded-lg sm:rounded-[8px] md:rounded-xl bg-gradient-to-br from-[#A8D5BA] to-[#6CC89A] flex items-center justify-center text-white shadow-lg shadow-green-200">
+                        <Hexagon size={18} className="sm:w-5 sm:h-5 md:w-6 md:h-6" fill="currentColor" fillOpacity={0.2} />
                     </div>
-                    <span className="font-['Syne'] font-extrabold text-xl tracking-tighter">Territory<span className="text-[#A8D5BA]">Run</span></span>
+                    <span className="font-['Syne'] font-extrabold text-sm sm:text-base md:text-xl tracking-tighter hidden sm:inline">Territory<span className="text-[#A8D5BA]">Run</span></span>
                 </motion.div>
 
                 <motion.div
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className="flex items-center gap-4 pointer-events-auto"
-                >
-                    <Link href="/login" className="hidden md:flex bg-white/90 backdrop-blur-xl border border-black/5 text-[11px] font-black uppercase tracking-widest text-slate-500 hover:text-[#A8D5BA] hover:shadow-md transition-all px-8 py-4 rounded-2xl">
+                    className="flex items-center gap-2 sm:gap-3 md:gap-4 pointer-events-auto">
+                    <Link href="/login" className="hidden md:flex bg-white/90 backdrop-blur-xl border border-black/5 text-[9px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-widest text-slate-500 hover:text-[#A8D5BA] hover:shadow-md transition-all px-4 sm:px-6 md:px-8 py-2 sm:py-3 md:py-4 rounded-lg sm:rounded-xl md:rounded-2xl">
                         Log In
                     </Link>
-                    <Link href="/login" className="bg-[#1A1A2E] text-white text-[11px] font-black uppercase tracking-widest px-8 py-4 rounded-2xl shadow-2xl shadow-slate-900/20 hover:scale-105 active:scale-95 transition-all">
-                        Launch Deployment
+                    <Link href="/login" className="bg-[#1A1A2E] text-white text-[9px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-widest px-4 sm:px-6 md:px-8 py-2 sm:py-3 md:py-4 rounded-lg sm:rounded-xl md:rounded-2xl shadow-2xl shadow-slate-900/20 hover:scale-105 active:scale-95 transition-all">
+                        Launch
                     </Link>
                 </motion.div>
             </nav>
 
             {/* ─── HERO SECTION ─── */}
-            <section className="relative pt-48 pb-24 px-6 md:px-12 min-h-screen flex flex-col items-center justify-center overflow-hidden">
+            <section className="relative pt-20 sm:pt-32 md:pt-48 pb-12 sm:pb-16 md:pb-24 px-4 sm:px-6 md:px-12 min-h-screen flex flex-col items-center justify-center overflow-hidden">
                 <DecorativeHexGrid />
 
                 {/* Floating Soft Orbs */}
@@ -205,11 +204,11 @@ export default function LandingPage() {
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.6 }}
-                        className="inline-flex items-center gap-3 bg-white/80 backdrop-blur-md border border-[#A8D5BA]/30 px-6 py-2 rounded-full mb-12 shadow-sm"
+                        className="inline-flex items-center gap-2 sm:gap-3 bg-white/80 backdrop-blur-md border border-[#A8D5BA]/30 px-3 sm:px-6 py-1.5 sm:py-2 rounded-full mb-6 sm:mb-8 md:mb-12 shadow-sm"
                     >
-                        <div className="flex h-2.5 w-2.5 rounded-full bg-[#A8D5BA] shadow-[0_0_10px_#A8D5BA]" />
-                        <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#2E7D52]">
-                            {onlineCount.toLocaleString()} Tactical Units Online • Season 04 ACTIVE
+                        <div className="flex h-1.5 w-1.5 sm:h-2.5 sm:w-2.5 rounded-full bg-[#A8D5BA] shadow-[0_0_10px_#A8D5BA]" />
+                        <span className="text-[9px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-[0.2em] text-[#2E7D52]">
+                            {onlineCount.toLocaleString()} Online • S04 ACTIVE
                         </span>
                     </motion.div>
 
@@ -217,8 +216,7 @@ export default function LandingPage() {
                         initial={{ opacity: 0, y: 40 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8, delay: 0.1 }}
-                        className="font-['Syne'] font-extrabold text-[clamp(44px,10vw,120px)] leading-[0.9] tracking-tighter mb-12"
-                    >
+                        className="font-['Syne'] font-extrabold text-[clamp(32px,8vw,120px)] leading-[0.9] tracking-tighter mb-6 sm:mb-10 md:mb-12">
                         CLAIM YOUR <br />
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#A8D5BA] via-[#6CC89A] to-[#C3B1E1] filter drop-shadow-sm">STREETS.</span>
                     </motion.h1>
@@ -227,24 +225,24 @@ export default function LandingPage() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8, delay: 0.2 }}
-                        className="text-lg md:text-2xl text-slate-400 font-bold max-w-3xl mx-auto mb-14 leading-relaxed tracking-tight"
+                        className="text-sm sm:text-lg md:text-2xl text-slate-400 font-bold max-w-3xl mx-auto mb-8 sm:mb-10 md:mb-14 leading-relaxed tracking-tight px-4"
                     >
-                        Step into a global game of real-world territory control. Every kilometre expands your empire. Defend your turf or watch it fall.
+                        Step into global territory control. Every kilometre expands your empire.
                     </motion.p>
 
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8, delay: 0.3 }}
-                        className="flex flex-col sm:flex-row gap-6 justify-center items-center w-full"
+                        className="flex flex-col w-full sm:flex-row gap-4 sm:gap-6 justify-center items-center"
                     >
-                        <Link href="/login" className="w-full sm:w-auto px-12 py-6 bg-gradient-to-r from-[#A8D5BA] to-[#6CC89A] text-white rounded-[32px] shadow-[0_20px_40px_-10px_rgba(168,213,186,0.5)] font-black uppercase text-xs tracking-[0.2em] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-4 group">
-                            Start Your Run
-                            <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                        <Link href="/login" className="w-full sm:w-auto px-6 sm:px-12 py-4 sm:py-6 bg-gradient-to-r from-[#A8D5BA] to-[#6CC89A] text-white rounded-[24px] sm:rounded-[32px] shadow-[0_20px_40px_-10px_rgba(168,213,186,0.5)] font-black uppercase text-[10px] sm:text-xs tracking-[0.2em] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 sm:gap-4 group">
+                            Start Run
+                            <ArrowRight size={16} className="sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
                         </Link>
-                        <button className="w-full sm:w-auto px-12 py-6 bg-white border border-black/5 rounded-[32px] shadow-xl shadow-slate-900/5 text-[#1A1A2E] font-black uppercase text-xs tracking-[0.2em] hover:bg-white transition-all flex items-center justify-center gap-4 group">
-                            <Play size={20} fill="currentColor" className="text-[#A8D5BA] group-hover:scale-110 transition-transform" />
-                            Tactical Brief
+                        <button className="w-full sm:w-auto px-6 sm:px-12 py-4 sm:py-6 bg-white border border-black/5 rounded-[24px] sm:rounded-[32px] shadow-xl shadow-slate-900/5 text-[#1A1A2E] font-black uppercase text-[10px] sm:text-xs tracking-[0.2em] hover:bg-white transition-all flex items-center justify-center gap-2 sm:gap-4 group">
+                            <Play size={16} className="sm:w-5 sm:h-5 fill-[#A8D5BA] text-[#A8D5BA] group-hover:scale-110 transition-transform" />
+                            Brief
                         </button>
                     </motion.div>
                 </div>
@@ -254,11 +252,11 @@ export default function LandingPage() {
                     initial={{ opacity: 0, y: 40 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 1, duration: 0.6 }}
-                    className="mt-28 md:mt-32 w-full max-w-lg"
+                    className="mt-12 sm:mt-16 md:mt-28 lg:mt-32 w-full max-w-lg px-4 sm:px-0"
                 >
-                    <div className="bg-white/80 backdrop-blur-2xl px-8 py-5 rounded-[40px] border border-white shadow-2xl shadow-green-900/5 flex items-center gap-6 group hover:translate-y-[-4px] transition-transform">
-                        <div className="w-16 h-16 rounded-2xl bg-[#A8D5BA] flex items-center justify-center text-white shadow-[0_12px_24px_-8px_#A8D5BA] shrink-0">
-                            <Zap size={32} />
+                    <div className="bg-white/80 backdrop-blur-2xl px-4 sm:px-6 md:px-8 py-4 sm:py-5 rounded-[28px] sm:rounded-[40px] border border-white shadow-2xl shadow-green-900/5 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 group hover:translate-y-[-4px] transition-transform">
+                        <div className="w-12 sm:w-14 md:w-16 h-12 sm:h-14 md:h-16 rounded-lg sm:rounded-2xl bg-[#A8D5BA] flex items-center justify-center text-white shadow-[0_12px_24px_-8px_#A8D5BA] shrink-0">
+                            <Zap size={24} className="sm:w-7 sm:h-7 md:w-8 md:h-8" />
                         </div>
                         <div className="flex-1 min-w-0">
                             <AnimatePresence mode="wait">
@@ -269,16 +267,16 @@ export default function LandingPage() {
                                     exit={{ opacity: 0, x: -15 }}
                                     className="space-y-1"
                                 >
-                                    <p className="text-base font-black text-[#1A1A2E] truncate">
-                                        {activeActivity.invaderUsername} <span className="text-slate-300 font-bold uppercase text-[10px] tracking-widest pl-1">just took control of</span>
+                                    <p className="text-sm sm:text-base font-black text-[#1A1A2E] truncate">
+                                        {activeActivity.invaderUsername} <span className="text-slate-300 font-bold uppercase text-[8px] sm:text-[10px] tracking-widest pl-1">just took</span>
                                     </p>
-                                    <div className="flex items-center gap-3">
-                                        <div className="bg-[#F0F7F4] px-3 py-1 rounded-lg">
-                                            <span className="text-[11px] font-black uppercase tracking-widest text-[#2E7D52]">{activeActivity.hexCity || 'Unknown Sector'}</span>
+                                    <div className="flex items-center gap-2 sm:gap-3">
+                                        <div className="bg-[#F0F7F4] px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg">
+                                            <span className="text-[9px] sm:text-[11px] font-black uppercase tracking-widest text-[#2E7D52] truncate">{activeActivity.hexCity || 'Unknown'}</span>
                                         </div>
-                                        <div className="flex items-center gap-1.5">
-                                            <Radio size={12} className="text-[#A8D5BA] animate-pulse" />
-                                            <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Live SAT-LINK</span>
+                                        <div className="flex items-center gap-1 whitespace-nowrap">
+                                            <Radio size={10} className="sm:w-3 sm:h-3 text-[#A8D5BA] animate-pulse" />
+                                            <span className="text-[8px] sm:text-[10px] font-black text-slate-300 uppercase tracking-widest">Live</span>
                                         </div>
                                     </div>
                                 </motion.div>
@@ -291,24 +289,24 @@ export default function LandingPage() {
             <StatTicker stats={{ ...globalStats, onlineCount }} />
 
             {/* ─── FEATURES GRID ─── */}
-            <section className="py-40 px-6 md:px-12 bg-white relative">
+            <section className="py-16 sm:py-24 md:py-40 px-4 sm:px-6 md:px-12 bg-white relative">
                 <div className="max-w-7xl mx-auto">
-                    <div className="flex flex-col md:flex-row md:items-end justify-between mb-24 gap-12">
+                    <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 sm:mb-16 md:mb-24 gap-6 sm:gap-8 md:gap-12">
                         <div className="max-w-2xl">
-                            <div className="flex items-center gap-3 mb-6">
-                                <span className="text-[11px] font-black uppercase tracking-[0.3em] text-[#A8D5BA]">The Protocol</span>
-                                <div className="h-0.5 w-12 bg-[#A8D5BA]/30" />
+                            <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+                                <span className="text-[9px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-[0.3em] text-[#A8D5BA]">The Protocol</span>
+                                <div className="h-0.5 w-8 sm:w-12 bg-[#A8D5BA]/30" />
                             </div>
-                            <h2 className="font-['Syne'] font-extrabold text-5xl md:text-7xl lg:text-8xl tracking-tighter text-[#1A1A2E] leading-none">
+                            <h2 className="font-['Syne'] font-extrabold text-3xl sm:text-5xl md:text-7xl lg:text-8xl tracking-tighter text-[#1A1A2E] leading-none">
                                 RUNNING IS YOUR <br /> <span className="text-[#A8D5BA]">STRATEGY.</span>
                             </h2>
                         </div>
-                        <p className="max-w-md text-slate-400 font-bold text-xl leading-relaxed tracking-tight">
-                            We've turned your fitness into a tactical landscape. Every step validates your claim to the city.
+                        <p className="max-w-md text-slate-400 font-bold text-sm sm:text-lg md:text-xl leading-relaxed tracking-tight">
+                            Every step validates your claim to the city.
                         </p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
                         <FeatureCard
                             icon={MapIcon}
                             title="Global Hex Grid"
@@ -356,33 +354,33 @@ export default function LandingPage() {
             </section>
 
             {/* ─── CALL TO ACTION ─── */}
-            <section className="py-32 px-6 md:px-12 relative overflow-hidden">
+            <section className="py-16 sm:py-24 md:py-32 px-4 sm:px-6 md:px-12 relative overflow-hidden">
                 <div className="absolute inset-0 bg-white" />
                 <div className="max-w-7xl mx-auto relative z-10">
-                    <div className="bg-[#1A1A2E] rounded-[80px] p-16 md:p-32 text-center relative overflow-hidden shadow-2xl flex flex-col items-center">
+                    <div className="bg-[#1A1A2E] rounded-[48px] sm:rounded-[64px] md:rounded-[80px] p-8 sm:p-16 md:p-32 text-center relative overflow-hidden shadow-2xl flex flex-col items-center">
                         {/* Decorative background for CTA */}
                         <div className="absolute top-0 left-0 w-full h-full opacity-5 pointer-events-none">
-                            <Hexagon size={400} className="absolute -top-20 -right-20 rotate-12" />
-                            <Hexagon size={300} className="absolute -bottom-20 -left-20 -rotate-12" />
+                            <Hexagon size={300} className="sm:w-[400px] sm:h-[400px] md:w-[500px] md:h-[500px] absolute -top-20 -right-20 rotate-12" />
+                            <Hexagon size={200} className="sm:w-[300px] sm:h-[300px] absolute -bottom-20 -left-20 -rotate-12" />
                         </div>
 
                         <motion.div
                             whileInView={{ scale: [0.9, 1], opacity: [0, 1] }}
                             viewport={{ once: true }}
-                            className="w-24 h-24 rounded-[32px] bg-white/5 backdrop-blur-xl flex items-center justify-center text-[#A8D5BA] mb-12 border border-white/10 shadow-inner"
+                            className="w-16 sm:w-20 md:w-24 h-16 sm:h-20 md:h-24 rounded-[20px] sm:rounded-[28px] md:rounded-[32px] bg-white/5 backdrop-blur-xl flex items-center justify-center text-[#A8D5BA] mb-6 sm:mb-10 md:mb-12 border border-white/10 shadow-inner"
                         >
-                            <Sparkles size={48} strokeWidth={1.5} />
+                            <Sparkles size={32} className="sm:w-10 sm:h-10 md:w-12 md:h-12" strokeWidth={1.5} />
                         </motion.div>
 
-                        <h2 className="font-['Syne'] font-extrabold text-5xl md:text-8xl text-white tracking-tighter mb-10 max-w-4xl mx-auto leading-none italic">
+                        <h2 className="font-['Syne'] font-extrabold text-3xl sm:text-5xl md:text-8xl text-white tracking-tighter mb-6 sm:mb-8 md:mb-10 max-w-4xl mx-auto leading-none italic">
                             THE CITY AWAITS <br /> YOUR COMMAND.
                         </h2>
 
-                        <p className="text-white/40 font-bold text-xl mb-16 max-w-2xl mx-auto leading-relaxed">
-                            Join over {globalStats?.totalUsers?.toLocaleString() || '48,000'} runners who have already claimed their first hex. The grid resets for no one.
+                        <p className="text-white/40 font-bold text-sm sm:text-lg md:text-xl mb-8 sm:mb-12 md:mb-16 max-w-2xl mx-auto leading-relaxed">
+                            Join {globalStats?.totalUsers?.toLocaleString() || '48,000'} runners who have claimed their first hex.
                         </p>
 
-                        <Link href="/login" className="px-16 py-8 bg-[#A8D5BA] text-white rounded-[32px] font-black uppercase text-xs tracking-[0.3em] shadow-[0_25px_50px_-12px_rgba(168,213,186,0.5)] hover:bg-[#6CC89A] hover:scale-105 active:scale-95 transition-all">
+                        <Link href="/login" className="px-8 sm:px-12 md:px-16 py-4 sm:py-6 md:py-8 bg-[#A8D5BA] text-white rounded-[24px] sm:rounded-[32px] font-black uppercase text-[10px] sm:text-xs md:text-[11px] tracking-[0.3em] shadow-[0_25px_50px_-12px_rgba(168,213,186,0.5)] hover:bg-[#6CC89A] hover:scale-105 active:scale-95 transition-all">
                             Initialize Deployment
                         </Link>
                     </div>
