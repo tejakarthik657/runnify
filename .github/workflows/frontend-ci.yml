@@ -2,10 +2,10 @@ name: Frontend CI/CD (All Branches)
 on:
   pull_request:
     branches: [main, test, develop]
-    paths: ["frontend/**"]
+    paths: ["frontend/**", ".github/workflows/frontend-ci.yml"]
   push:
     branches: [main, test, develop]
-    paths: ["frontend/**"]
+    paths: ["frontend/**", ".github/workflows/frontend-ci.yml"]
 
 concurrency:
   group: frontend-${{ github.ref }}
