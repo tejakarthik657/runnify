@@ -1,100 +1,39 @@
-const express = require('express');
+// blockchain-service/routes.js
+const express  = require('express');
+const { runDailyAnchor, verifyUserProof } = require('./anchor.sync');
 const { requireAuth } = require('../middleware/auth');
-const { User, DailyProof } = require('../core/schema');
-const { writeDailyProof, fetchProofFromChain, initializeProofStore } = require('./anchor.sync');
-const { generateUserProof, verifyUserProof } = require('./verify');
+const router   = express.Router();
 
-const router = express.Router();
-
-async function requireAdmin(req, res, next) {
+// GET /blockchain/proof/:date
+// Returns the stored proof + etherscan link
+router.get('/proof/:date', async (req, res, next) => {
   try {
-    if (!req.userId) return res.status(401).json({ error: 'Unauthorized' });
-    const user = await User.findById(req.userId).select('isAdmin').lean();
-    if (!user?.isAdmin) return res.status(403).json({ error: 'Admin access required' });
-    return next();
-  } catch (error) {
-    return res.status(500).json({ error: 'Failed to validate admin access' });
-  }
-}
-
-router.get('/proof/:date', async (req, res) => {
-  try {
-    const { date } = req.params;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      return res.status(400).json({ error: 'Use YYYY-MM-DD format' });
-    }
-
-    const dbProof = await DailyProof.findOne({ date });
-    if (!dbProof) return res.status(404).json({ error: 'No proof for this date' });
-
-    const chainProof = await fetchProofFromChain(date).catch(() => null);
-
-    return res.json({
-      date,
-      status: dbProof.status,
-      merkleRoot: dbProof.merkleRoot,
-      txSignature: dbProof.txSignature,
-      blockHeight: dbProof.blockHeight,
-      network: dbProof.network,
-      anchoredAt: dbProof.anchoredAt,
-      totalUsers: dbProof.totalUsers,
-      totalHexes: dbProof.totalHexesClaimed,
-      explorerUrl: dbProof.txSignature
-        ? `https://explorer.solana.com/tx/${dbProof.txSignature}?cluster=${dbProof.network}`
-        : null,
-      onChain: chainProof,
-    });
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
+    const { DailyProof } = require('../config/models');
+    const proof = await DailyProof.findOne({ date: req.params.date });
+    if (!proof) return res.status(404).json({ error: 'No proof for this date' });
+    res.json(proof);
+  } catch (err) { next(err); }
 });
 
-router.get('/proofs', async (_req, res) => {
+// POST /blockchain/verify
+// Lets a user verify their own score is in the on-chain proof
+router.post('/verify', requireAuth, async (req, res, next) => {
   try {
-    const proofs = await DailyProof.find({ status: 'confirmed' })
-      .sort({ date: -1 })
-      .limit(30)
-      .select('date merkleRoot txSignature anchoredAt totalUsers network');
-
-    return res.json({ proofs });
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
+    const { date, creditsEarned, hexesClaimed } = req.body;
+    if (!date) return res.status(400).json({ error: 'date required (YYYY-MM-DD)' });
+    const result = await verifyUserProof(req.userId, date, creditsEarned, hexesClaimed);
+    res.json(result);
+  } catch (err) { next(err); }
 });
 
-router.get('/my-proof/:date', requireAuth, async (req, res) => {
+// POST /blockchain/anchor-now  (dev/admin only)
+// Manually trigger an anchor — useful for testing without waiting for cron
+router.post('/anchor-now', requireAuth, async (req, res, next) => {
   try {
-    const proofPackage = await generateUserProof(req.userId.toString(), req.params.date);
-    const verified = verifyUserProof(proofPackage);
-
-    return res.json({
-      ...proofPackage,
-      isVerified: verified,
-      message: verified
-        ? '✅ Your score is verified on-chain'
-        : '❌ Verification failed — proof may not be anchored yet',
-    });
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
-});
-
-router.post('/trigger', requireAuth, requireAdmin, async (req, res) => {
-  const dateStr = req.body?.date || new Date().toISOString().split('T')[0];
-  res.json({ message: 'Proof generation started', date: dateStr });
-
-  writeDailyProof(dateStr).catch((error) => {
-    console.error('[Blockchain Trigger] Failed:', error.message);
-  });
-});
-
-router.post('/initialize', requireAuth, requireAdmin, async (_req, res) => {
-  try {
-    const pda = await initializeProofStore();
-    return res.json({ message: 'ProofStore initialized', pda });
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
+    const { date } = req.body;
+    const proof = await runDailyAnchor(date);
+    res.json({ message: 'Anchor complete', proof });
+  } catch (err) { next(err); }
 });
 
 module.exports = router;

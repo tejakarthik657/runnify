@@ -29,7 +29,7 @@ const PEAK_MULTIPLIER = 1.5;
 const DECAY_RATE = 0.98;   // per 24h of inactivity
 const MAX_RUN_DURATION_H = 4;
 const MAX_GPS_POINTS = 500;
-const MAX_RUNS_PER_DAY = 3;
+const MAX_RUNS_PER_DAY = 50;
 const GPS_ACCURACY_LIMIT = 50;     // metres
 const MAX_SPEED_KMH = 45;     // anti-cheat: flag runs with GPS > this
 
@@ -323,10 +323,18 @@ const RunService = {
     } else {
       // Check for recent active run (not stale)
       const active = await Run.findOne({ userId, isActive: true });
-      if (active) throw new Error('A run is already in progress');
+      if (active) {
+        const err = new Error('A run is already in progress');
+        err.status = 403;
+        throw err;
+      }
     }
 
-    if (count >= MAX_RUNS_PER_DAY) throw new Error(`Daily run limit of ${MAX_RUNS_PER_DAY} reached`);
+    if (count >= MAX_RUNS_PER_DAY) {
+      const err = new Error(`Daily run limit of ${MAX_RUNS_PER_DAY} reached`);
+      err.status = 403;
+      throw err;
+    }
     return true;
   },
 
@@ -334,11 +342,18 @@ const RunService = {
   async startRun(userId, { lat, lng, city }) {
     // Validate GPS coordinates
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-      throw new Error('Valid GPS coordinates required to start a run');
+      const err = new Error('Valid GPS coordinates required to start a run');
+      err.status = 400;
+      throw err;
     }
 
     await RunService.canStartRun(userId);
     const user = await User.findById(userId).select('username color');
+    if (!user) {
+      const err = new Error('Commander profile not found');
+      err.status = 404;
+      throw err;
+    }
     const run = await Run.create({
       userId,
       username: user.username,

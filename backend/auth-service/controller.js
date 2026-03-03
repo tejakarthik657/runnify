@@ -157,7 +157,7 @@ async function login(req, res, next) {
 
 async function me(req, res, next) {
 	try {
-		const user = await User.findById(req.user.userId);
+		const user = await User.findById(req.userId);
 		if (!user) return res.status(404).json({ error: 'User not found' });
 		res.json({ user: user.publicProfile });
 	} catch (error) {

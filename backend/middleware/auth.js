@@ -30,7 +30,7 @@ function authenticateJWT(req, res, next) {
     next();
   } catch (error) {
     logger.warn('JWT verification failed:', error.message);
-    return res.status(403).json({ error: 'Invalid or expired token' });
+    return res.status(401).json({ error: 'Invalid or expired token' });
   }
 }
 

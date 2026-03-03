@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { MapContainer, TileLayer, useMap, ZoomControl } from 'react-leaflet';
+import { MapContainer, TileLayer, useMap, ZoomControl, Polyline, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// 4. Component Library: Pastel Marker Styling
+// Default Icon Fix for Leaflet
 const DefaultIcon = L.divIcon({
     className: 'pastel-marker',
     html: `<div style="width: 14px; height: 14px; background: #A8D5BA; border: 3px solid white; border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"></div>`,
@@ -18,21 +18,47 @@ interface LeafletMapProps {
     center: [number, number];
     zoom: number;
     children?: React.ReactNode;
+    onMapReady?: (map: L.Map) => void;
+    followUser?: boolean;
+    onManualMove?: () => void;
 }
 
 // 6.0 Motion Rule: Smooth view transitions
-function ChangeView({ center, zoom }: { center: [number, number], zoom: number }) {
+function ChangeView({ center, zoom, enabled }: { center: [number, number], zoom: number, enabled: boolean }) {
     const map = useMap();
     useEffect(() => {
+        if (!enabled) return;
         map.flyTo(center, zoom, {
-            duration: 1.5,
+            duration: 0.5,
             easeLinearity: 0.25
         });
-    }, [center, zoom, map]);
+    }, [center, zoom, map, enabled]);
     return null;
 }
 
-export default function LeafletMap({ center, zoom, children }: LeafletMapProps) {
+import { useMapEvents } from 'react-leaflet';
+
+function MapEventsHandler({ onManualMove }: { onManualMove?: () => void }) {
+    useMapEvents({
+        dragstart: () => {
+            if (onManualMove) onManualMove();
+        },
+        zoomstart: () => {
+            if (onManualMove) onManualMove();
+        }
+    });
+    return null;
+}
+
+function MapInstanceHandler({ onReady }: { onReady?: (map: L.Map) => void }) {
+    const map = useMap();
+    useEffect(() => {
+        if (onReady) onReady(map);
+    }, [map, onReady]);
+    return null;
+}
+
+export default function LeafletMap({ center, zoom, children, onMapReady, followUser, onManualMove }: LeafletMapProps) {
     return (
         <div className="h-full w-full bg-[#F4F7F4] relative group">
             {/* Soft Grid Overlay Layer */}
@@ -56,7 +82,9 @@ export default function LeafletMap({ center, zoom, children }: LeafletMapProps) 
                         maxNativeZoom={18}
                     />
 
-                    <ChangeView center={center} zoom={zoom} />
+                    <ChangeView center={center} zoom={zoom} enabled={!!followUser} />
+                    <MapInstanceHandler onReady={onMapReady} />
+                    <MapEventsHandler onManualMove={onManualMove} />
 
                     {/* Friendly Zoom Control Styling */}
                     <ZoomControl position="bottomright" />
@@ -98,6 +126,15 @@ export default function LeafletMap({ center, zoom, children }: LeafletMapProps) 
                 }
                 .leaflet-control-attribution {
                     display: none !important;
+                }
+                @keyframes pulse-gps {
+                    0% { transform: scale(1); opacity: 1; }
+                    100% { transform: scale(2.5); opacity: 0; }
+                }
+                @keyframes pulse-gps-other {
+                    0% { transform: scale(1); opacity: 0.8; }
+                    50% { transform: scale(1.8); opacity: 0.4; }
+                    100% { transform: scale(1); opacity: 0.8; }
                 }
             `}</style>
         </div>

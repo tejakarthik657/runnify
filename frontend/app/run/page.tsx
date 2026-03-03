@@ -16,16 +16,17 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import useSWR from 'swr';
+import { useCallback } from 'react';
+import { toast } from 'react-hot-toast';
 import api from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
-import { useGps } from '../../hooks/useGps';
 import Badge from '../../components/ui/Badge';
-import { toast } from 'react-hot-toast';
+import { useGps } from '../../hooks/useGps';
 
 const fetcher = (url: string) => api.get(url).then(res => res.data);
 
 export default function RunPage() {
-    const { user } = useAuthStore();
+    const { user, accessToken } = useAuthStore();
     const [isRunning, setIsRunning] = useState(false);
     const [runId, setRunId] = useState<string | null>(null);
     const [isStarting, setIsStarting] = useState(false);
@@ -33,7 +34,60 @@ export default function RunPage() {
     const [stats, setStats] = useState({ distance: 0, time: 0, hexCount: 0, credits: 0, speed: 0 });
     const statsInterval = useRef<any>(null);
 
-    const { position, error: gpsError } = useGps(true);
+    // Track state locally for the UI
+    const [position, setPosition] = useState<any>(null);
+    const [gpsError, setGpsError] = useState<string | null>(null);
+
+    // useGPS handles real-time GPS tracking with production-ready filtering
+    const { start: startGps, stop: stopGps, active: gpsActive } = useGps({
+        enabled: true,
+        onUpdate: (state: any) => {
+            if (state.error) {
+                setGpsError(state.error);
+                toast.error(state.error);
+                return;
+            }
+            setGpsError(null);
+            // GPS point received
+            if (state.lat && state.lng) {
+                const point = { lat: state.lat, lng: state.lng, accuracy: state.accuracy || 8 };
+                setPosition(point);
+                handleGpsPoint(point);
+            }
+        }
+    });
+
+    const handleGpsPoint = useCallback((point: { lat: number; lng: number; accuracy?: number; altitude?: number }) => {
+        if (!isRunning || !runId) return;
+
+        api.post(`/run/${runId}/gps`, {
+            points: [
+                {
+                    lat: point.lat,
+                    lng: point.lng,
+                    accuracy: point.accuracy || 10,
+                    timestamp: Date.now()
+                }
+            ]
+        }).catch(err => {
+            const errorMsg = err.response?.data?.error || err.message;
+            console.error('[GPS Upload Failed]', { message: errorMsg, status: err.response?.status });
+        });
+    }, [isRunning, runId]);
+
+    const startTimer = useCallback(() => {
+        if (statsInterval.current) return;
+        statsInterval.current = setInterval(() => {
+            setStats(prev => ({ ...prev, time: prev.time + 1 }));
+        }, 1000);
+    }, []);
+
+    const stopTimer = useCallback(() => {
+        if (statsInterval.current) {
+            clearInterval(statsInterval.current);
+            statsInterval.current = null;
+        }
+    }, []);
 
     useEffect(() => {
         const checkActiveRun = async () => {
@@ -58,57 +112,53 @@ export default function RunPage() {
         };
         checkActiveRun();
         return () => stopTimer();
-    }, []);
-
-    const startTimer = () => {
-        if (statsInterval.current) return;
-        statsInterval.current = setInterval(() => {
-            setStats(prev => ({ ...prev, time: prev.time + 1 }));
-        }, 1000);
-    };
-
-    const stopTimer = () => {
-        if (statsInterval.current) {
-            clearInterval(statsInterval.current);
-            statsInterval.current = null;
-        }
-    };
+    }, [startTimer, stopTimer]);
 
     const startRun = async () => {
-        if (!position) {
-            toast.error('Waiting for GPS signal...');
-            return;
-        }
         setIsStarting(true);
         try {
+            if (!position || position.lat === null || position.lng === null) {
+                toast.error('Waiting for GPS location...');
+                setIsStarting(false);
+                return;
+            }
+
             const { data } = await api.post('/run/start', {
-                startPos: { lat: position.lat, lng: position.lng }
+                startPos: {
+                    lat: position.lat,
+                    lng: position.lng
+                }
             });
             setRunId(data.run._id);
             setIsRunning(true);
+            startGps();
             startTimer();
             toast.success('Campaign Initiated');
-        } catch (error) {
-            toast.error('Initialization failed');
+        } catch (error: any) {
+            const errorMsg = error.response?.data?.error || 'Initialization failed';
+            toast.error(errorMsg);
         } finally {
             setIsStarting(false);
         }
     };
 
     const endRun = async () => {
-        if (!runId || !position) return;
+        if (!runId) return;
         setIsEnding(true);
         try {
             await api.post(`/run/${runId}/end`, {
-                endPos: { lat: position.lat, lng: position.lng }
+                lat: position?.lat || 0,
+                lng: position?.lng || 0
             });
             setIsRunning(false);
             setRunId(null);
+            stopGps(); // Stop GPS
             stopTimer();
             setStats({ distance: 0, time: 0, hexCount: 0, credits: 0, speed: 0 });
             toast.success('Mission Accomplished');
-        } catch (error) {
-            toast.error('Sync error. Retrying...');
+        } catch (error: any) {
+            const errorMsg = error.response?.data?.error || 'Sync error. Retrying...';
+            toast.error(errorMsg);
         } finally {
             setIsEnding(false);
         }
@@ -264,6 +314,8 @@ export default function RunPage() {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+
         </div>
     );
 }

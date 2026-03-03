@@ -20,20 +20,78 @@ async function searchUsers(req, res, next) {
     const q = String(req.query.q || '').trim();
     if (!q) return res.status(400).json({ error: 'Query parameter q is required' });
 
-    const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    let query;
+    if (q.startsWith('#')) {
+      // Color search
+      query = { color: q.toUpperCase(), isBanned: false };
+    } else {
+      // Username/hashcode search
+      const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      query = {
+        isBanned: false,
+        $or: [
+          { username: regex },
+          { hashcode: regex },
+        ],
+      };
+    }
 
-    const users = await User.find({
-      isBanned: false,
-      $or: [
-        { username: regex },
-        { hashcode: regex },
-      ],
-    })
-      .select('_id username color hashcode city credits totalHexes')
-      .limit(20)
-      .lean();
+    const { redis } = require('../config/redis');
+    const [users, onlineRaw] = await Promise.all([
+      User.find(query)
+        .select('_id username color hashcode city credits totalHexes homeLocation')
+        .limit(20)
+        .lean(),
+      redis.smembers('online_users'),
+    ]);
 
-    return res.json({ count: users.length, users });
+    // Parse online users and fetch live positions
+    const onlineUserIds = new Set();
+    onlineRaw.forEach(record => {
+      try {
+        const parsed = JSON.parse(record);
+        if (parsed?.userId) onlineUserIds.add(parsed.userId.toString());
+      } catch (e) { }
+    });
+
+    // Fetch live positions and running flags for all found users
+    const liveFetchPromises = users.map(async (user) => {
+      const uid = user._id.toString();
+      const [livePos, isRunning] = await Promise.all([
+        redis.get(`user:live:pos:${uid}`),
+        redis.get(`user:running:${uid}`)
+      ]);
+      return {
+        id: uid,
+        livePos: livePos ? JSON.parse(livePos) : null,
+        isRunning: !!isRunning
+      };
+    });
+    const liveDataResults = await Promise.all(liveFetchPromises);
+    const liveDataMap = new Map(liveDataResults.map(ld => [ld.id, ld]));
+
+    const enrichedUsers = users.map(user => {
+      const liveInfo = liveDataMap.get(user._id.toString());
+      const isRunning = liveInfo?.isRunning || onlineUserIds.has(user._id.toString());
+
+      // Prioritize LIVE position if they are running, otherwise use Home Location
+      const lat = liveInfo?.livePos?.lat ?? user.homeLocation?.lat ?? null;
+      const lng = liveInfo?.livePos?.lng ?? user.homeLocation?.lng ?? null;
+
+      return {
+        id: user._id,
+        username: user.username,
+        color: user.color,
+        hashcode: user.hashcode,
+        city: user.city,
+        credits: user.credits,
+        totalHexes: user.totalHexes,
+        isRunningNow: isRunning,
+        lastPosition: lat !== null ? { lat, lng } : null
+      };
+    });
+
+    return res.json({ count: enrichedUsers.length, users: enrichedUsers });
   } catch (err) {
     next(err);
   }
@@ -265,9 +323,9 @@ async function uploadProfileImage(req, res, next) {
     try {
       imageUrl = await uploadToSupabaseStorage(file.buffer, file.mimetype, 'profiles');
     } catch (uploadError) {
-      return res.status(500).json({ 
+      return res.status(500).json({
         error: 'Failed to upload profile image',
-        details: uploadError.message 
+        details: uploadError.message
       });
     }
 
@@ -277,9 +335,9 @@ async function uploadProfileImage(req, res, next) {
       { $set: { avatarUrl: imageUrl } }
     );
 
-    res.json({ 
+    res.json({
       message: 'Profile image uploaded successfully',
-      avatarUrl: imageUrl 
+      avatarUrl: imageUrl
     });
   } catch (err) {
     next(err);

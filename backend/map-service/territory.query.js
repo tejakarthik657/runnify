@@ -2,7 +2,7 @@ const { Territory, User } = require('../core/schema');
 const { hexCenter, hexesInBoundingBox, gpsToHex } = require('../run-service/h3.service');
 const { applyDecay } = require('../run-service/credit.engine');
 
-const MAX_BBOX_HEXES = 2000;
+const MAX_BBOX_HEXES = 5000;
 
 async function getTerritoriesByBbox({ minLat, minLng, maxLat, maxLng }) {
 	const hexIds = hexesInBoundingBox(minLat, minLng, maxLat, maxLng);

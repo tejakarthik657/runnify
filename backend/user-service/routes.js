@@ -88,7 +88,7 @@ router.get('/me/achievements', authenticateJWT, async (req, res, next) => {
 		const allDefs = await AchievementDef.find({}).lean();
 
 		// Get achievements earned by the current user
-		const earned = await UserAchievement.find({ userId: req.user.userId })
+		const earned = await UserAchievement.find({ userId: req.userId })
 			.select('achievementSlug earnedAt').lean();
 		const earnedMap = new Map(earned.map(e => [e.achievementSlug, e.earnedAt]));
 

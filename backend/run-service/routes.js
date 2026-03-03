@@ -13,18 +13,26 @@ router.post('/start', authenticateJWT, async (req, res, next) => {
 		const bodyLng = Number(req.body?.lng);
 		const posLat = Number(req.body?.startPos?.lat);
 		const posLng = Number(req.body?.startPos?.lng);
-		const lat = Number.isFinite(bodyLat) ? bodyLat : (Number.isFinite(posLat) ? posLat : null);
-		const lng = Number.isFinite(bodyLng) ? bodyLng : (Number.isFinite(posLng) ? posLng : null);
-		const city = req.body?.city || null;
+
+		let lat = Number.isFinite(bodyLat) ? bodyLat : (Number.isFinite(posLat) ? posLat : null);
+		let lng = Number.isFinite(bodyLng) ? bodyLng : (Number.isFinite(posLng) ? posLng : null);
+		const city = req.body?.city || process.env.NEXT_PUBLIC_DEV_CITY || 'Hyderabad';
+
+		// Fallback for DEV_MODE testing
+		if ((!lat || !lng) && req.body?.devMode === true) {
+			console.log('[DEV] No coordinates provided, using Hyderabad fallback');
+			lat = 17.38505;
+			lng = 78.48667;
+		}
 
 		if (Number.isFinite(lat) && Number.isFinite(lng)) {
-			const user = await User.findById(req.user.userId).select('homeLocation').lean();
+			const user = await User.findById(req.userId).select('homeLocation').lean();
 			const lastUpdate = user?.homeLocation?.updatedAt ? new Date(user.homeLocation.updatedAt) : null;
 			const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
 			if (!lastUpdate || lastUpdate < sevenDaysAgo) {
 				await User.updateOne(
-					{ _id: req.user.userId },
+					{ _id: req.userId },
 					{
 						$set: {
 							'homeLocation.lat': lat,
@@ -36,8 +44,9 @@ router.post('/start', authenticateJWT, async (req, res, next) => {
 			}
 		}
 
-		const run = await RunService.startRun(req.user.userId, { lat, lng, city });
-		res.status(201).json({ run });
+		const run = await RunService.startRun(req.userId, { lat, lng, city });
+		const user = await User.findById(req.userId).select('username color').lean();
+		res.status(201).json({ run, user: { username: user?.username, color: user?.color } });
 	} catch (error) {
 		next(error);
 	}
@@ -45,7 +54,7 @@ router.post('/start', authenticateJWT, async (req, res, next) => {
 
 router.post('/:runId/gps', authenticateJWT, gpsRateLimit, async (req, res, next) => {
 	try {
-		const result = await RunService.ingestGpsPoints(req.params.runId, req.user.userId, req.body.points || []);
+		const result = await RunService.ingestGpsPoints(req.params.runId, req.userId, req.body.points || []);
 		res.json(result);
 	} catch (error) {
 		next(error);
@@ -62,7 +71,7 @@ router.post('/:runId/end', authenticateJWT, async (req, res, next) => {
 			isMockLocation: req.body.isMockLocation === true,
 			clientVersion: req.body.clientVersion || null,
 		};
-		const result = await RunService.endRun(req.params.runId, req.user.userId, { lat, lng }, requestIp, clientMeta);
+		const result = await RunService.endRun(req.params.runId, req.userId, { lat, lng }, requestIp, clientMeta);
 		const { territoryChanges } = result;
 
 		// ── Broadcast territory changes via Socket.IO ─────────────
@@ -88,7 +97,7 @@ router.post('/end', authenticateJWT, async (req, res, next) => {
 			isMockLocation: req.body.isMockLocation === true,
 			clientVersion: req.body.clientVersion || null,
 		};
-		const result = await RunService.endRun(runId, req.user.userId, { lat, lng }, requestIp, clientMeta);
+		const result = await RunService.endRun(runId, req.userId, { lat, lng }, requestIp, clientMeta);
 		const { territoryChanges } = result;
 
 		// ── Broadcast territory changes via Socket.IO ─────────────
@@ -105,7 +114,7 @@ router.post('/end', authenticateJWT, async (req, res, next) => {
 
 router.get('/active', authenticateJWT, async (req, res, next) => {
 	try {
-		const activeRun = await Run.findOne({ userId: req.user.userId, isActive: true });
+		const activeRun = await Run.findOne({ userId: req.userId, isActive: true });
 		res.json({ activeRun });
 	} catch (error) {
 		next(error);
@@ -114,7 +123,7 @@ router.get('/active', authenticateJWT, async (req, res, next) => {
 
 router.get('/history/me', authenticateJWT, async (req, res, next) => {
 	try {
-		const runs = await Run.find({ userId: req.user.userId, isActive: false })
+		const runs = await Run.find({ userId: req.userId, isActive: false })
 			.sort({ endedAt: -1 })
 			.limit(20);
 		res.json({ runs });
@@ -125,7 +134,7 @@ router.get('/history/me', authenticateJWT, async (req, res, next) => {
 
 router.get('/:id', authenticateJWT, async (req, res, next) => {
 	try {
-		const run = await Run.findOne({ _id: req.params.id, userId: req.user.userId });
+		const run = await Run.findOne({ _id: req.params.id, userId: req.userId });
 		if (!run) return res.status(404).json({ error: 'Run not found' });
 		res.json({ run });
 	} catch (error) {

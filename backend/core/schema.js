@@ -726,10 +726,13 @@ const DailyProofSchema = new Schema({
   merkleRoot: { type: String, required: true },
   leafCount: { type: Number },
 
-  // Blockchain anchoring
-  txSignature: { type: String, default: null },  // Solana tx signature
-  blockHeight: { type: Number, default: null },
-  network: { type: String, enum: ['devnet', 'mainnet-beta'], default: 'devnet' },
+  // Blockchain anchoring - Ethereum Sepolia
+  txHash: { type: String, default: null },  // Ethereum tx hash
+  txStatus: { type: String, default: null }, // confirmed | failed
+  explorerUrl: { type: String, default: null }, // etherscan link
+  network: { type: String, enum: ['sepolia', 'mainnet'], default: 'sepolia' },
+  userCount: { type: Number, default: 0 },
+  totalHexes: { type: Number, default: 0 },
   anchoredAt: { type: Date, default: null },
   anchorAttempts: { type: Number, default: 0 },
   anchorError: { type: String, default: null },
