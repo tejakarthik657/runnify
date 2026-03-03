@@ -40,40 +40,40 @@ export default function CreditsPage() {
 
     return (
         <div className="min-h-screen pb-20 font-['Nunito'] bg-[#F4F7F4]">
-            <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-8">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 space-y-6 md:space-y-8">
 
                 {/* Header */}
-                <div className="flex items-center justify-between mb-12">
-                    <div className="flex items-center gap-6">
-                        <Link href="/dashboard" className="p-4 bg-white rounded-2xl border border-black/5 shadow-sm hover:shadow-md transition-all active:scale-95">
-                            <ArrowLeft size={24} className="text-[#1a1a2e]" />
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 mb-8 md:mb-12">
+                    <div className="flex items-center gap-3 sm:gap-4 md:gap-6">
+                        <Link href="/dashboard" className="p-2 sm:p-4 bg-white rounded-2xl border border-black/5 shadow-sm hover:shadow-md transition-all active:scale-95">
+                            <ArrowLeft size={20} className="sm:w-6 sm:h-6 text-[#1a1a2e]" />
                         </Link>
                         <div>
-                            <h1 className="text-3xl font-black text-[#1a1a2e]">Treasury & Assets</h1>
-                            <div className="flex items-center gap-2 mt-1">
+                            <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-[#1a1a2e]">Treasury & Assets</h1>
+                            <div className="flex items-center gap-1 sm:gap-2 mt-1">
                                 <Badge variant="lavender">Vault Secured</Badge>
-                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">TRC Mainnet v2.1</span>
+                                <span className="text-[8px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest">TRC Mainnet v2.1</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 {/* Main HUD: Balance & Chart */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-8">
                     {/* Balanced HUD */}
-                    <div className="lg:col-span-5 bg-white rounded-[40px] border border-black/5 p-10 shadow-sm relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-[#C3B1E1] opacity-[0.03] rounded-full -mr-20 -mt-20 blur-3xl" />
+                    <div className="lg:col-span-5 bg-white rounded-[32px] sm:rounded-[40px] border border-black/5 p-6 sm:p-8 lg:p-10 shadow-sm relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-48 sm:w-64 h-48 sm:h-64 bg-[#C3B1E1] opacity-[0.03] rounded-full -mr-20 -mt-20 blur-3xl" />
 
                         <div className="relative z-10 flex flex-col h-full justify-between">
                             <div>
-                                <div className="flex items-center gap-3 mb-8">
-                                    <div className="w-12 h-12 bg-[#F8F5FE] rounded-2xl flex items-center justify-center text-[#C3B1E1] shadow-inner">
-                                        <Wallet size={24} />
+                                <div className="flex items-center gap-2 sm:gap-3 mb-6 sm:mb-8">
+                                    <div className="w-10 sm:w-12 h-10 sm:h-12 bg-[#F8F5FE] rounded-2xl flex items-center justify-center text-[#C3B1E1] shadow-inner">
+                                        <Wallet size={20} className="sm:w-6 sm:h-6" />
                                     </div>
-                                    <span className="text-xs font-black text-[#1a1a2e] uppercase tracking-widest">Available TRC</span>
+                                    <span className="text-[8px] sm:text-xs font-black text-[#1a1a2e] uppercase tracking-widest">Available TRC</span>
                                 </div>
                                 <div className="space-y-1">
-                                    <h2 className="text-7xl font-black text-[#1a1a2e] tracking-tight">
+                                    <h2 className="text-5xl sm:text-6xl md:text-7xl font-black text-[#1a1a2e] tracking-tight">
                                         {user?.credits?.toLocaleString() || 0}
                                     </h2>
                                     <div className="flex items-center gap-2">

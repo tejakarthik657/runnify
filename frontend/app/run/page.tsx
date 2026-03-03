@@ -173,32 +173,32 @@ export default function RunPage() {
     };
 
     return (
-        <div className="min-h-[calc(100vh-70px)] bg-[#F4F7F4] p-6 lg:p-12 font-['Nunito'] pb-32">
+        <div className="min-h-[calc(100vh-70px)] bg-[#F4F7F4] px-4 sm:px-6 lg:px-12 py-6 lg:py-12 font-['Nunito'] pb-32">
             {/* Header */}
-            <header className="flex items-center justify-between mb-12">
-                <Link href="/dashboard" className="p-4 bg-white rounded-2xl border border-black/5 shadow-sm hover:shadow-md transition-all active:scale-95">
-                    <ChevronLeft size={24} className="text-[#1a1a2e]" />
+            <header className="flex items-center justify-between mb-8 sm:mb-12">
+                <Link href="/dashboard" className="p-2 sm:p-4 bg-white rounded-2xl border border-black/5 shadow-sm hover:shadow-md transition-all active:scale-95">
+                    <ChevronLeft size={20} className="sm:w-6 sm:h-6 text-[#1a1a2e]" />
                 </Link>
                 <div className="text-right">
-                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Operation Sector</div>
-                    <div className="text-lg font-black text-[#1a1a2e]">Central_Sortie_Alpha</div>
+                    <div className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest">Operation Sector</div>
+                    <div className="text-sm sm:text-lg font-black text-[#1a1a2e]">Central_Sortie_Alpha</div>
                 </div>
             </header>
 
-            <div className="max-w-xl mx-auto space-y-8">
+            <div className="max-w-2xl mx-auto space-y-6 sm:space-y-8">
                 {/* Dynamic Timer Display */}
                 <motion.div
                     layout
-                    className="bg-[#F0F7F4] rounded-[48px] p-12 text-center border-2 border-[#A8D5BA]/20 shadow-inner overflow-hidden relative"
+                    className="bg-[#F0F7F4] rounded-[28px] sm:rounded-[48px] p-6 sm:p-10 md:p-12 text-center border-2 border-[#A8D5BA]/20 shadow-inner overflow-hidden relative"
                 >
                     <div className="relative z-10">
-                        <Badge variant="sage" pulse className="mb-4">
+                        <Badge variant="sage" pulse className="mb-3 sm:mb-4">
                             {isRunning ? 'Mission in Progress' : 'Standby for Launch'}
                         </Badge>
-                        <h2 className="text-7xl font-black tracking-tighter text-[#1a1a2e] mb-2 font-mono tabular-nums">
+                        <h2 className="text-5xl sm:text-6xl md:text-7xl font-black tracking-tighter text-[#1a1a2e] mb-2 font-mono tabular-nums">
                             {formatTime(stats.time)}
                         </h2>
-                        <div className="text-sm font-bold text-[#2E7D52] uppercase tracking-[0.2em]">Elapsed Time</div>
+                        <div className="text-xs sm:text-sm font-bold text-[#2E7D52] uppercase tracking-[0.2em]">Elapsed Time</div>
                     </div>
                     {/* Background decoration */}
                     <div className="absolute top-[-20%] left-[-10%] w-64 h-64 bg-[#A8D5BA] opacity-10 rounded-full blur-3xl animate-pulse" />

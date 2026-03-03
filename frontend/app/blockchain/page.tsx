@@ -32,44 +32,44 @@ export default function BlockchainPage() {
 
     return (
         <div className="min-h-screen pb-20 font-['Nunito'] bg-[#F4F7F4]">
-            <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-8">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 space-y-6 md:space-y-8">
 
                 {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 bg-white p-8 rounded-[40px] border border-black/5 shadow-sm">
-                    <div className="flex items-center gap-6">
-                        <Link href="/dashboard" className="p-4 bg-[#F4F7F4] rounded-2xl border border-black/5 hover:shadow-md transition-all active:scale-95">
-                            <ArrowLeft size={24} className="text-[#1a1a2e]" />
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 mb-8 md:mb-12 bg-white p-6 sm:p-8 rounded-[32px] sm:rounded-[40px] border border-black/5 shadow-sm">
+                    <div className="flex items-center gap-3 sm:gap-4 md:gap-6">
+                        <Link href="/dashboard" className="p-2 sm:p-4 bg-[#F4F7F4] rounded-2xl border border-black/5 hover:shadow-md transition-all active:scale-95">
+                            <ArrowLeft size={20} className="sm:w-6 sm:h-6 text-[#1a1a2e]" />
                         </Link>
                         <div>
-                            <h1 className="text-3xl font-black text-[#1a1a2e]">Proof of Run</h1>
-                            <div className="flex items-center gap-2 mt-1">
+                            <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-[#1a1a2e]">Proof of Run</h1>
+                            <div className="flex items-center gap-1 sm:gap-2 mt-1">
                                 <Badge variant="lavender">Immutable Ledger</Badge>
-                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Protocol Integrity V.4</span>
+                                <span className="text-[8px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest">Protocol Integrity V.4</span>
                             </div>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4 bg-[#F8F5FE] px-5 py-3 rounded-2xl border border-[#C3B1E1]/20 shadow-inner">
-                        <div className="w-2 h-2 rounded-full bg-[#A594D3] animate-pulse" />
-                        <span className="text-[10px] font-black text-[#A594D3] uppercase tracking-widest leading-none">Net: Solana Mainnet Node</span>
+                    <div className="flex items-center gap-2 sm:gap-3 bg-[#F8F5FE] px-3 sm:px-5 py-2 sm:py-3 rounded-2xl border border-[#C3B1E1]/20 shadow-inner">
+                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#A594D3] animate-pulse" />
+                        <span className="text-[8px] sm:text-[10px] font-black text-[#A594D3] uppercase tracking-widest leading-none">Net: Solana Mainnet Node</span>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-8">
 
                     {/* LEFT COLUMN: Immutable Proofs */}
                     <div className="lg:col-span-8 space-y-8">
 
                         {/* Protocol Integrity Hero */}
-                        <div className="relative bg-gradient-to-br from-[#A594D3] to-[#C3B1E1] rounded-[48px] p-10 overflow-hidden shadow-lg group">
-                            <div className="absolute top-0 right-0 opacity-10 -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
-                                <ShieldCheck size={320} />
+                        <div className="relative bg-gradient-to-br from-[#A594D3] to-[#C3B1E1] rounded-[32px] sm:rounded-[48px] p-6 sm:p-8 md:p-10 overflow-hidden shadow-lg group">
+                            <div className="absolute top-0 right-0 opacity-10 -mr-12 sm:-mr-16 -mt-12 sm:-mt-16 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
+                                <ShieldCheck size={240} className="sm:w-80 sm:h-80" />
                             </div>
 
-                            <div className="relative z-10 space-y-8">
+                            <div className="relative z-10 space-y-6 sm:space-y-8">
                                 <div className="max-w-xl">
-                                    <h2 className="text-3xl font-black text-white mb-4 tracking-tight">Trust but verify.</h2>
-                                    <p className="text-white/80 text-lg font-bold leading-relaxed">
+                                    <h2 className="text-2xl sm:text-3xl font-black text-white mb-3 sm:mb-4 tracking-tight">Trust but verify.</h2>
+                                    <p className="text-white/80 text-sm sm:text-lg font-bold leading-relaxed">
                                         We anchor a cryptographic hash of every finalized run to the blockchain, ensuring all rankings and rewards are
                                         <span className="text-white bg-white/10 px-2 py-0.5 rounded-lg mx-1">transparent and tamper-proof.</span>
                                     </p>

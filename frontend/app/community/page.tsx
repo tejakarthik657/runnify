@@ -43,22 +43,22 @@ export default function CommunityPage() {
         <div className="flex flex-col h-[calc(100vh-70px)] md:h-screen overflow-hidden bg-[#F4F7F4] font-['Nunito']">
 
             {/* Header */}
-            <div className="p-4 md:px-8 border-b border-black/5 bg-white/80 backdrop-blur-md flex items-center justify-between z-20">
-                <div className="flex items-center gap-6">
-                    <Link href="/dashboard" className="p-3 bg-white rounded-2xl border border-black/5 shadow-sm hover:shadow-md transition-all active:scale-95">
-                        <ArrowLeft size={20} className="text-[#1a1a2e]" />
+            <div className="p-3 sm:p-4 md:px-8 border-b border-black/5 bg-white/80 backdrop-blur-md flex items-center justify-between z-20">
+                <div className="flex items-center gap-3 sm:gap-4 md:gap-6">
+                    <Link href="/dashboard" className="p-2 sm:p-3 bg-white rounded-2xl border border-black/5 shadow-sm hover:shadow-md transition-all active:scale-95">
+                        <ArrowLeft size={18} className="sm:w-5 sm:h-5 text-[#1a1a2e]" />
                     </Link>
                     <div>
-                        <h1 className="text-xl font-black text-[#1a1a2e]">Chat Hub</h1>
+                        <h1 className="text-lg sm:text-xl font-black text-[#1a1a2e]">Chat Hub</h1>
                         <div className="flex items-center gap-2 mt-0.5">
                             <div className="w-1.5 h-1.5 rounded-full bg-[#A8D5BA] animate-pulse" />
-                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tactical Network Active</span>
+                            <span className="text-[8px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest">Tactical Network Active</span>
                         </div>
                     </div>
                 </div>
-                <div className="hidden md:flex items-center gap-4 px-4 py-2 bg-[#F0F7F4] border border-[#A8D5BA]/20 rounded-2xl">
-                    <Radio size={14} className="text-[#A8D5BA]" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-[#2E7D52]">Secure Uplink Online</span>
+                <div className="hidden md:flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-2 bg-[#F0F7F4] border border-[#A8D5BA]/20 rounded-2xl">
+                    <Radio size={12} className="sm:w-3.5 sm:h-3.5 text-[#A8D5BA]" />
+                    <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-[#2E7D52]">Secure Uplink Online</span>
                 </div>
             </div>
 
@@ -70,14 +70,14 @@ export default function CommunityPage() {
                 `}>
 
                     {/* Search */}
-                    <div className="p-6">
+                    <div className="p-4 sm:p-6">
                         <div className="relative group">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-[#A8D5BA] transition-colors" size={18} />
+                            <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-[#A8D5BA] transition-colors" size={16} />
                             <input
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 placeholder="Search for runners..."
-                                className="w-full bg-[#F4F7F4] border-none rounded-2xl py-4 pl-12 pr-4 text-sm font-bold text-[#1a1a2e] focus:ring-2 focus:ring-[#A8D5BA]/50 transition-all placeholder:text-gray-300"
+                                className="w-full bg-[#F4F7F4] border-none rounded-2xl py-3 sm:py-4 pl-10 sm:pl-12 pr-3 sm:pr-4 text-xs sm:text-sm font-bold text-[#1a1a2e] focus:ring-2 focus:ring-[#A8D5BA]/50 transition-all placeholder:text-gray-300"
                             />
                         </div>
                     </div>

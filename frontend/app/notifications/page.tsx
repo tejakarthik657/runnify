@@ -73,20 +73,20 @@ export default function NotificationsPage() {
 
     return (
         <div className="min-h-screen pb-20 font-['Nunito'] bg-[#F8FAF8]">
-            <div className="max-w-4xl mx-auto p-4 md:p-12">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-12 py-6 lg:py-12">
 
                 {/* --- PREMIUM HEADER --- */}
-                <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-8">
-                    <div className="flex items-center gap-8">
-                        <Link href="/dashboard" className="w-14 h-14 bg-white rounded-2xl border border-black/5 shadow-sm hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center group active:scale-95">
-                            <ArrowLeft size={24} className="text-[#1A1A2E] group-hover:-translate-x-1 transition-transform" />
+                <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-12 sm:mb-16 gap-4 sm:gap-6 md:gap-8">
+                    <div className="flex items-center gap-4 sm:gap-6 md:gap-8">
+                        <Link href="/dashboard" className="w-12 sm:w-14 h-12 sm:h-14 bg-white rounded-2xl border border-black/5 shadow-sm hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center group active:scale-95">
+                            <ArrowLeft size={20} className="sm:w-6 sm:h-6 text-[#1A1A2E] group-hover:-translate-x-1 transition-transform" />
                         </Link>
                         <div>
-                            <div className="flex items-center gap-3 mb-2">
-                                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[#A8D5BA]">HQ Intelligence</span>
-                                <Badge variant="sage" className="px-2 py-0.5 text-[9px] font-black" pulse>Live</Badge>
+                            <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+                                <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-[#A8D5BA]">HQ Intelligence</span>
+                                <Badge variant="sage" className="px-2 py-0.5 text-[8px] sm:text-[9px] font-black" pulse>Live</Badge>
                             </div>
-                            <h1 className="text-4xl md:text-5xl font-extrabold font-['Syne'] text-[#1A1A2E] tracking-tighter">
+                            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold font-['Syne'] text-[#1A1A2E] tracking-tighter">
                                 Intel <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#A8D5BA] to-[#6CC89A]">Feed</span>
                             </h1>
                         </div>
@@ -104,18 +104,18 @@ export default function NotificationsPage() {
                 </div>
 
                 {/* --- NOTIFICATIONS LIST --- */}
-                <div className="space-y-6">
+                <div className="space-y-4 sm:space-y-6">
                     {isLoading ? (
-                        <div className="py-40 text-center flex flex-col items-center">
-                            <div className="relative mb-8">
+                        <div className="py-20 sm:py-40 text-center flex flex-col items-center">
+                            <div className="relative mb-6 sm:mb-8">
                                 <motion.div
                                     animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.2, 0.5] }}
                                     transition={{ duration: 2, repeat: Infinity }}
                                     className="absolute inset-0 bg-[#A8D5BA]/20 rounded-full blur-2xl"
                                 />
-                                <Loader2 className="animate-spin text-[#A8D5BA] relative z-10" size={56} strokeWidth={1.5} />
+                                <Loader2 className="animate-spin text-[#A8D5BA] relative z-10" size={40} className="sm:w-14 sm:h-14" strokeWidth={1.5} />
                             </div>
-                            <p className="text-sm font-black uppercase tracking-[0.3em] text-gray-400 italic">Syncing Strategic Channels...</p>
+                            <p className="text-[11px] sm:text-sm font-black uppercase tracking-[0.3em] text-gray-400 italic">Syncing Strategic Channels...</p>
                         </div>
                     ) : notifications.length > 0 ? (
                         <AnimatePresence mode="popLayout">
@@ -129,11 +129,11 @@ export default function NotificationsPage() {
                                         exit={{ opacity: 0, scale: 0.98, x: 20 }}
                                         key={notif._id}
                                         className={`
-                                            relative bg-white p-6 md:p-8 rounded-[40px] border border-black/5 transition-all shadow-sm group
+                                            relative bg-white p-4 sm:p-6 md:p-8 rounded-[32px] sm:rounded-[40px] border border-black/5 transition-all shadow-sm group
                                             ${!notif.read ? 'hover:shadow-2xl hover:shadow-green-100/30 ring-4 ring-black/5' : 'opacity-60 md:hover:opacity-100'}
                                         `}
                                     >
-                                        <div className="flex flex-col md:flex-row gap-6 md:items-start">
+                                        <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 md:items-start">
                                             <div className="flex-shrink-0 flex items-center justify-center">
                                                 <div className="w-16 h-16 rounded-[24px] flex items-center justify-center shadow-inner relative group-hover:scale-110 transition-transform" style={{ backgroundColor: `${cfg.color}15`, color: cfg.color }}>
                                                     {cfg.icon}
@@ -142,35 +142,35 @@ export default function NotificationsPage() {
                                             </div>
 
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex flex-wrap items-center justify-between mb-4 gap-4">
-                                                    <div className="flex items-center gap-3">
-                                                        <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-[#1A1A2E]" style={{ backgroundColor: `${cfg.color}20` }}>
+                                                <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center justify-between mb-3 sm:mb-4 gap-2 sm:gap-3 md:gap-4">
+                                                    <div className="flex items-center gap-2 sm:gap-3">
+                                                        <span className="px-2 sm:px-3 py-1 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-[#1A1A2E]" style={{ backgroundColor: `${cfg.color}20` }}>
                                                             {cfg.label}
                                                         </span>
                                                         {!notif.read && (
                                                             <div className="w-2 h-2 rounded-full animate-pulse shadow-sm" style={{ backgroundColor: cfg.color }} />
                                                         )}
                                                     </div>
-                                                    <div className="flex items-center gap-2 text-[10px] font-black text-gray-300 uppercase tracking-widest">
-                                                        <Clock size={12} strokeWidth={3} />
+                                                    <div className="flex items-center gap-1 sm:gap-2 text-[8px] sm:text-[10px] font-black text-gray-300 uppercase tracking-widest whitespace-nowrap">
+                                                        <Clock size={10} className="sm:w-3 sm:h-3" strokeWidth={3} />
                                                         {formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true })}
                                                     </div>
                                                 </div>
 
-                                                <h3 className="text-xl font-extrabold text-[#1A1A2E] mb-2 leading-tight font-['Syne']">
+                                                <h3 className="text-lg sm:text-xl font-extrabold text-[#1A1A2E] mb-2 leading-tight font-['Syne']">
                                                     {notif.title}
                                                 </h3>
-                                                <p className="text-sm font-bold leading-relaxed text-slate-400 max-w-2xl">
+                                                <p className="text-xs sm:text-sm font-bold leading-relaxed text-slate-400 max-w-2xl">
                                                     {notif.message}
                                                 </p>
 
                                                 {!notif.read && (
-                                                    <div className="mt-8 flex flex-wrap items-center gap-6">
-                                                        <motion.button
-                                                            whileHover={{ scale: 1.02 }}
-                                                            whileTap={{ scale: 0.98 }}
-                                                            onClick={() => api.patch(`/notifications/${notif._id}/read`).then(() => mutate())}
-                                                            className="px-8 py-3.5 bg-[#1A1A2E] text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-[#2E7D52] transition-colors"
+<div className="mt-6 sm:mt-8 flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-3 sm:gap-6">
+                                        <motion.button
+                                            whileHover={{ scale: 1.02 }}
+                                            whileTap={{ scale: 0.98 }}
+                                            onClick={() => api.patch(`/notifications/${notif._id}/read`).then(() => mutate())}
+                                            className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-3.5 bg-[#1A1A2E] text-white rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-[#2E7D52] transition-colors"
                                                         >
                                                             Acknowledge dispatch
                                                         </motion.button>
@@ -191,12 +191,12 @@ export default function NotificationsPage() {
                             })}
                         </AnimatePresence>
                     ) : (
-                        <div className="py-40 bg-white rounded-[64px] border-2 border-dashed border-slate-100 flex flex-col items-center text-center p-12 shadow-sm">
-                            <div className="w-28 h-28 bg-[#F8FAF8] rounded-[48px] flex items-center justify-center text-slate-200 mb-10 border border-black/5 shadow-inner">
-                                <Sparkles size={48} className="animate-pulse" />
+                        <div className="py-20 sm:py-40 bg-white rounded-[40px] sm:rounded-[64px] border-2 border-dashed border-slate-100 flex flex-col items-center text-center p-6 sm:p-12 shadow-sm">
+                            <div className="w-20 sm:w-28 h-20 sm:h-28 bg-[#F8FAF8] rounded-[32px] sm:rounded-[48px] flex items-center justify-center text-slate-200 mb-6 sm:mb-10 border border-black/5 shadow-inner">
+                                <Sparkles size={36} className="sm:w-12 sm:h-12 animate-pulse" />
                             </div>
-                            <h3 className="text-2xl font-black text-[#1A1A2E] mb-3 font-['Syne'] uppercase tracking-tighter">Zero Hostile Signals</h3>
-                            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest italic opacity-60 max-w-sm leading-relaxed">
+                            <h3 className="text-xl sm:text-2xl font-black text-[#1A1A2E] mb-2 sm:mb-3 font-['Syne'] uppercase tracking-tighter">Zero Hostile Signals</h3>
+                            <p className="text-slate-400 text-[10px] sm:text-xs font-bold uppercase tracking-widest italic opacity-60 max-w-sm leading-relaxed">
                                 Scanner frequency 104.2MHz clear. No recent tactical dispatches for your sector.
                             </p>
                         </div>
