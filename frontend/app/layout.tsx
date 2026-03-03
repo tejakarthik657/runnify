@@ -12,7 +12,7 @@ const nunito = Nunito({
 })
 
 export const metadata: Metadata = {
-  title: 'TerritoryRun // Command Center',
+  title: 'TerritoryRun // Command Center ✨ Live',
   description: 'Soft competition. Hard gains.',
 }
 
