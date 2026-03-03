@@ -4,6 +4,7 @@
  */
 const winston = require('winston');
 const DailyRotateFile = require('winston-daily-rotate-file');
+const fs = require('fs');
 const path = require('path');
 
 // Log format
@@ -19,8 +20,11 @@ const logFormat = winston.format.combine(
   })
 );
 
-// Create logs directory
-const logsDir = path.join(__dirname, '../../logs');
+// Create logs directory (backend-local for portable deployments)
+const logsDir = path.join(__dirname, '../logs');
+if (!fs.existsSync(logsDir)) {
+  fs.mkdirSync(logsDir, { recursive: true });
+}
 
 // Daily rotate file transport
 const fileRotateTransport = new DailyRotateFile({
