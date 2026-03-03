@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
+import type { HTMLMotionProps } from 'framer-motion';
 import { ChevronUp, ChevronDown, Zap } from 'lucide-react';
 
 // Design Tokens from Documentation
@@ -23,11 +24,11 @@ export default function CreditDelta({ value, showIcon = true }: CreditDeltaProps
     
     // 6.0 Motion Rule: Animations under 700ms. 
     // Positive: Slide-in from bottom. Negative: Pulse animation.
-    const animationProps = isPositive 
+    const animationProps: Pick<HTMLMotionProps<'div'>, 'initial' | 'animate' | 'transition'> = isPositive 
         ? {
             initial: { opacity: 0, y: 15 },
             animate: { opacity: 1, y: 0 },
-            transition: { type: 'spring', damping: 15, stiffness: 200 }
+            transition: { type: 'spring' as const, damping: 15, stiffness: 200 }
         }
         : {
             initial: { opacity: 0, scale: 1.1 },

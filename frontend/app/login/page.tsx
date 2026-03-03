@@ -27,8 +27,6 @@ const registerSchema = z.object({
 
 type AuthFormData = z.infer<typeof registerSchema>;
 
-interface RegisterFormData extends AuthFormData { }
-
 export default function LoginPage() {
     const [isLogin, setIsLogin] = useState(true);
     const [isLoading, setIsLoading] = useState(false);

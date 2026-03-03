@@ -9,6 +9,7 @@ interface User {
   city?: string;
   avatarUrl?: string;
   credits?: number;
+  hexesOwned?: number;
   rank?: string;
 }
 

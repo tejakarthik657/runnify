@@ -8,7 +8,7 @@
     "dev":              "nodemon api-gateway/index.js",
     "test":             "jest --runInBand --forceExit",
     "test:unit":        "jest tests/algorithms.test.js --runInBand",
-    "test:integration": "jest tests/integration.test.js --runInBand --forceExit",
+    "test:integration": "jest tests/integration --runInBand --forceExit",
     "cron:decay":       "node utils/decay.warning.cron.js",
     "cron:leaderboard": "node utils/leaderboard.cron.js",
     "cron:blockchain":  "node utils/blockchain.cron.js",

@@ -1,20 +1,122 @@
-name: Backend CI
+name: Backend CI/CD (All Branches)
 on:
   pull_request:
+    branches: [main, test, develop]
     paths: ["backend/**"]
+  push:
+    branches: [main, test, develop]
+    paths: ["backend/**"]
+
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
+    name: Test Backend
     runs-on: ubuntu-latest
     env:
-      MONGODB_URI: ${{ secrets.MONGO_URI_TEST }}
-      JWT_SECRET: test_secret_for_ci
+      MONGODB_URI: ${{ secrets.MONGODB_URI_TEST }}
+      JWT_SECRET: ci_test_secret_github_actions_v1
+      JWT_REFRESH_SECRET: ci_test_refresh_secret_github_actions_v1
+      UPSTASH_REDIS_URL: ${{ secrets.UPSTASH_REDIS_URL }}
+      UPSTASH_REDIS_TOKEN: ${{ secrets.UPSTASH_REDIS_TOKEN }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      BLOCKCHAIN_NETWORK: sepolia
+      ALCHEMY_RPC_URL: ${{ secrets.ALCHEMY_RPC_URL }}
+      WALLET_PRIVATE_KEY: ${{ secrets.WALLET_PRIVATE_KEY }}
+      NODE_ENV: test
+      PORT: 4000
+    
     steps:
       - uses: actions/checkout@v4
+      
       - uses: actions/setup-node@v4
         with:
           node-version: 18
           cache: "npm"
           cache-dependency-path: backend/package-lock.json
-      - run: cd backend && npm ci
-      - run: cd backend && npm test
-      - run: cd backend && npm run test:integration
+      
+      - name: Install dependencies
+        run: cd backend && npm ci
+      
+      - name: Run unit tests
+        run: cd backend && npm test
+      
+      - name: Run integration tests
+        run: cd backend && npm run test:integration
+      
+      - name: Lint check
+        run: cd backend && npm run lint
+        continue-on-error: true
+  
+  deploy-to-render:
+    name: Deploy to Render
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push'
+    
+    strategy:
+      matrix:
+        environment:
+          - branch: main
+            service_id: ${{ secrets.RENDER_SERVICE_ID_PROD }}
+            deploy_key: ${{ secrets.RENDER_DEPLOY_KEY_PROD }}
+            name: production
+          - branch: test
+            service_id: ${{ secrets.RENDER_SERVICE_ID_STAGING }}
+            deploy_key: ${{ secrets.RENDER_DEPLOY_KEY_STAGING }}
+            name: staging
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy to Render (${{ matrix.environment.name }})
+        if: github.ref == format('refs/heads/{0}', matrix.environment.branch)
+        run: |
+          curl -X POST "https://api.render.com/deploy/srv-${{ matrix.environment.service_id }}?key=${{ matrix.environment.deploy_key }}"
+          echo "Deployment triggered for ${{ matrix.environment.name }}"
+      
+      - name: Wait for deployment
+        run: sleep 30
+  
+  verify-health:
+    name: Verify Backend Health
+    runs-on: ubuntu-latest
+    needs: deploy-to-render
+    if: github.event_name == 'push'
+    
+    steps:
+      - name: Check production health
+        if: github.ref == 'refs/heads/main'
+        run: |
+          max_attempts=10
+          attempt=1
+          while [ $attempt -le $max_attempts ]; do
+            if curl -f https://api.territoryrun.onrender.com/health; then
+              echo "✅ Production health check passed"
+              exit 0
+            fi
+            echo "Attempt $attempt/$max_attempts: Health check failed, retrying..."
+            sleep 10
+            attempt=$((attempt + 1))
+          done
+          echo "❌ Production health check failed after $max_attempts attempts"
+          exit 1
+      
+      - name: Check staging health
+        if: github.ref == 'refs/heads/test'
+        run: |
+          max_attempts=10
+          attempt=1
+          while [ $attempt -le $max_attempts ]; do
+            if curl -f https://api.territoryrun-api-staging.onrender.com/health; then
+              echo "✅ Staging health check passed"
+              exit 0
+            fi
+            echo "Attempt $attempt/$max_attempts: Health check failed, retrying..."
+            sleep 10
+            attempt=$((attempt + 1))
+          done
+          echo "❌ Staging health check failed after $max_attempts attempts"
+          exit 1

@@ -24,8 +24,8 @@ export default function TerritoryLayer() {
         { refreshInterval: 10000 }
     );
 
-    const map = useMapEvent('moveend', () => {
-        const b = map.getBounds();
+    const map = useMapEvent('moveend', (event) => {
+        const b = event.target.getBounds();
         setBounds({
             minLat: b.getSouth(),
             minLng: b.getWest(),
