@@ -66,8 +66,8 @@ jobs:
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           working-directory: frontend
-          prod: ${{ matrix.environment.prod }}
-          comment: false
+          vercel-args: ${{ matrix.environment.prod && '--prod' || '' }}
+          github-comment: false
   
   verify-health:
     name: Verify Health Check
