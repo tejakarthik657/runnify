@@ -113,7 +113,7 @@ export default function NotificationsPage() {
                                     transition={{ duration: 2, repeat: Infinity }}
                                     className="absolute inset-0 bg-[#A8D5BA]/20 rounded-full blur-2xl"
                                 />
-                                <Loader2 className="animate-spin text-[#A8D5BA] relative z-10" size={40} className="sm:w-14 sm:h-14" strokeWidth={1.5} />
+                                <Loader2 className="animate-spin text-[#A8D5BA] relative z-10 sm:w-14 sm:h-14" size={40} strokeWidth={1.5} />
                             </div>
                             <p className="text-[11px] sm:text-sm font-black uppercase tracking-[0.3em] text-gray-400 italic">Syncing Strategic Channels...</p>
                         </div>
