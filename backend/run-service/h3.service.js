@@ -40,7 +40,7 @@ function processGpsBatch(points = []) {
 			lng: point.lng,
 			accuracy: point.accuracy,
 			hexId,
-			timestamp: point.timestamp || Date.now(),
+			timestamp: point.ts || point.timestamp || Date.now(),
 		});
 	}
 

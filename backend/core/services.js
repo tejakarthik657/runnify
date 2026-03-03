@@ -14,6 +14,10 @@ const {
   Report, Session, CityStats,
   PLAYER_COLORS, NOTIFICATION_TYPES, SCHEMA_VERSION,
 } = require('./schema');
+const { getRedis } = require('../config/redis');
+const h3js = require('h3-js');
+
+const AntiCheatEngine = require('../run-service/anticheat.engine');
 
 // ─────────────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -213,7 +217,7 @@ const H3Service = {
         [prevPoint.lat, prevPoint.lng],
         [point.lat, point.lng], 'm'
       );
-      const dtS = (point.timestamp - prevPoint.timestamp) / 1000;
+      const dtS = ((point.ts || point.timestamp) - (prevPoint.ts || prevPoint.timestamp)) / 1000;
       const speedKmh = dtS > 0 ? (distM / 1000) / (dtS / 3600) : 0;
 
       if (speedKmh > MAX_SPEED_KMH) {
@@ -389,7 +393,7 @@ const RunService = {
         altitude: pt.altitude || null,
         speed: pt.speed || null,
         hexId: pt.isValid ? H3Service.latLngToHex(pt.lat, pt.lng) : null,
-        recordedAt: new Date(pt.timestamp),
+        recordedAt: new Date(pt.ts || pt.timestamp),
         isValid: pt.isValid,
       });
       if (pt.isValid) prev = pt;
@@ -411,12 +415,60 @@ const RunService = {
     if (!run) throw new Error('No active run found');
 
     // Fetch all valid GPS points for this run
-    const points = await GpsPoint.find({ runId, isValid: true })
+    // Fetch all current points from DB
+    const dbPoints = await GpsPoint.find({ runId, isValid: true })
       .sort('seq')
-      .select('location hexId');
+      .select('location hexId accuracy altitude recordedAt');
+
+    // PLUS pull any pending from Redis (simulation or socket delay)
+    const redis = getRedis();
+    const redisKey = `run:gps:${runId}`;
+    let bufferedPoints = [];
+    try {
+      const raw = await redis.lrange(redisKey, 0, -1);
+      if (raw && raw.length > 0) {
+        bufferedPoints = raw.map(str => {
+          const p = JSON.parse(str);
+          return {
+            location: { type: 'Point', coordinates: [p.lng, p.lat] },
+            hexId: p.hexId || h3js.latLngToCell(p.lat, p.lng, 9),
+            accuracy: p.accuracy || 10,
+            altitude: p.altitude || 500,
+            recordedAt: new Date(p.ts || p.timestamp),
+          };
+        });
+        // Clear buffer so we don't double-process if endRun is retried
+        await redis.del(redisKey);
+      }
+    } catch (_) { /* non-critical if redis fails */ }
+
+    const points = [...dbPoints, ...bufferedPoints];
 
     // Get unique hexes
-    const touchedHexIds = [...new Set(points.map(p => p.hexId).filter(Boolean))];
+    const allTouchedHexIds = [...new Set(points.map(p => p.hexId).filter(Boolean))];
+
+    // Calculate distance
+    const distanceKm = RunService._calcDistanceKm(points);
+
+    // ANTI-CHEAT CHECK (before classification to filter points/hexes)
+    const acResult = await AntiCheatEngine.runAntiCheat(
+      points.map(p => ({
+        lat: p.location.coordinates[1],
+        lng: p.location.coordinates[0],
+        ts: p.recordedAt instanceof Date ? p.recordedAt.getTime() : p.recordedAt,
+        hexId: p.hexId,
+        accuracy: p.accuracy
+      })),
+      distanceKm,
+      [], // invasions not yet classified
+      userId,
+      null, // request IP
+      {}
+    );
+
+    // Only process hexes that passed anti-cheat filters (e.g. dwell time)
+    const validHexSet = new Set(acResult.validHexes);
+    const touchedHexIds = allTouchedHexIds.filter(h => validHexSet.has(h));
 
     // Classify hexes
     const existingTerritories = await Territory.find({ hexId: { $in: touchedHexIds } })
@@ -440,11 +492,10 @@ const RunService = {
       }
     }
 
-    // Calculate credits
-    const credits = CreditEngine.calculate({ hexesClaimed, hexesInvaded, hexesRetouched });
+    // Calculate credits (multiplied by AC verdict)
+    const rawCredits = CreditEngine.calculate({ hexesClaimed, hexesInvaded, hexesRetouched });
+    const finalCreditsTotal = Math.floor(rawCredits.total * acResult.creditMultiplier);
 
-    // Calculate distance
-    const distanceKm = RunService._calcDistanceKm(points);
 
     // Duration check
     const durationSeconds = Math.floor((Date.now() - run.startedAt.getTime()) / 1000);
@@ -570,28 +621,36 @@ const RunService = {
 
     // Deduct credits from newly-invaded hex owners already handled above
     // Add credits to runner
-    const userAfter = await User.findByIdAndUpdate(userId, {
+    // Add credits to runner + Update Strikes
+    const userUpdate = {
       $inc: {
-        credits: credits.total,
+        credits: finalCreditsTotal,
         hexesOwned: hexesClaimed.length,
-        'stats.totalCreditsEarned': credits.total,
+        'stats.totalCreditsEarned': finalCreditsTotal,
         'stats.totalHexesClaimed': hexesClaimed.length,
         'stats.totalHexesInvaded': hexesInvaded.length,
         'stats.totalKm': distanceKm,
         'stats.totalRuns': 1,
       },
       $set: { lastActiveAt: new Date(), lastRunAt: new Date() },
-    }, { new: true });
+    };
+
+    if (acResult.verdict === 'disqualified' || acResult.verdict === 'warned') {
+      userUpdate.$inc['antiCheat.strikeCount'] = 1;
+      userUpdate.$set['antiCheat.lastFlaggedRun'] = new Date();
+    }
+
+    const userAfter = await User.findByIdAndUpdate(userId, userUpdate, { new: true });
 
     // Credit ledger for runner
     await CreditLedger.create({
-      userId, username: user.username, amount: credits.total,
+      userId, username: user.username, amount: finalCreditsTotal,
       balanceAfter: userAfter.credits,
       type: 'run_claim',
       hexIds: [...hexesClaimed, ...hexesInvaded],
       hexCount: hexesClaimed.length + hexesInvaded.length,
-      multiplier: credits.multiplier,
-      note: `Run: ${hexesClaimed.length} claims, ${hexesInvaded.length} invasions`,
+      multiplier: rawCredits.multiplier,
+      note: `Run: ${hexesClaimed.length} claims, ${hexesInvaded.length} invasions (AC: ${acResult.verdict})`,
       occurredAt: new Date(), schemaVersion: SCHEMA_VERSION,
     });
 
@@ -603,12 +662,21 @@ const RunService = {
         durationSeconds, distanceKm,
         hexesClaimed, hexesInvaded, hexesRetouched,
         hexesTotal: touchedHexIds.length,
-        creditsEarned: credits.total,
-        creditsFromClaims: credits.fromClaims,
-        creditsFromInvasions: credits.fromInvasions,
-        peakMultiplierUsed: credits.multiplier,
+        creditsEarned: finalCreditsTotal,
+        creditsFromClaims: rawCredits.fromClaims,
+        creditsFromInvasions: rawCredits.fromInvasions,
+        peakMultiplierUsed: rawCredits.multiplier,
         endLocation: { type: 'Point', coordinates: [lng, lat] },
         boundingBox, isProcessed: true, processedAt: new Date(),
+        antiCheat: {
+          verdict: acResult.verdict,
+          creditMultiplier: acResult.creditMultiplier,
+          totalWeight: acResult.score.totalWeight,
+          flagCount: acResult.score.flags.length,
+          checkedAt: new Date()
+        },
+        validHexes: acResult.validHexes,
+        failedHexes: acResult.failedHexes
       }
     }, { new: true });
 
@@ -623,7 +691,7 @@ const RunService = {
         hexesClaimed: hexesClaimed.length,
         hexesInvaded: hexesInvaded.length,
         hexesRetouched: hexesRetouched.length,
-        creditsEarned: credits.total,
+        creditsEarned: finalCreditsTotal,
         distanceKm,
         durationSeconds,
       }
@@ -1037,7 +1105,9 @@ const BlockchainService = {
 
     // Build leaf hashes
     const leaves = users.map(u => {
-      const leaf = `${u._id.toString()}:${u.credits}:${u.hexesOwned}:${dateStr}`;
+      // Align with test expectations: userId:credits:hexes:km:date
+      const km = Math.round((u.stats.totalKm || 0) * 100);
+      const leaf = `${u._id.toString()}:${u.credits}:${u.hexesOwned}:${km}:${dateStr}`;
       return crypto.createHash('sha256').update(leaf).digest('hex');
     });
 

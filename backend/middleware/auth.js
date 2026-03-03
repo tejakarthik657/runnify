@@ -119,7 +119,11 @@ function generateToken(userId, email, options = {}) {
  * Helper to generate refresh token
  */
 function generateRefreshToken(userId) {
-  const payload = { userId, type: 'refresh' };
+  const payload = {
+    userId,
+    type: 'refresh',
+    jti: require('crypto').randomBytes(16).toString('hex') // Unique ID for each token
+  };
   const secret = process.env.JWT_REFRESH_SECRET || JWT_SECRET;
 
   return jwt.sign(payload, secret, {

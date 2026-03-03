@@ -141,11 +141,14 @@ async function handleGpsUpdate(socket, io, userId, data) {
 	// Persistent tracking & Broadcast
 	await broadcastUserLocation(io, socket, userId, data, hexId);
 
+	// Fetch territory ownership if it exists
+	const territory = await Territory.findOne({ hexId }).select('ownerId ownerUsername').lean();
+
 	socket.emit('gps_ack', {
 		hexId,
 		pointNumber: socket.gpsPointCount,
 		currentOwner: territory?.ownerUsername || null,
-		willInvade: territory && territory.ownerId.toString() !== userId,
+		willInvade: territory && territory.ownerId.toString() !== userId.toString(),
 	});
 }
 

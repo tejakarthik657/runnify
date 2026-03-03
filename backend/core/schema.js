@@ -833,7 +833,7 @@ const RunMomentSchema = new Schema({
   },
 
   createdAt: { type: Date, default: Date.now },
-  expiresAt: { type: Date, required: true, index: true },
+  expiresAt: { type: Date, required: true },
 }, { timestamps: false, collection: 'run_moments_v1' });
 
 // TTL index to auto-delete after expiresAt

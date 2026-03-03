@@ -7,8 +7,8 @@
     "start": "node api-gateway/index.js",
     "dev": "nodemon api-gateway/index.js",
     "test": "jest --runInBand --forceExit",
-    "test:unit": "jest tests/algorithms.test.js --runInBand",
-    "test:integration": "jest tests/integration.test.js --runInBand --forceExit",
+    "test:unit": "jest tests/algorithms.test.js",
+    "test:integration": "jest tests/integration.test.js --forceExit",
     "test:load": "artillery run tests/load/gps-stream.yml",
     "cron:decay": "node utils/decay.warning.cron.js",
     "cron:leaderboard": "node utils/leaderboard.cron.js",
@@ -55,6 +55,7 @@
     "@types/jest": "^30.0.0",
     "artillery": "^2.0.27",
     "jest": "^30.2.0",
+    "mongodb-memory-server": "^11.0.1",
     "nodemon": "^3.1.10",
     "supertest": "^7.1.4"
   }

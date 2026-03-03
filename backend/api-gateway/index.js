@@ -139,25 +139,28 @@ function startServerWithPortFallback(startPort, maxAttempts) {
   tryListen(startPort);
 }
 
-(async () => {
-  try {
-    await connectDB();
-    await connectRedis();
-    await seedAchievementDefs();       // idempotent — safe to run on every start
-    await initBot();                   // warm up RAG bot (non-blocking if fails)
+// Only start the server if this file is run directly (not required as a module for tests)
+if (require.main === module) {
+  (async () => {
+    try {
+      await connectDB();
+      await connectRedis();
+      await seedAchievementDefs();       // idempotent — safe to run on every start
+      await initBot();                   // warm up RAG bot (non-blocking if fails)
 
-    // ── Start RAG data ingestion cron (every 6 hours) ────────────
-    startRagIngestCron(6).catch(err => {
-      console.warn('[RAGIngestCron] Failed to start:', err.message);
-      // Non-fatal — continue server startup
-    });
+      // ── Start RAG data ingestion cron (every 6 hours) ────────────
+      startRagIngestCron(6).catch(err => {
+        console.warn('[RAGIngestCron] Failed to start:', err.message);
+        // Non-fatal — continue server startup
+      });
 
-    registerBlockchainCrons();
-    startServerWithPortFallback(BASE_PORT, MAX_PORT_ATTEMPTS);
-  } catch (err) {
-    console.error('[FATAL] Startup failed:', err.message);
-    process.exit(1);
-  }
-})();
+      registerBlockchainCrons();
+      startServerWithPortFallback(BASE_PORT, MAX_PORT_ATTEMPTS);
+    } catch (err) {
+      console.error('[FATAL] Startup failed:', err.message);
+      process.exit(1);
+    }
+  })();
+}
 
-module.exports = { app, io };
+module.exports = { app, io, server };
