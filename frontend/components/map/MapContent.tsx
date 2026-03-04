@@ -1,16 +1,22 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Polyline, Marker, Tooltip } from 'react-leaflet';
 import { UserIcon } from '../../lib/mapIcons';
 import TerritoryLayer from './TerritoryLayer';
+import UserLocationMarker from './UserLocationMarker';
+import { latLngToCell } from 'h3-js';
 
 interface MapContentProps {
     isRunning: boolean;
     runPath: [number, number][];
     userColor: string;
     position: { lat: number | null; lng: number | null } | null;
+    accuracy?: number;
     activeRunners: Record<string, any>;
+    stepCount?: number;
+    stepRate?: number;
+    onCurrentTerritoryChange?: (territory: any) => void;
 }
 
 export default function MapContent({
@@ -18,11 +24,35 @@ export default function MapContent({
     runPath,
     userColor,
     position,
-    activeRunners
+    accuracy = 10,
+    activeRunners,
+    stepCount = 0,
+    stepRate = 0,
+    onCurrentTerritoryChange,
 }: MapContentProps) {
+    const [currentTerritory, setCurrentTerritory] = useState<any>(null);
+
+    // Calculate current hex ID from position
+    let currentHexId: string | undefined;
+    try {
+        if (position && position.lat !== null && position.lng !== null) {
+            currentHexId = latLngToCell(position.lat, position.lng, 9);
+        }
+    } catch (err) {
+        // Invalid coordinates
+    }
+
+    const handleTerritoryChange = (territory: any) => {
+        setCurrentTerritory(territory);
+        onCurrentTerritoryChange?.(territory);
+    };
+
     return (
         <>
-            <TerritoryLayer />
+            <TerritoryLayer 
+                currentHexId={currentHexId}
+                onCurrentTerritoryChange={handleTerritoryChange}
+            />
 
             {isRunning && runPath.length > 0 && (
                 <Polyline
@@ -35,10 +65,23 @@ export default function MapContent({
             )}
 
             {position && position.lat !== null && position.lng !== null && (
-                <Marker
-                    position={[position.lat, position.lng]}
-                    icon={UserIcon(userColor) as any}
-                />
+                <>
+                    <UserLocationMarker 
+                        latitude={position.lat}
+                        longitude={position.lng}
+                        accuracy={accuracy}
+                        currentHexId={currentHexId}
+                        currentTerritory={currentTerritory}
+                        stepCount={stepCount}
+                        stepRate={stepRate}
+                    />
+                    {!isRunning && (
+                        <Marker
+                            position={[position.lat, position.lng]}
+                            icon={UserIcon(userColor) as any}
+                        />
+                    )}
+                </>
             )}
 
             {/* Multiplayer Markers */}

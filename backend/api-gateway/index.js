@@ -33,6 +33,9 @@ const { initialize: initBot } = require('../rag-bot-service/bot.service');
 const { seedAchievementDefs } = require('../user-service/achievements');
 const { startRagIngestCron } = require('../utils/rag.ingest.cron');
 const { registerBlockchainCrons } = require('../blockchain-service/cron');
+const cron = require('node-cron');
+const { Territory } = require('../core/schema');
+const { LeaderboardService } = require('../core/services');
 
 const app = express();
 const server = http.createServer(app);
@@ -139,6 +142,25 @@ function startServerWithPortFallback(startPort, maxAttempts) {
   tryListen(startPort);
 }
 
+function registerRollingTerritoryExpiry() {
+  cron.schedule('*/10 * * * *', async () => {
+    try {
+      const expiryCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const result = await Territory.deleteMany({ claimedAt: { $lt: expiryCutoff } });
+
+      if ((result.deletedCount || 0) > 0) {
+        await LeaderboardService.buildGlobal();
+      }
+
+      console.log(`[TerritoryExpiry] Rolling 24h cleanup complete. Removed ${result.deletedCount || 0} expired territories.`);
+    } catch (err) {
+      console.error('[TerritoryExpiry] failed:', err.message);
+    }
+  }, {
+    timezone: 'UTC',
+  });
+}
+
 // Only start the server if this file is run directly (not required as a module for tests)
 if (require.main === module) {
   (async () => {
@@ -155,6 +177,7 @@ if (require.main === module) {
       });
 
       registerBlockchainCrons();
+      registerRollingTerritoryExpiry();
       startServerWithPortFallback(BASE_PORT, MAX_PORT_ATTEMPTS);
     } catch (err) {
       console.error('[FATAL] Startup failed:', err.message);

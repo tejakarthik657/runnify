@@ -21,22 +21,37 @@ import { toast } from 'react-hot-toast';
 import api from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import Badge from '../../components/ui/Badge';
+import StepCounterDisplay from '../../components/ui/StepCounterDisplay';
 import { useGps } from '../../hooks/useGps';
+import { useStepCounter } from '../../hooks/useStepCounter';
 
 const fetcher = (url: string) => api.get(url).then(res => res.data);
 
 export default function RunPage() {
-    const { user, accessToken } = useAuthStore();
+    const { user, accessToken, updateUser } = useAuthStore();
     const [isRunning, setIsRunning] = useState(false);
     const [runId, setRunId] = useState<string | null>(null);
     const [isStarting, setIsStarting] = useState(false);
     const [isEnding, setIsEnding] = useState(false);
-    const [stats, setStats] = useState({ distance: 0, time: 0, hexCount: 0, credits: 0, speed: 0 });
+    const [stats, setStats] = useState({ distance: 0, time: 0, hexCount: 0, credits: 0, speed: 0, steps: 0 });
     const statsInterval = useRef<any>(null);
 
     // Track state locally for the UI
     const [position, setPosition] = useState<any>(null);
     const [gpsError, setGpsError] = useState<string | null>(null);
+
+    // Initialize step counter with accelerometer
+    const { steps: accelSteps, stepRate, cadence, isDetecting, start: startStepCounter, stop: stopStepCounter, reset: resetStepCounter } = useStepCounter({
+        enabled: true,
+        useAccelerometer: true,
+        onUpdate: (state) => {
+            // Update stats with accelerometer-detected steps  
+            setStats(prev => ({
+                ...prev,
+                steps: Math.max(prev.steps || 0, state.steps),
+            }));
+        }
+    });
 
     // useGPS handles real-time GPS tracking with production-ready filtering
     const { start: startGps, stop: stopGps, active: gpsActive } = useGps({
@@ -104,7 +119,8 @@ export default function RunPage() {
                         time: elapsedSeconds,
                         hexCount: run.hexesTotal || 0,
                         credits: Math.floor((run.hexesTotal || 0) * 1.5),
-                        speed: 0 // Placeholder
+                        speed: 0, // Placeholder
+                        steps: Math.max(0, Math.round((run.distanceKm || 0) * 1312)),
                     });
                     startTimer();
                 }
@@ -131,7 +147,10 @@ export default function RunPage() {
             });
             setRunId(data.run._id);
             setIsRunning(true);
+            setStats({ distance: 0, time: 0, hexCount: 0, credits: 0, speed: 0, steps: 0 });
+            resetStepCounter();
             startGps();
+            startStepCounter();
             startTimer();
             toast.success('Campaign Initiated');
         } catch (error: any) {
@@ -146,16 +165,25 @@ export default function RunPage() {
         if (!runId) return;
         setIsEnding(true);
         try {
-            await api.post(`/run/${runId}/end`, {
+            const { data } = await api.post(`/run/${runId}/end`, {
                 lat: position?.lat || 0,
                 lng: position?.lng || 0
             });
+
+            if (data?.user) {
+                updateUser({
+                    credits: data.user.credits,
+                    hexesOwned: data.user.hexesOwned,
+                });
+            }
+
             setIsRunning(false);
             setRunId(null);
             stopGps(); // Stop GPS
+            stopStepCounter();
             stopTimer();
-            setStats({ distance: 0, time: 0, hexCount: 0, credits: 0, speed: 0 });
-            toast.success('Mission Accomplished');
+            setStats({ distance: 0, time: 0, hexCount: 0, credits: 0, speed: 0, steps: 0 });
+            toast.success(`Mission Accomplished • ${data?.summary?.hexesClaimed || 0} claims • ${data?.summary?.creditsEarned || 0} TRC`);
         } catch (error: any) {
             const errorMsg = error.response?.data?.error || 'Sync error. Retrying...';
             toast.error(errorMsg);
@@ -203,6 +231,17 @@ export default function RunPage() {
                     {/* Background decoration */}
                     <div className="absolute top-[-20%] left-[-10%] w-64 h-64 bg-[#A8D5BA] opacity-10 rounded-full blur-3xl animate-pulse" />
                 </motion.div>
+
+                {/* Step Counter Display */}
+                {isRunning && (
+                    <StepCounterDisplay
+                        steps={stats.steps}
+                        stepRate={stepRate}
+                        cadence={cadence}
+                        isDetecting={isDetecting}
+                        accuracy="High"
+                    />
+                )}
 
                 {/* KPI Grid */}
                 <div className="grid grid-cols-2 gap-4">

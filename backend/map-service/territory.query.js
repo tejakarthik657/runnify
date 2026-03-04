@@ -10,19 +10,29 @@ async function getTerritoriesByBbox({ minLat, minLng, maxLat, maxLng }) {
 		throw new Error(`Bounding box too large. Zoom in further. (${hexIds.length} hexes, max ${MAX_BBOX_HEXES})`);
 	}
 
+	const now = Date.now();
+	const rollingWindowStart = new Date(now - 24 * 60 * 60 * 1000);
+	const rollingWindowEnd = new Date(now + 24 * 60 * 60 * 1000);
+
 	const privateUsers = await User.find({ 'privacy.hideFromMap': true }).select('_id').lean();
 	const privateIds = privateUsers.map((user) => user._id);
 
 	const territories = await Territory.find({
 		hexId: { $in: hexIds },
 		ownerId: { $nin: privateIds },
+		claimedAt: { $gte: rollingWindowStart },
 	})
-		.select('hexId ownerId ownerUsername ownerColor creditValue lastActiveAt totalInvasions')
+		.select('hexId ownerId ownerUsername ownerColor creditValue lastActiveAt totalInvasions claimedAt')
 		.lean();
 
 	return {
 		totalHexes: hexIds.length,
 		claimedHexes: territories.length,
+		window: {
+			mode: 'rolling_24h',
+			from: rollingWindowStart,
+			to: rollingWindowEnd,
+		},
 		features: territories.map((territory) => ({
 			hexId: territory.hexId,
 			ownerId: territory.ownerId,
@@ -30,6 +40,8 @@ async function getTerritoriesByBbox({ minLat, minLng, maxLat, maxLng }) {
 			ownerColor: territory.ownerColor,
 			creditValue: applyDecay(territory.creditValue, territory.lastActiveAt),
 			invasionCount: territory.totalInvasions || 0,
+			claimedAt: territory.claimedAt,
+			expiresAt: new Date(new Date(territory.claimedAt).getTime() + 24 * 60 * 60 * 1000),
 		})),
 	};
 }

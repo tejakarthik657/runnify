@@ -293,6 +293,7 @@ const RunSchema = new Schema({
 
   // Distance & territory
   distanceKm: { type: Number, default: 0 },
+  stepsCount: { type: Number, default: 0 }, // accelerometer & distance-based step count
   hexesClaimed: { type: [String], default: [] }, // new claims (unclaimed before)
   hexesInvaded: { type: [String], default: [] }, // claimed from others
   hexesRetouched: { type: [String], default: [] }, // already owned, refreshed

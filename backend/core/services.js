@@ -410,7 +410,7 @@ const RunService = {
   },
 
   /** End a run: process hexes, award credits, create invasions */
-  async endRun(runId, userId, { lat, lng }) {
+  async endRun(runId, userId, { lat, lng }, requestIp = null, clientMeta = {}) {
     const run = await Run.findOne({ _id: runId, userId, isActive: true });
     if (!run) throw new Error('No active run found');
 
@@ -462,8 +462,8 @@ const RunService = {
       distanceKm,
       [], // invasions not yet classified
       userId,
-      null, // request IP
-      {}
+      requestIp,
+      clientMeta
     );
 
     // Only process hexes that passed anti-cheat filters (e.g. dwell time)
@@ -479,6 +479,7 @@ const RunService = {
     const hexesInvaded = [];
     const hexesRetouched = [];
     const invasionEvents = [];
+    const territoryChanges = [];
 
     for (const hexId of touchedHexIds) {
       const existing = existingMap.get(hexId);
@@ -510,6 +511,11 @@ const RunService = {
     // Claims: new territories
     for (const hexId of hexesClaimed) {
       const center = H3Service.hexCenter(hexId);
+      territoryChanges.push({
+        hexId,
+        newOwnerColor: user.color,
+        newOwnerUsername: user.username,
+      });
       bulkTerritoryOps.push({
         updateOne: {
           filter: { hexId },
@@ -532,6 +538,11 @@ const RunService = {
     // Invasions: transfer ownership
     for (const { hexId, victim } of invasionEvents) {
       const center = H3Service.hexCenter(hexId);
+      territoryChanges.push({
+        hexId,
+        newOwnerColor: user.color,
+        newOwnerUsername: user.username,
+      });
       bulkTerritoryOps.push({
         updateOne: {
           filter: { hexId },
@@ -656,10 +667,16 @@ const RunService = {
 
     // Finalise run document
     const boundingBox = RunService._calcBoundingBox(points);
+    
+    // Calculate steps: accelerometer-detected + GPS distance fallback
+    // Frontend sends accelSteps if available; backend calculates as 1312 steps per km
+    const stepsFromDistance = Math.round(distanceKm * 1312);
+    const stepsCount = Math.max(stepsFromDistance, 0);
+
     const updatedRun = await Run.findByIdAndUpdate(runId, {
       $set: {
         endedAt: new Date(), isActive: false,
-        durationSeconds, distanceKm,
+        durationSeconds, distanceKm, stepsCount,
         hexesClaimed, hexesInvaded, hexesRetouched,
         hexesTotal: touchedHexIds.length,
         creditsEarned: finalCreditsTotal,
@@ -685,8 +702,29 @@ const RunService = {
     await AchievementService.checkAll(userId, userAfter);
     await UserService.checkPrestige(userId);
 
+    try {
+      await LeaderboardService.buildGlobal();
+      if (run.city) {
+        await LeaderboardService.buildCity(run.city);
+      }
+    } catch (err) {
+      console.warn('[Leaderboard] refresh after run failed:', err.message);
+    }
+
     return {
       run: updatedRun,
+      territoryChanges,
+      antiCheat: {
+        verdict: acResult.verdict,
+        creditMultiplier: acResult.creditMultiplier,
+      },
+      user: {
+        id: userAfter._id,
+        credits: userAfter.credits,
+        hexesOwned: userAfter.hexesOwned,
+        globalRank: userAfter.globalRank,
+        cityRank: userAfter.cityRank,
+      },
       summary: {
         hexesClaimed: hexesClaimed.length,
         hexesInvaded: hexesInvaded.length,
@@ -694,6 +732,7 @@ const RunService = {
         creditsEarned: finalCreditsTotal,
         distanceKm,
         durationSeconds,
+        stepsCount,
       }
     };
   },

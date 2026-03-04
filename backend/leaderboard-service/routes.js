@@ -34,16 +34,18 @@ router.get('/stats', async (req, res, next) => {
 
 router.get('/me', authenticateJWT, async (req, res, next) => {
 	try {
-		const user = await User.findById(req.user.userId).select('credits username color').lean();
+		const userId = req.userId || req.user?.userId || req.user?.sub;
+		const user = await User.findById(userId).select('credits username color').lean();
 		if (!user) return res.status(404).json({ error: 'User not found' });
 
 		const usersAbove = await User.countDocuments({ credits: { $gt: user.credits }, isBanned: false });
-		res.json({
+		const payload = {
 			rank: usersAbove + 1,
 			username: user.username,
 			color: user.color,
 			credits: user.credits,
-		});
+		};
+		res.json({ ...payload, userRank: payload });
 	} catch (error) {
 		next(error);
 	}

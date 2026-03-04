@@ -20,11 +20,13 @@ import {
 import Link from 'next/link';
 import { useCallback } from 'react';
 import { useGps } from '../../hooks/useGps';
+import { useStepCounter } from '../../hooks/useStepCounter';
 import { useSocket } from '../../hooks/useSocket';
 import { useAuthStore } from '../../store/authStore';
 import api from '../../services/api';
 import { toast } from 'react-hot-toast';
 import Badge from '../../components/ui/Badge';
+import StepCounterDisplay from '../../components/ui/StepCounterDisplay';
 import MapContent from '../../components/map/MapContent';
 import MapSearch from '../../components/map/MapSearch';
 import L from 'leaflet';
@@ -44,7 +46,8 @@ export default function MapPage() {
     const mapInstance = useRef<L.Map | null>(null);
     const [isStarting, setIsStarting] = useState(false);
     const [isEnding, setIsEnding] = useState(false);
-    const [stats, setStats] = useState({ distance: 0, time: 0, hexCount: 0, credits: 0 });
+    const [stats, setStats] = useState({ distance: 0, time: 0, hexCount: 0, credits: 0, steps: 0 });
+    const [currentTerritory, setCurrentTerritory] = useState<any>(null);
     const statsInterval = useRef<any>(null);
     const [runPath, setRunPath] = useState<[number, number][]>([]);
     const [activeRunners, setActiveRunners] = useState<Record<string, any>>({});
@@ -67,7 +70,7 @@ export default function MapPage() {
         return { center: [20, 0], zoom: 3 };
     });
 
-    const { user, accessToken } = useAuthStore();
+    const { user, accessToken, updateUser } = useAuthStore();
     const socket = useSocket('main');
 
     const startTimer = useCallback(() => {
@@ -96,6 +99,7 @@ export default function MapPage() {
     };
 
     const lastGpsPoint = useRef<{ lat: number; lng: number } | null>(null);
+    const lastGpsTs = useRef<number | null>(null);
 
     const handleLocateUser = useCallback((lat: number, lng: number) => {
         setFollowUser(false);
@@ -125,16 +129,33 @@ export default function MapPage() {
             accuracy: point.accuracy || 10
         });
 
+        // Ignore poor-accuracy points for run metrics (presence is still emitted above)
+        const accuracy = point.accuracy ?? 999;
+        if (accuracy > 45) {
+            return;
+        }
+
         // Calculate distance from last point
         let addedDist = 0;
+        const nowTs = Date.now();
         if (lastGpsPoint.current) {
             addedDist = getDistance(lastGpsPoint.current.lat, lastGpsPoint.current.lng, point.lat, point.lng);
-            if (addedDist > 0.1) {
+            const moveMeters = addedDist * 1000;
+            const minMoveMeters = Math.max(6, Math.round(accuracy * 0.6));
+            const dtSec = lastGpsTs.current ? Math.max(1, Math.floor((nowTs - lastGpsTs.current) / 1000)) : 1;
+            const speedKmh = (addedDist / dtSec) * 3600;
+
+            if (moveMeters < minMoveMeters) {
+                addedDist = 0;
+            }
+
+            if (addedDist > 0.03 || speedKmh > 22) {
                 console.warn(`[GPS] Ignoring suspicious jump: ${addedDist}km`);
                 addedDist = 0;
             }
         }
         lastGpsPoint.current = point;
+        lastGpsTs.current = nowTs;
 
         // Discovery Logic
         try {
@@ -155,6 +176,8 @@ export default function MapPage() {
         setStats(prev => {
             const newDist = parseFloat((prev.distance + addedDist).toFixed(5));
             const newHexCount = hexSetRef.current.size;
+            const addedSteps = Math.max(0, Math.round(addedDist * 1312));
+            const newSteps = prev.steps + addedSteps;
             const newCredits = Math.floor(newDist * 12) + (newHexCount * 2);
 
             return {
@@ -162,6 +185,7 @@ export default function MapPage() {
                 distance: newDist,
                 hexCount: newHexCount,
                 credits: newCredits,
+                steps: newSteps,
             };
         });
     }, [socket]);
@@ -180,6 +204,19 @@ export default function MapPage() {
     const { position, error: gpsError, start: startGps, stop: stopGps, updatePosition } = useGps({
         enabled: true,
         onUpdate: handleGpsUpdate
+    });
+
+    // Initialize step counter with accelerometer
+    const { steps: accelSteps, stepRate, cadence, isDetecting, start: startStepCounter, stop: stopStepCounter, reset: resetStepCounter } = useStepCounter({
+        enabled: true,
+        useAccelerometer: true,
+        onUpdate: (state) => {
+            // Update stats with accelerometer-detected steps
+            setStats(prev => ({
+                ...prev,
+                steps: Math.max(prev.steps, state.steps), // Use accelerometer if higher
+            }));
+        }
     });
 
     const userCenter = React.useMemo<[number, number]>(() => {
@@ -206,7 +243,8 @@ export default function MapPage() {
                         distance: run.distanceKm || 0,
                         time: elapsedSeconds,
                         hexCount: run.hexesTotal || 0,
-                        credits: Math.floor((run.hexesTotal || 0) * 1.5)
+                        credits: Math.floor((run.hexesTotal || 0) * 1.5),
+                        steps: Math.max(0, Math.round((run.distanceKm || 0) * 1312)),
                     });
                     startTimer();
                     startGps();
@@ -248,10 +286,13 @@ export default function MapPage() {
             isRunningRef.current = true;
 
             hexSetRef.current = new Set();
-            setStats({ distance: 0, time: 0, hexCount: 0, credits: 0 });
+            setStats({ distance: 0, time: 0, hexCount: 0, credits: 0, steps: 0 });
             lastGpsPoint.current = null;
+            lastGpsTs.current = null;
+            resetStepCounter();
             startTimer();
             startGps();
+            startStepCounter();
             socket?.emit('run_start', { runId: data.run._id, lat: position.lat, lng: position.lng });
         } catch (error: any) {
             const errorMessage = error.response?.data?.error || 'Could not initialize campaign. Check linkage.';
@@ -263,23 +304,33 @@ export default function MapPage() {
         if (!runId || !position) return;
         setIsEnding(true);
         try {
-            await api.post(`/run/${runId}/end`, {
+            const { data } = await api.post(`/run/${runId}/end`, {
                 lat: position.lat,
                 lng: position.lng
             });
+
+            if (data?.user) {
+                updateUser({
+                    credits: data.user.credits,
+                    hexesOwned: data.user.hexesOwned,
+                });
+            }
 
             setIsRunning(false);
             isRunningRef.current = false;
             setRunId(null);
             runIdRef.current = null;
             stopGps();
+            stopStepCounter();
             stopTimer();
 
             // Show results and update leaderboard
-            toast.success('Campaign Concluded. Intel synchronization complete.');
+            const summary = data?.summary || {};
+            toast.success(`Campaign Concluded • ${summary.hexesClaimed || 0} claims • ${summary.creditsEarned || 0} credits`);
 
             // Soft reset stats for next run
-            setStats({ distance: 0, time: 0, hexCount: 0, credits: 0 });
+            setStats({ distance: 0, time: 0, hexCount: 0, credits: 0, steps: 0 });
+            lastGpsTs.current = null;
         } catch (error: any) {
             const errorMsg = error.response?.data?.error || 'Uplink failed. Retrying sync...';
             toast.error(errorMsg);
@@ -476,7 +527,11 @@ export default function MapPage() {
                         runPath={runPath}
                         userColor={user?.color || '#A8D5BA'}
                         position={position}
+                        accuracy={position?.accuracy || 10}
                         activeRunners={activeRunners}
+                        stepCount={stats.steps}
+                        stepRate={stepRate}
+                        onCurrentTerritoryChange={setCurrentTerritory}
                     />
                 </LeafletMap>
 
@@ -517,22 +572,40 @@ export default function MapPage() {
             <div className="absolute bottom-8 left-4 right-4 z-[1000] flex flex-col items-center gap-6 pointer-events-none">
                 <AnimatePresence>
                     {isRunning && (
-                        <motion.div
-                            initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }}
-                            className="bg-white/90 backdrop-blur-md rounded-[32px] border border-black/5 shadow-2xl p-6 w-full max-w-lg pointer-events-auto grid grid-cols-4 items-center"
-                        >
-                            <StatItem label="Chrono" value={formatTime(stats.time)} color="text-[#1a1a2e]" />
-                            <StatItem label="KM" value={stats.distance.toFixed(3)} color="text-[#1a1a2e]" />
-                            <StatItem label="Hexes" value={stats.hexCount} color="text-[#2E7D52]" icon={<Crosshair size={10} />} />
-                            <StatItem label="Yield" value={stats.credits} color="text-[#A594D3]" icon={<Zap size={10} />} />
+                        <>
+                            {/* Step Counter Display */}
+                            <motion.div
+                                initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }}
+                                className="w-full max-w-xs pointer-events-auto"
+                            >
+                                <StepCounterDisplay
+                                    steps={stats.steps}
+                                    stepRate={stepRate}
+                                    cadence={cadence}
+                                    isDetecting={isDetecting}
+                                    accuracy="High"
+                                />
+                            </motion.div>
 
-                            {nearestRunner && (
-                                <div className="absolute -top-16 left-1/2 -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded-full font-black text-[10px] uppercase shadow-xl animate-bounce border-2 border-white flex items-center gap-2">
-                                    <Zap size={12} fill="white" />
-                                    Conflict: {nearestRunner.dist.toFixed(0)}m from {nearestRunner.name}
-                                </div>
-                            )}
-                        </motion.div>
+                            {/* Run Stats Bar */}
+                            <motion.div
+                                initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }}
+                                className="bg-white/90 backdrop-blur-md rounded-[32px] border border-black/5 shadow-2xl p-6 w-full max-w-xl pointer-events-auto grid grid-cols-5 items-center"
+                            >
+                                <StatItem label="Chrono" value={formatTime(stats.time)} color="text-[#1a1a2e]" />
+                                <StatItem label="KM" value={stats.distance.toFixed(3)} color="text-[#1a1a2e]" />
+                                <StatItem label="Hexes" value={stats.hexCount} color="text-[#2E7D52]" icon={<Crosshair size={10} />} />
+                                <StatItem label="Yield" value={stats.credits} color="text-[#A594D3]" icon={<Zap size={10} />} />
+                                <StatItem label="Territory" value={currentTerritory?.ownerUsername?.substring(0, 8) || 'Wild'} color="text-[#2E7D52]" />
+
+                                {nearestRunner && (
+                                    <div className="absolute -top-16 left-1/2 -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded-full font-black text-[10px] uppercase shadow-xl animate-bounce border-2 border-white flex items-center gap-2">
+                                        <Zap size={12} fill="white" />
+                                        Conflict: {nearestRunner.dist.toFixed(0)}m from {nearestRunner.name}
+                                    </div>
+                                )}
+                            </motion.div>
+                        </>
                     )}
                 </AnimatePresence>
 

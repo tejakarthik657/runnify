@@ -16,11 +16,11 @@ export default function LeaderboardPage() {
     const userCity = user?.city || 'Sector_01';
     const [scope, setScope] = useState<'global' | 'city'>('global');
 
-    const { data: globalData, isLoading: globalLoading } = useSWR('/leaderboard/global', fetcher);
-    const { data: cityData, isLoading: cityLoading } = useSWR(userCity ? `/leaderboard/city/${userCity}` : null, fetcher);
-    const { data: meRank } = useSWR('/leaderboard/me', fetcher);
+    const { data: globalData, isLoading: globalLoading } = useSWR('/leaderboard/global', fetcher, { refreshInterval: 10000 });
+    const { data: cityData, isLoading: cityLoading } = useSWR(userCity ? `/leaderboard/city/${userCity}` : null, fetcher, { refreshInterval: 10000 });
+    const { data: meRank } = useSWR('/leaderboard/me', fetcher, { refreshInterval: 10000 });
 
-    const currentData = scope === 'global' ? globalData?.leaderboard : cityData?.leaderboard;
+    const currentData = scope === 'global' ? globalData?.entries : cityData?.entries;
     const isLoading = scope === 'global' ? globalLoading : cityLoading;
 
     return (
@@ -90,7 +90,7 @@ export default function LeaderboardPage() {
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-8 md:gap-16">
                             <div>
                                 <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Global Rank</div>
-                                <div className="text-3xl font-black text-[#A8D5BA]">#{meRank?.userRank?.rank || '---'}</div>
+                                <div className="text-3xl font-black text-[#A8D5BA]">#{meRank?.rank || meRank?.userRank?.rank || '---'}</div>
                             </div>
                             <div>
                                 <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total TRC</div>
@@ -117,11 +117,11 @@ export default function LeaderboardPage() {
                         <div className="p-4 md:p-8">
                             <div className="space-y-3">
                                 {currentData.map((entry: any, index: number) => {
-                                    const rank = index + 1;
-                                    const isMe = entry._id === user?.id;
+                                    const rank = entry.rank || index + 1;
+                                    const isMe = entry.userId === user?.id;
                                     return (
                                         <motion.div
-                                            key={entry._id}
+                                            key={entry.userId || `${entry.username}-${rank}`}
                                             initial={{ opacity: 0, x: -20 }}
                                             animate={{ opacity: 1, x: 0 }}
                                             transition={{ delay: index * 0.05 }}
@@ -161,7 +161,7 @@ export default function LeaderboardPage() {
                                                             {isMe && <Badge variant="sage" className="scale-75 origin-left">YOU</Badge>}
                                                         </div>
                                                         <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">
-                                                            {entry.city || 'Wild_Zone'} • LVL {Math.floor(entry.credits / 1000)}
+                                                            {entry.city || 'Wild_Zone'} • {entry.hexesOwned || 0} HEX
                                                         </div>
                                                     </div>
                                                 </div>
@@ -171,7 +171,7 @@ export default function LeaderboardPage() {
                                                 <div className="text-right hidden sm:block">
                                                     <div className="text-xs font-black text-gray-400 uppercase tracking-widest mb-0.5">Performance</div>
                                                     <div className="flex items-center gap-1 text-[10px] text-[#A8D5BA] font-black uppercase">
-                                                        <TrendingUp size={12} /> +{Math.floor(Math.random() * 50)} TRC
+                                                        <TrendingUp size={12} /> {Math.round(entry.totalKm || 0)} KM TOTAL
                                                     </div>
                                                 </div>
                                                 <div className="text-right">

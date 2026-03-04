@@ -1,0 +1,20 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "C:\\Projects\\runni5\\backend\\logs\\.bb44f67001339775c8825f501f919266f0e80b40-audit.json",
+    "files": [
+        {
+            "date": 1772540988607,
+            "name": "C:\\Projects\\runni5\\backend\\logs\\territory-run-2026-03-03.log",
+            "hash": "aaa73facf002b1050a2bf75431141e64c333128ef6c288eebe4573829b7392a5"
+        },
+        {
+            "date": 1772635036671,
+            "name": "C:\\Projects\\runni5\\backend\\logs\\territory-run-2026-03-04.log",
+            "hash": "c8500eedf588336ff54d98399e933788df2ab166e258d3130d9f2b52632f8630"
+        }
+    ],
+    "hashType": "sha256"
+}

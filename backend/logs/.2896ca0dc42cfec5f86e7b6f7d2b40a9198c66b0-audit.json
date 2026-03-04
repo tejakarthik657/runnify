@@ -1,0 +1,20 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "C:\\Projects\\runni5\\backend\\logs\\.2896ca0dc42cfec5f86e7b6f7d2b40a9198c66b0-audit.json",
+    "files": [
+        {
+            "date": 1772540988611,
+            "name": "C:\\Projects\\runni5\\backend\\logs\\error-2026-03-03.log",
+            "hash": "aff5e62151e65db56f1e33980c4bcf210734fa780fb9f02fd96b71fa0dc3b869"
+        },
+        {
+            "date": 1772635036675,
+            "name": "C:\\Projects\\runni5\\backend\\logs\\error-2026-03-04.log",
+            "hash": "22632aba77e07bf31eaff20e1e15370003e2f341ccd010fc26d584a689040c42"
+        }
+    ],
+    "hashType": "sha256"
+}
