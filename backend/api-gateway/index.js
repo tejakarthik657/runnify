@@ -34,7 +34,7 @@ const { seedAchievementDefs } = require('../user-service/achievements');
 const { startRagIngestCron } = require('../utils/rag.ingest.cron');
 const { registerBlockchainCrons } = require('../blockchain-service/cron');
 const cron = require('node-cron');
-const { Territory } = require('../core/schema');
+const { Territory, User } = require('../core/schema');
 const { LeaderboardService } = require('../core/services');
 
 const app = express();
@@ -142,19 +142,47 @@ function startServerWithPortFallback(startPort, maxAttempts) {
   tryListen(startPort);
 }
 
-function registerRollingTerritoryExpiry() {
-  cron.schedule('*/10 * * * *', async () => {
+function registerDailyTerritoryReset() {
+  // 23:59 UTC every day
+  cron.schedule('59 23 * * *', async () => {
     try {
-      const expiryCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      const result = await Territory.deleteMany({ claimedAt: { $lt: expiryCutoff } });
+      const bonusTable = [500, 300, 200, 150, 100, 75, 50, 50, 25, 25];
 
-      if ((result.deletedCount || 0) > 0) {
-        await LeaderboardService.buildGlobal();
+      // Ensure leaderboard cache is fresh before snapshot
+      const entries = await LeaderboardService.buildGlobal();
+      const winners = entries.slice(0, 10);
+
+      // Award top-10 bonus credits
+      for (let index = 0; index < winners.length; index += 1) {
+        const winner = winners[index];
+        const bonus = bonusTable[index] || 0;
+        if (bonus > 0) {
+          await User.findByIdAndUpdate(winner.userId, { $inc: { credits: bonus } });
+        }
       }
 
-      console.log(`[TerritoryExpiry] Rolling 24h cleanup complete. Removed ${result.deletedCount || 0} expired territories.`);
+      // Reset map ownership for new day
+      const deleteResult = await Territory.deleteMany({});
+
+      // Recompute global leaderboard after bonuses applied
+      await LeaderboardService.buildGlobal();
+
+      // Notify clients for celebration/reset UI
+      io.emit('daily_reset', {
+        date: new Date().toISOString().split('T')[0],
+        winners: winners.slice(0, 3).map((winner, index) => ({
+          rank: index + 1,
+          userId: winner.userId,
+          username: winner.username,
+          credits: winner.credits,
+          bonus: bonusTable[index] || 0,
+        })),
+        territoriesCleared: deleteResult.deletedCount || 0,
+      });
+
+      console.log(`[DailyReset] Completed. Cleared ${deleteResult.deletedCount || 0} territories, awarded bonuses to ${winners.length} winners.`);
     } catch (err) {
-      console.error('[TerritoryExpiry] failed:', err.message);
+      console.error('[DailyReset] failed:', err.message);
     }
   }, {
     timezone: 'UTC',
@@ -177,7 +205,7 @@ if (require.main === module) {
       });
 
       registerBlockchainCrons();
-      registerRollingTerritoryExpiry();
+      registerDailyTerritoryReset();
       startServerWithPortFallback(BASE_PORT, MAX_PORT_ATTEMPTS);
     } catch (err) {
       console.error('[FATAL] Startup failed:', err.message);

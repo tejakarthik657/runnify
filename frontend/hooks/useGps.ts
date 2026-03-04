@@ -73,13 +73,13 @@ export function useGps({ onUpdate, enabled = false }: Options = {}) {
                 const { latitude: lat, longitude: lng, accuracy, altitude } = pos.coords;
 
                 setState(prev => {
-                    // Accuracy Filtering: Support wide range for multiplayer presence
-                    const limit = 500;
+                    // Accuracy Filtering
+                    const limit = 30;
                     if (accuracy > limit) return prev;
 
                     if (prev.lat !== null && prev.lng !== null) {
                         const dist = getDistance(prev.lat, prev.lng, lat, lng);
-                        if (dist < 0.002) return prev;
+                        if (dist < 0.005) return prev;
                     }
 
                     return {

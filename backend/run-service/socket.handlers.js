@@ -6,6 +6,19 @@ const { gpsToHex } = require('./h3.service');
 const EMIT_INTERVAL_MS = 1000;
 const MAX_POINTS_PER_RUN = 500;
 const MAX_RUN_DURATION_MS = 4 * 60 * 60 * 1000;
+const MIN_ACCURACY_METERS = 30;
+const MIN_MOVEMENT_METERS = 5;
+
+function haversineMeters(lat1, lon1, lat2, lon2) {
+	const R = 6371000;
+	const dLat = (lat2 - lat1) * Math.PI / 180;
+	const dLon = (lon2 - lon1) * Math.PI / 180;
+	const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+		Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+		Math.sin(dLon / 2) * Math.sin(dLon / 2);
+	const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+	return R * c;
+}
 
 function authenticateSocket(socket) {
 	const token = socket.handshake.auth?.token;
@@ -44,6 +57,7 @@ function initSocketHandlers(io) {
 			socket.runId = data.runId;
 			socket.runStartedAt = Date.now();
 			socket.gpsPointCount = 0;
+			socket.lastAcceptedGpsPoint = null;
 
 			// Mark user as actively running in Redis
 			await redis.set(`user:running:${userId}`, 'true', { ex: 2 * 60 * 60 }); // 2h expiry
@@ -106,10 +120,25 @@ async function handleGpsUpdate(socket, io, userId, data) {
 		socket.emit('gps_rejected', { reason: 'lat/lng must be numbers' });
 		return;
 	}
-	if (data.accuracy !== undefined && data.accuracy > 500) {
-		socket.emit('gps_rejected', { reason: 'accuracy exceeds 500m limit' });
+	if (data.accuracy !== undefined && data.accuracy > MIN_ACCURACY_METERS) {
+		socket.emit('gps_rejected', { reason: `accuracy exceeds ${MIN_ACCURACY_METERS}m limit` });
 		return;
 	}
+
+	if (socket.lastAcceptedGpsPoint) {
+		const dist = haversineMeters(
+			socket.lastAcceptedGpsPoint.lat,
+			socket.lastAcceptedGpsPoint.lng,
+			data.lat,
+			data.lng
+		);
+		if (dist < MIN_MOVEMENT_METERS) {
+			socket.emit('gps_rejected', { reason: `movement below ${MIN_MOVEMENT_METERS}m threshold` });
+			return;
+		}
+	}
+
+	socket.lastAcceptedGpsPoint = { lat: data.lat, lng: data.lng };
 
 	const hexId = gpsToHex(data.lat, data.lng);
 	const { latLngToCell, gridDisk } = require('h3-js');
@@ -154,7 +183,7 @@ async function handleGpsUpdate(socket, io, userId, data) {
 
 async function handlePresenceSync(socket, io, userId, data) {
 	if (typeof data?.lat !== 'number' || typeof data?.lng !== 'number') return;
-	if (data.accuracy !== undefined && data.accuracy > 500) return;
+	if (data.accuracy !== undefined && data.accuracy > MIN_ACCURACY_METERS) return;
 
 	const { latLngToCell } = require('h3-js');
 	const hexId = latLngToCell(data.lat, data.lng, 9);

@@ -39,6 +39,9 @@ import { UserIcon } from '../../lib/mapIcons';
 const LeafletMap = dynamic(() => import('../../components/map/LeafletMap'), { ssr: false });
 const TerritoryLayer = dynamic(() => import('../../components/map/TerritoryLayer'), { ssr: false });
 
+const MIN_DISTANCE_METERS = 5;
+const MIN_ACCURACY_METERS = 30;
+
 export default function MapPage() {
     const [isRunning, setIsRunning] = useState(false);
     const [runId, setRunId] = useState<string | null>(null);
@@ -112,26 +115,11 @@ export default function MapPage() {
     }, []);
 
     const handleGpsPoint = useCallback((point: { lat: number; lng: number; accuracy?: number; altitude?: number }) => {
-        // ALWAYS emit presence for global visibility (passive presence)
-        socket?.emit('presence_sync', {
-            lat: point.lat,
-            lng: point.lng,
-            accuracy: point.accuracy || 10
-        });
-
         if (!isRunningRef.current || !runIdRef.current) return;
 
-        // Emit to socket for real-time tracking (active run)
-        socket?.emit('gps_update', {
-            runId: runIdRef.current,
-            lat: point.lat,
-            lng: point.lng,
-            accuracy: point.accuracy || 10
-        });
-
-        // Ignore poor-accuracy points for run metrics (presence is still emitted above)
+        // Ignore poor-accuracy points for run metrics and socket emission
         const accuracy = point.accuracy ?? 999;
-        if (accuracy > 45) {
+        if (accuracy > MIN_ACCURACY_METERS) {
             return;
         }
 
@@ -141,7 +129,7 @@ export default function MapPage() {
         if (lastGpsPoint.current) {
             addedDist = getDistance(lastGpsPoint.current.lat, lastGpsPoint.current.lng, point.lat, point.lng);
             const moveMeters = addedDist * 1000;
-            const minMoveMeters = Math.max(6, Math.round(accuracy * 0.6));
+            const minMoveMeters = MIN_DISTANCE_METERS;
             const dtSec = lastGpsTs.current ? Math.max(1, Math.floor((nowTs - lastGpsTs.current) / 1000)) : 1;
             const speedKmh = (addedDist / dtSec) * 3600;
 
@@ -154,8 +142,26 @@ export default function MapPage() {
                 addedDist = 0;
             }
         }
+        if (lastGpsPoint.current && addedDist === 0) {
+            return;
+        }
+
         lastGpsPoint.current = point;
         lastGpsTs.current = nowTs;
+
+        // Emit only validated points (prevents phantom movement)
+        socket?.emit('presence_sync', {
+            lat: point.lat,
+            lng: point.lng,
+            accuracy: point.accuracy || 10
+        });
+
+        socket?.emit('gps_update', {
+            runId: runIdRef.current,
+            lat: point.lat,
+            lng: point.lng,
+            accuracy: point.accuracy || 10
+        });
 
         // Discovery Logic
         try {
@@ -248,13 +254,14 @@ export default function MapPage() {
                     });
                     startTimer();
                     startGps();
+                    startStepCounter();
                     toast.success('Active Mission Detected: Resuming Uplink');
                 }
             } catch (error) { /* No active run */ }
         };
         checkActiveRun();
         return () => stopTimer();
-    }, [startTimer, stopTimer]);
+    }, [startTimer, stopTimer, startStepCounter]);
 
     // HEARTBEAT: Ensure visibility even when stationary
     useEffect(() => {
@@ -286,6 +293,7 @@ export default function MapPage() {
             isRunningRef.current = true;
 
             hexSetRef.current = new Set();
+            setRunPath([]);
             setStats({ distance: 0, time: 0, hexCount: 0, credits: 0, steps: 0 });
             lastGpsPoint.current = null;
             lastGpsTs.current = null;
@@ -409,6 +417,31 @@ export default function MapPage() {
             clearInterval(cleanup);
         };
     }, [socket, user?.id]); // no position dependency — was causing stale closures
+
+    useEffect(() => {
+        if (!socket) return;
+
+        const onDailyReset = (payload: any) => {
+            const winners = payload?.winners || [];
+            const podium = winners.map((winner: any) => `#${winner.rank} ${winner.username}`).join(' • ');
+
+            // Reset local active run visuals for a clean new day
+            setRunPath([]);
+            setStats({ distance: 0, time: 0, hexCount: 0, credits: 0, steps: 0 });
+            setCurrentTerritory(null);
+
+            if (podium) {
+                toast.success(`Daily Reset • Winners: ${podium}`);
+            } else {
+                toast.success('Daily Reset completed');
+            }
+        };
+
+        socket.on('daily_reset', onDailyReset);
+        return () => {
+            socket.off('daily_reset', onDailyReset);
+        };
+    }, [socket]);
 
     // Join map zone rooms so we receive other runners' updates
     useEffect(() => {

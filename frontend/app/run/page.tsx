@@ -123,12 +123,13 @@ export default function RunPage() {
                         steps: Math.max(0, Math.round((run.distanceKm || 0) * 1312)),
                     });
                     startTimer();
+                    startStepCounter();
                 }
             } catch (error) { /* No active run */ }
         };
         checkActiveRun();
         return () => stopTimer();
-    }, [startTimer, stopTimer]);
+    }, [startTimer, stopTimer, startStepCounter]);
 
     const startRun = async () => {
         setIsStarting(true);

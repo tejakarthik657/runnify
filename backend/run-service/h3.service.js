@@ -2,7 +2,12 @@ const h3 = require('h3-js');
 const { H3Service } = require('../core/services');
 
 const HEX_RESOLUTION = 9;
-const MIN_ACCURACY_METERS = 50;
+const MIN_ACCURACY_METERS = 30;
+const MIN_MOVEMENT_METERS = 5;
+
+function haversineMeters(lat1, lng1, lat2, lng2) {
+	return h3.greatCircleDistance([lat1, lng1], [lat2, lng2], 'm');
+}
 
 function gpsToHex(lat, lng, resolution = HEX_RESOLUTION) {
 	return H3Service.latLngToHex(lat, lng, resolution);
@@ -25,6 +30,7 @@ function processGpsBatch(points = []) {
 	const hexIds = new Set();
 	const validPoints = [];
 	let rejectedCount = 0;
+	let lastAcceptedPoint = null;
 
 	for (const point of points) {
 		const check = validateGpsPoint(point);
@@ -33,15 +39,25 @@ function processGpsBatch(points = []) {
 			continue;
 		}
 
+		if (lastAcceptedPoint) {
+			const dist = haversineMeters(lastAcceptedPoint.lat, lastAcceptedPoint.lng, point.lat, point.lng);
+			if (dist < MIN_MOVEMENT_METERS) {
+				rejectedCount += 1;
+				continue;
+			}
+		}
+
 		const hexId = gpsToHex(point.lat, point.lng);
 		hexIds.add(hexId);
-		validPoints.push({
+		const acceptedPoint = {
 			lat: point.lat,
 			lng: point.lng,
 			accuracy: point.accuracy,
 			hexId,
 			timestamp: point.ts || point.timestamp || Date.now(),
-		});
+		};
+		validPoints.push(acceptedPoint);
+		lastAcceptedPoint = acceptedPoint;
 	}
 
 	return { validPoints, hexIds, rejectedCount };

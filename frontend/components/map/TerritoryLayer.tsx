@@ -5,7 +5,6 @@ import { Polygon, Tooltip, useMapEvent } from 'react-leaflet';
 import useSWR from 'swr';
 import api from '../../services/api';
 import { cellToBoundary } from 'h3-js';
-import { useAuthStore } from '../../store/authStore';
 
 // Design Tokens from Documentation
 const COLORS = {
@@ -24,7 +23,6 @@ interface TerritoryLayerProps {
 
 export default function TerritoryLayer({ currentHexId, onCurrentTerritoryChange }: TerritoryLayerProps) {
     const [bounds, setBounds] = useState<any>(null);
-    const { user } = useAuthStore();
     const { data: territories } = useSWR(
         bounds ? `/map/territories?minLat=${bounds.minLat}&minLng=${bounds.minLng}&maxLat=${bounds.maxLat}&maxLng=${bounds.maxLng}` : null,
         fetcher,
@@ -67,10 +65,9 @@ export default function TerritoryLayer({ currentHexId, onCurrentTerritoryChange 
                 const positions: [number, number][] = boundary.map(coord => [coord[0], coord[1]]);
 
                 // Determine color based on owner
-                const isOwnedByMe = territory.ownerId === user?.id;
                 const isCurrentTerritory = territory.hexId === currentHexId;
                 const rawColor = territory.ownerColor || COLORS.rose;
-                const hexColor = isOwnedByMe ? COLORS.sage : rawColor;
+                const hexColor = rawColor;
                 const claimedAtMs = territory?.claimedAt ? new Date(territory.claimedAt).getTime() : Date.now();
                 const ageRatio = Math.min(1, Math.max(0, (Date.now() - claimedAtMs) / (24 * 60 * 60 * 1000)));
                 const freshness = 1 - ageRatio;

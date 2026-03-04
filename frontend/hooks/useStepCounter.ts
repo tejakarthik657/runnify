@@ -20,14 +20,13 @@ type Options = {
   useAccelerometer?: boolean;
 };
 
-// Empirically tuned constants for step detection
+// Tuned constants for real-device walking/running detection
 const STEP_DETECTION_CONFIG = {
-  THRESHOLD_LOW: 15,        // Minimum acceleration peak
-  THRESHOLD_HIGH: 30,       // Maximum normal walking peak
+  THRESHOLD_RISE: 1.05,      // Rising edge threshold (delta from smoothed baseline)
+  THRESHOLD_FALL: 0.65,      // Hysteresis reset threshold
   MIN_STEP_INTERVAL_MS: 250, // Min milliseconds between steps (240 bpm max)
   MAX_STEP_INTERVAL_MS: 1200, // Max milliseconds between steps (50 bpm min)
-  BUFFER_SIZE: 16,          // Rolling window for smoothing
-  GRAVITY: 9.81,            // m/s² for filtering gravity
+  BUFFER_SIZE: 12,           // Rolling window for smoothing
 };
 
 export function useStepCounter({ 
@@ -50,6 +49,7 @@ export function useStepCounter({
   const stepTimesRef = useRef<number[]>([]);
   const onStepDetectedRef = useRef(onStepDetected);
   const accelDataRef = useRef<{ x: number; y: number; z: number }>({ x: 0, y: 0, z: 0 });
+  const wasAboveThresholdRef = useRef(false);
 
   // Keep refs in sync with props
   useEffect(() => {
@@ -57,16 +57,17 @@ export function useStepCounter({
   }, [onStepDetected]);
 
   const handleDeviceMotion = useCallback((event: DeviceMotionEvent) => {
-    if (!event.acceleration) return;
+    const acc = event.accelerationIncludingGravity || event.acceleration;
+    if (!acc) return;
 
-    const x = event.acceleration.x ?? 0;
-    const y = event.acceleration.y ?? 0;
-    const z = event.acceleration.z ?? 0;
+    const x = acc.x ?? 0;
+    const y = acc.y ?? 0;
+    const z = acc.z ?? 0;
 
     // Store latest acceleration data
     accelDataRef.current = { x, y, z };
 
-    // Calculate magnitude (ignore gravity component)
+    // Magnitude of acceleration vector
     const magnitude = Math.sqrt(x * x + y * y + z * z);
 
     // Add to rolling buffer for smoothing
@@ -78,65 +79,45 @@ export function useStepCounter({
     // Only detect steps if we have enough buffer
     if (accelBufferRef.current.length < 4) return;
 
-    // Calculate moving average
+    // Smoothed baseline from rolling average
     const avgAccel = accelBufferRef.current.reduce((a, b) => a + b, 0) / accelBufferRef.current.length;
-    const currentIdx = accelBufferRef.current.length - 1;
-    const prevIdx = currentIdx - 1;
+    const signal = Math.abs(magnitude - avgAccel);
+    const now = Date.now();
+    const timeSinceLastStep = now - lastStepTimeRef.current;
 
-    // Peak detection: is current point > neighbors?
-    if (currentIdx > 0 && accelBufferRef.current.length > 2) {
-      const prev = accelBufferRef.current[prevIdx];
-      const current = accelBufferRef.current[currentIdx];
+    // Hysteresis detector to avoid double-counting on one stride
+    if (!wasAboveThresholdRef.current && signal >= STEP_DETECTION_CONFIG.THRESHOLD_RISE) {
+      if (
+        timeSinceLastStep >= STEP_DETECTION_CONFIG.MIN_STEP_INTERVAL_MS &&
+        timeSinceLastStep <= STEP_DETECTION_CONFIG.MAX_STEP_INTERVAL_MS
+      ) {
+        stepCountRef.current++;
+        lastStepTimeRef.current = now;
 
-      // Rising peak with threshold
-      const isPeak = 
-        current > prev && 
-        current > STEP_DETECTION_CONFIG.THRESHOLD_LOW && 
-        current < STEP_DETECTION_CONFIG.THRESHOLD_HIGH;
+        stepTimesRef.current.push(now);
+        if (stepTimesRef.current.length > 12) stepTimesRef.current.shift();
 
-      if (isPeak) {
-        const now = Date.now();
-        const timeSinceLastStep = now - lastStepTimeRef.current;
-
-        // Validate step timing (debounce false positives)
-        if (
-          timeSinceLastStep >= STEP_DETECTION_CONFIG.MIN_STEP_INTERVAL_MS &&
-          timeSinceLastStep <= STEP_DETECTION_CONFIG.MAX_STEP_INTERVAL_MS
-        ) {
-          // Confirmed step detection
-          stepCountRef.current++;
-          lastStepTimeRef.current = now;
-
-          // Track step times for cadence calculation
-          stepTimesRef.current.push(now);
-          if (stepTimesRef.current.length > 12) {
-            stepTimesRef.current.shift(); // Keep last 12 steps for cadence
-          }
-
-          // Calculate cadence (steps per minute)
-          let cadence = 0;
-          if (stepTimesRef.current.length >= 2) {
-            const timeSpan = stepTimesRef.current[stepTimesRef.current.length - 1] - stepTimesRef.current[0];
-            if (timeSpan > 0) {
-              cadence = Math.round((stepTimesRef.current.length / timeSpan) * 60000);
-            }
-          }
-
-          // Calculate rolling step rate (steps/min)
-          const rate60s = stepTimesRef.current.filter(t => now - t < 60000).length;
-          const stepRate = rate60s > 0 ? rate60s : 0;
-
-          setState({
-            steps: stepCountRef.current,
-            stepRate,
-            cadence,
-            isDetecting: true,
-            error: null,
-          });
-
-          onStepDetectedRef.current?.(stepCountRef.current);
+        let cadence = 0;
+        if (stepTimesRef.current.length >= 2) {
+          const timeSpan = stepTimesRef.current[stepTimesRef.current.length - 1] - stepTimesRef.current[0];
+          if (timeSpan > 0) cadence = Math.round((stepTimesRef.current.length / timeSpan) * 60000);
         }
+
+        const stepRate = stepTimesRef.current.filter((timestamp) => now - timestamp < 60000).length;
+
+        setState({
+          steps: stepCountRef.current,
+          stepRate,
+          cadence,
+          isDetecting: true,
+          error: null,
+        });
+
+        onStepDetectedRef.current?.(stepCountRef.current);
       }
+      wasAboveThresholdRef.current = true;
+    } else if (wasAboveThresholdRef.current && signal <= STEP_DETECTION_CONFIG.THRESHOLD_FALL) {
+      wasAboveThresholdRef.current = false;
     }
   }, []);
 
@@ -190,6 +171,7 @@ export function useStepCounter({
     lastStepTimeRef.current = Date.now();
     accelBufferRef.current = [];
     stepTimesRef.current = [];
+    wasAboveThresholdRef.current = false;
     setState({
       steps: 0,
       stepRate: 0,

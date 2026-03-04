@@ -54,12 +54,12 @@ export default function MapContent({
                 onCurrentTerritoryChange={handleTerritoryChange}
             />
 
-            {isRunning && runPath.length > 0 && (
+            {runPath.length > 0 && (
                 <Polyline
                     positions={runPath}
                     color={userColor}
                     weight={6}
-                    opacity={0.8}
+                    opacity={isRunning ? 0.8 : 0.45}
                     lineJoin="round"
                 />
             )}

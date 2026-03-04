@@ -36,6 +36,9 @@ const MAX_GPS_POINTS = 500;
 const MAX_RUNS_PER_DAY = 50;
 const GPS_ACCURACY_LIMIT = 50;     // metres
 const MAX_SPEED_KMH = 45;     // anti-cheat: flag runs with GPS > this
+const ENCLOSURE_CLOSE_DISTANCE_M = 100;
+const ENCLOSURE_MIN_POINTS = 10;
+const ENCLOSURE_BONUS_PER_HEX = 5;
 
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -468,7 +471,14 @@ const RunService = {
 
     // Only process hexes that passed anti-cheat filters (e.g. dwell time)
     const validHexSet = new Set(acResult.validHexes);
-    const touchedHexIds = allTouchedHexIds.filter(h => validHexSet.has(h));
+    let touchedHexIds = allTouchedHexIds.filter(h => validHexSet.has(h));
+
+    // Enclosure capture: closed-loop run claims enclosed area hexes
+    const enclosedHexes = RunService._detectEnclosedHexes(points);
+    if (enclosedHexes.length > 0) {
+      const merged = new Set([...touchedHexIds, ...enclosedHexes]);
+      touchedHexIds = [...merged];
+    }
 
     // Classify hexes
     const existingTerritories = await Territory.find({ hexId: { $in: touchedHexIds } })
@@ -495,7 +505,8 @@ const RunService = {
 
     // Calculate credits (multiplied by AC verdict)
     const rawCredits = CreditEngine.calculate({ hexesClaimed, hexesInvaded, hexesRetouched });
-    const finalCreditsTotal = Math.floor(rawCredits.total * acResult.creditMultiplier);
+    const enclosureBonus = enclosedHexes.length * ENCLOSURE_BONUS_PER_HEX;
+    const finalCreditsTotal = Math.floor((rawCredits.total + enclosureBonus) * acResult.creditMultiplier);
 
 
     // Duration check
@@ -733,8 +744,46 @@ const RunService = {
         distanceKm,
         durationSeconds,
         stepsCount,
+        enclosureHexes: enclosedHexes.length,
+        enclosureBonus,
       }
     };
+  },
+
+  _detectEnclosedHexes(points) {
+    if (!Array.isArray(points) || points.length < ENCLOSURE_MIN_POINTS) return [];
+
+    const first = points[0]?.location?.coordinates;
+    const last = points[points.length - 1]?.location?.coordinates;
+    if (!first || !last) return [];
+
+    const startLat = first[1];
+    const startLng = first[0];
+    const endLat = last[1];
+    const endLng = last[0];
+
+    const closingDistanceM = h3.greatCircleDistance([startLat, startLng], [endLat, endLng], 'm');
+    if (closingDistanceM > ENCLOSURE_CLOSE_DISTANCE_M) return [];
+
+    const ring = points
+      .map((point) => point?.location?.coordinates)
+      .filter((coord) => Array.isArray(coord) && Number.isFinite(coord[0]) && Number.isFinite(coord[1]))
+      .map((coord) => [coord[1], coord[0]]);
+
+    if (ring.length < ENCLOSURE_MIN_POINTS) return [];
+
+    const [firstLat, firstLng] = ring[0];
+    const [lastLat, lastLng] = ring[ring.length - 1];
+    if (firstLat !== lastLat || firstLng !== lastLng) {
+      ring.push([firstLat, firstLng]);
+    }
+
+    try {
+      const enclosed = h3.polygonToCells([ring], H3_RES);
+      return Array.isArray(enclosed) ? enclosed : [];
+    } catch (_) {
+      return [];
+    }
   },
 
   _calcDistanceKm(points) {
