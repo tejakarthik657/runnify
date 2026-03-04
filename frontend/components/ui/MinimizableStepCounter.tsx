@@ -34,7 +34,7 @@ export default function MinimizableStepCounter({
   return (
     <motion.div
       layout
-      className={`fixed bottom-4 right-4 z-40 ${className}`}
+      className={`fixed bottom-20 right-4 z-50 ${className}`}
     >
       <AnimatePresence mode="wait">
         {isMinimized ? (
@@ -43,19 +43,53 @@ export default function MinimizableStepCounter({
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => setIsMinimized(false)}
-            className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full shadow-lg border-2 border-white flex items-center justify-center text-white hover:shadow-xl transition-all active:scale-95"
+            className="group relative"
           >
-            <div className="relative flex items-center justify-center">
-              <Activity size={24} />
-              {isDetecting && (
-                <motion.div
-                  className="absolute inset-1 border-2 border-white rounded-full"
-                  animate={{ scale: [1, 1.3, 1], opacity: [1, 0.3, 1] }}
-                  transition={{ duration: 1.5, repeat: Infinity }}
-                />
-              )}
+            {/* Main button with larger size */}
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full shadow-2xl border-4 border-white flex flex-col items-center justify-center text-white hover:shadow-emerald-300/50 transition-all">
+              <div className="relative flex items-center justify-center">
+                <Activity size={28} className="sm:w-8 sm:h-8" strokeWidth={2.5} />
+                {isDetecting && (
+                  <motion.div
+                    className="absolute inset-0 border-2 border-white rounded-full"
+                    animate={{ scale: [1, 1.4, 1], opacity: [1, 0.2, 1] }}
+                    transition={{ duration: 1.2, repeat: Infinity }}
+                  />
+                )}
+              </div>
+              {/* Step count badge */}
+              <div className="text-[10px] font-black mt-0.5">{steps}</div>
             </div>
+            
+            {/* Tooltip hint */}
+            <motion.div
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.5, duration: 0.3 }}
+              className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-emerald-600 text-white px-3 py-2 rounded-lg text-xs font-bold whitespace-nowrap shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+            >
+              Tap to view steps
+              <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 rotate-45 w-2 h-2 bg-emerald-600"></div>
+            </motion.div>
+
+            {/* Pulse ring animation */}
+            {isDetecting && (
+              <motion.div
+                className="absolute inset-0 rounded-full bg-emerald-400"
+                animate={{
+                  scale: [1, 1.5, 1],
+                  opacity: [0.6, 0, 0.6]
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeOut"
+                }}
+              />
+            )}
           </motion.button>
         ) : (
           <motion.div
@@ -63,7 +97,7 @@ export default function MinimizableStepCounter({
             initial={{ scale: 0.95, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-[24px] p-4 sm:p-6 border-2 border-emerald-200/50 shadow-xl overflow-hidden relative w-80 sm:w-96 max-w-[calc(100vw-2rem)]"
+            className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-[24px] p-4 sm:p-6 border-2 border-emerald-200/50 shadow-2xl overflow-hidden relative w-80 sm:w-96 max-w-[calc(100vw-2rem)]"
           >
             {/* Background pulse */}
             {isDetecting && (
@@ -92,9 +126,10 @@ export default function MinimizableStepCounter({
                 </div>
                 <button
                   onClick={() => setIsMinimized(true)}
-                  className="p-1.5 sm:p-2 hover:bg-white/50 rounded-lg transition-all"
+                  className="p-1.5 sm:p-2 hover:bg-emerald-100 rounded-lg transition-all flex items-center gap-1"
                 >
                   <ChevronDown size={18} className="text-emerald-600" />
+                  <span className="text-xs font-bold text-emerald-600 hidden sm:inline">Hide</span>
                 </button>
               </div>
 
