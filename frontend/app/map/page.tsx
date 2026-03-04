@@ -26,7 +26,7 @@ import { useAuthStore } from '../../store/authStore';
 import api from '../../services/api';
 import { toast } from 'react-hot-toast';
 import Badge from '../../components/ui/Badge';
-import StepCounterDisplay from '../../components/ui/StepCounterDisplay';
+import MinimizableStepCounter from '../../components/ui/MinimizableStepCounter';
 import MapContent from '../../components/map/MapContent';
 import MapSearch from '../../components/map/MapSearch';
 import L from 'leaflet';
@@ -607,18 +607,15 @@ export default function MapPage() {
                     {isRunning && (
                         <>
                             {/* Step Counter Display */}
-                            <motion.div
-                                initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }}
-                                className="w-full max-w-xs pointer-events-auto"
-                            >
-                                <StepCounterDisplay
+                            {isRunning && (
+                                <MinimizableStepCounter
                                     steps={stats.steps}
                                     stepRate={stepRate}
                                     cadence={cadence}
                                     isDetecting={isDetecting}
                                     accuracy="High"
                                 />
-                            </motion.div>
+                            )}
 
                             {/* Run Stats Bar */}
                             <motion.div

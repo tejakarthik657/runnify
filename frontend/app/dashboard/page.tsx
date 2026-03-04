@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import useSWR from 'swr';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '../../store/authStore';
+import { useSocket } from '../../hooks/useSocket';
 import api from '../../services/api';
 import {
     Trophy,
@@ -28,13 +29,46 @@ import MomentsTray from '../../components/dashboard/MomentsTray';
 const fetcher = (url: string) => api.get(url).then(res => res.data);
 
 export default function DashboardPage() {
-    const { user } = useAuthStore();
+    const { user, updateUser } = useAuthStore();
+    const socket = useSocket('main');
+    const [liveStats, setLiveStats] = useState<any>(null);
+    
     const { data: meData } = useSWR('/auth/me', fetcher);
     const { data: rankData } = useSWR('/leaderboard/me', fetcher);
     const { data: runHistory } = useSWR('/run/history/me', fetcher);
     const { data: globalInvasions } = useSWR('/map/invasions?limit=10', fetcher, { refreshInterval: 10000 });
 
-    const currentUser = meData?.user || user;
+    const currentUser = liveStats ? { ...meData?.user || user, ...liveStats } : (meData?.user || user);
+
+    // Listen for real-time stat updates
+    useEffect(() => {
+        if (!socket) return;
+
+        const handleStatsUpdate = (data: any) => {
+            setLiveStats(data);
+            if (user?.id === data.userId) {
+                updateUser(data);
+            }
+        };
+
+        const handleRankUpdate = (data: any) => {
+            setLiveStats((prev: any) => ({ ...prev, rank: data.rank }));
+        };
+
+        const handleCreditsUpdate = (data: any) => {
+            setLiveStats((prev: any) => ({ ...prev, credits: data.credits }));
+        };
+
+        socket.on('user_stats_update', handleStatsUpdate);
+        socket.on('rank_update', handleRankUpdate);
+        socket.on('credits_update', handleCreditsUpdate);
+
+        return () => {
+            socket.off('user_stats_update', handleStatsUpdate);
+            socket.off('rank_update', handleRankUpdate);
+            socket.off('credits_update', handleCreditsUpdate);
+        };
+    }, [socket, user?.id, updateUser]);
 
     // Derived ActivityStrip data
     const activities = (globalInvasions?.invasions || []).map((inv: any) => ({

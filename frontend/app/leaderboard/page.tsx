@@ -1,27 +1,20 @@
 'use client';
 
 import React, { useState } from 'react';
-import useSWR from 'swr';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Globe, MapPin, ChevronRight, Loader2, ArrowLeft, TrendingUp, Medal, Zap } from 'lucide-react';
 import Link from 'next/link';
-import api from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
+import { useRealtimeLeaderboard } from '../../hooks/useRealtimeLeaderboard';
 import Badge from '../../components/ui/Badge';
-
-const fetcher = (url: string) => api.get(url).then(res => res.data);
 
 export default function LeaderboardPage() {
     const { user } = useAuthStore();
     const userCity = user?.city || 'Sector_01';
     const [scope, setScope] = useState<'global' | 'city'>('global');
 
-    const { data: globalData, isLoading: globalLoading } = useSWR('/leaderboard/global', fetcher, { refreshInterval: 10000 });
-    const { data: cityData, isLoading: cityLoading } = useSWR(userCity ? `/leaderboard/city/${userCity}` : null, fetcher, { refreshInterval: 10000 });
-    const { data: meRank } = useSWR('/leaderboard/me', fetcher, { refreshInterval: 10000 });
-
-    const currentData = scope === 'global' ? globalData?.entries : cityData?.entries;
-    const isLoading = scope === 'global' ? globalLoading : cityLoading;
+    const { entries, meRank, isLoading } = useRealtimeLeaderboard(scope, userCity);
+    const currentData = entries;
 
     return (
         <div className="min-h-screen pb-20">

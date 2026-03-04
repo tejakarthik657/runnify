@@ -80,6 +80,38 @@ router.post('/:runId/end', authenticateJWT, async (req, res, next) => {
 			if (io) broadcastTerritoryChanges(io, [], territoryChanges);
 		}
 
+		// ── Emit real-time leaderboard and stats updates ─────────────
+		const io = getIO();
+		if (io && req.userId) {
+			const user = await User.findById(req.userId).select('credits username city').lean();
+			if (user) {
+				// Emit stats update for this user
+				io.to(`user:${req.userId}`).emit('user_stats_update', {
+					userId: req.userId,
+					credits: user.credits,
+					distanceKm: result.summary?.distanceKm,
+					hexesClaimed: result.summary?.hexesClaimed
+				});
+
+				// Emit global leaderboard update
+				io.emit('leaderboard_update', {
+					userId: req.userId,
+					updates: {
+						credits: user.credits,
+						username: user.username,
+						lastRunTime: new Date()
+					}
+				});
+
+				// Emit rank update
+				const usersAbove = await User.countDocuments({ credits: { $gt: user.credits }, isBanned: false });
+				io.to(`user:${req.userId}`).emit('rank_update', {
+					userId: req.userId,
+					rank: usersAbove + 1
+				});
+			}
+		}
+
 		res.json(result);
 	} catch (error) {
 		next(error);
@@ -104,6 +136,38 @@ router.post('/end', authenticateJWT, async (req, res, next) => {
 		if (territoryChanges && territoryChanges.length > 0) {
 			const io = getIO();
 			if (io) broadcastTerritoryChanges(io, [], territoryChanges);
+		}
+
+		// ── Emit real-time leaderboard and stats updates ─────────────
+		const io = getIO();
+		if (io && req.userId) {
+			const user = await User.findById(req.userId).select('credits username city').lean();
+			if (user) {
+				// Emit stats update for this user
+				io.to(`user:${req.userId}`).emit('user_stats_update', {
+					userId: req.userId,
+					credits: user.credits,
+					distanceKm: result.summary?.distanceKm,
+					hexesClaimed: result.summary?.hexesClaimed
+				});
+
+				// Emit global leaderboard update
+				io.emit('leaderboard_update', {
+					userId: req.userId,
+					updates: {
+						credits: user.credits,
+						username: user.username,
+						lastRunTime: new Date()
+					}
+				});
+
+				// Emit rank update
+				const usersAbove = await User.countDocuments({ credits: { $gt: user.credits }, isBanned: false });
+				io.to(`user:${req.userId}`).emit('rank_update', {
+					userId: req.userId,
+					rank: usersAbove + 1
+				});
+			}
 		}
 
 		res.json(result);

@@ -21,7 +21,7 @@ import { toast } from 'react-hot-toast';
 import api from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import Badge from '../../components/ui/Badge';
-import StepCounterDisplay from '../../components/ui/StepCounterDisplay';
+import MinimizableStepCounter from '../../components/ui/MinimizableStepCounter';
 import { useGps } from '../../hooks/useGps';
 import { useStepCounter } from '../../hooks/useStepCounter';
 
@@ -235,7 +235,7 @@ export default function RunPage() {
 
                 {/* Step Counter Display */}
                 {isRunning && (
-                    <StepCounterDisplay
+                    <MinimizableStepCounter
                         steps={stats.steps}
                         stepRate={stepRate}
                         cadence={cadence}
