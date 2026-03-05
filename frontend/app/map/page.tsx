@@ -551,8 +551,16 @@ export default function MapPage() {
                     icon={<Search size={22} />}
                     onClick={() => setSearchOpen(true)}
                 />
-                <MapControlButton icon={<Layers size={22} />} />
-                <MapControlButton icon={<History size={22} />} />
+                <MapControlButton
+                    icon={<Layers size={22} />}
+                    onClick={() => toast('Layer switching will be enabled soon')}
+                    title="Layers"
+                />
+                <MapControlButton
+                    icon={<History size={22} />}
+                    onClick={() => toast('Run history timeline is coming soon')}
+                    title="History"
+                />
             </div>
 
             <AnimatePresence>
@@ -721,6 +729,7 @@ function StatItem({ label, value, color, icon }: any) {
 function MapControlButton({ icon, ...props }: any) {
     return (
         <button
+            type="button"
             {...props}
             className="w-12 h-12 bg-white rounded-2xl border border-black/5 shadow-lg flex items-center justify-center text-[#1a1a2e] hover:text-[#2E7D52] active:scale-95 transition-all pointer-events-auto"
         >

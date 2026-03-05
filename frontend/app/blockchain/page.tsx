@@ -23,12 +23,31 @@ import {
 import Link from 'next/link';
 import api from '../../services/api';
 import Badge from '../../components/ui/Badge';
+import { toast } from 'react-hot-toast';
 
 const fetcher = (url: string) => api.get(url).then(res => res.data);
 
 export default function BlockchainPage() {
     const { data: proofsData, isLoading } = useSWR('/blockchain/proofs', fetcher);
     const { data: myProof } = useSWR('/blockchain/my-proof/today', fetcher);
+
+    const handleExportProof = React.useCallback(() => {
+        if (!myProof?.proof) {
+            toast.error('No proof available to export');
+            return;
+        }
+
+        const blob = new Blob([JSON.stringify(myProof.proof, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `territoryrun-proof-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+        URL.revokeObjectURL(url);
+        toast.success('Proof exported');
+    }, [myProof]);
 
     return (
         <div className="min-h-screen pb-20 font-['Nunito'] bg-[#F4F7F4]">
@@ -166,7 +185,11 @@ export default function BlockchainPage() {
                                         <p className="text-[11px] text-gray-400 font-bold leading-relaxed italic uppercase tracking-tighter">
                                             "This unique signature anchors your movement data to the global state. Any alteration will sever the link."
                                         </p>
-                                        <button className="w-full py-5 bg-[#B5D5F5] text-[#2980B9] rounded-[24px] font-black text-xs uppercase tracking-widest hover:shadow-lg transition-all active:scale-95 shadow-sm">
+                                        <button
+                                            type="button"
+                                            onClick={handleExportProof}
+                                            className="w-full py-5 bg-[#B5D5F5] text-[#2980B9] rounded-[24px] font-black text-xs uppercase tracking-widest hover:shadow-lg transition-all active:scale-95 shadow-sm"
+                                        >
                                             Export JSON Proof
                                         </button>
                                     </div>

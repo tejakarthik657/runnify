@@ -240,10 +240,10 @@ export default function LandingPage() {
                             Start Run
                             <ArrowRight size={16} className="sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
                         </Link>
-                        <button className="w-full sm:w-auto px-6 sm:px-12 py-4 sm:py-6 bg-white border border-black/5 rounded-[24px] sm:rounded-[32px] shadow-xl shadow-slate-900/5 text-[#1A1A2E] font-black uppercase text-[10px] sm:text-xs tracking-[0.2em] hover:bg-white transition-all flex items-center justify-center gap-2 sm:gap-4 group">
+                        <Link href="/community" className="w-full sm:w-auto px-6 sm:px-12 py-4 sm:py-6 bg-white border border-black/5 rounded-[24px] sm:rounded-[32px] shadow-xl shadow-slate-900/5 text-[#1A1A2E] font-black uppercase text-[10px] sm:text-xs tracking-[0.2em] hover:bg-white transition-all flex items-center justify-center gap-2 sm:gap-4 group">
                             <Play size={16} className="sm:w-5 sm:h-5 fill-[#A8D5BA] text-[#A8D5BA] group-hover:scale-110 transition-transform" />
                             Brief
-                        </button>
+                        </Link>
                     </motion.div>
                 </div>
 
