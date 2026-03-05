@@ -17,10 +17,12 @@ interface AuthState {
   user: User | null;
   accessToken: string | null;
   isAuthenticated: boolean;
+  _hasHydrated: boolean;
   setAuth: (user: User, accessToken: string) => void;
   updateUser: (user: Partial<User>) => void;
   setAccessToken: (token: string) => void;
   logout: () => void;
+  setHasHydrated: (hydrated: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -29,6 +31,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       accessToken: null,
       isAuthenticated: false,
+      _hasHydrated: false,
       setAuth: (user, accessToken) => set({ user, accessToken, isAuthenticated: true }),
       updateUser: (userData) => 
         set((state) => ({ 
@@ -36,6 +39,7 @@ export const useAuthStore = create<AuthState>()(
         })),
       setAccessToken: (accessToken) => set({ accessToken }),
       logout: () => set({ user: null, accessToken: null, isAuthenticated: false }),
+      setHasHydrated: (hydrated: boolean) => set({ _hasHydrated: hydrated }),
     }),
     {
       name: 'territory-run-auth',
@@ -45,6 +49,9 @@ export const useAuthStore = create<AuthState>()(
           if (error) {
             console.warn('[Auth] Rehydration error:', error);
             state?.logout?.();
+          } else if (state) {
+            // Mark hydration as complete only after successful load
+            state._hasHydrated = true;
           }
         };
       },
