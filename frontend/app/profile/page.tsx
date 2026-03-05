@@ -52,6 +52,8 @@ export default function ProfilePage() {
 
     const [isUpdating, setIsUpdating] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const [isLoggingOutAll, setIsLoggingOutAll] = useState(false);
 
     const currentUser = meData?.user || user;
 
@@ -63,24 +65,30 @@ export default function ProfilePage() {
     const privacy = meData?.user?.privacy || {};
 
     const handleLogout = async () => {
+        if (isLoggingOut) return;
+        setIsLoggingOut(true);
         try {
             await api.post('/auth/logout');
             logout();
             window.location.href = '/login';
         } catch (err: any) {
             toast.error('Logout failed');
+            setIsLoggingOut(false);
         }
     };
 
     const handleLogoutAll = async () => {
+        if (isLoggingOutAll) return;
         try {
             if (confirm('Terminate all remote sessions?')) {
+                setIsLoggingOutAll(true);
                 await api.post('/user/me/sessions/logout-all');
                 logout();
                 window.location.href = '/login';
             }
         } catch (err: any) {
             toast.error('Reboot failed');
+            setIsLoggingOutAll(false);
         }
     };
 
@@ -238,10 +246,11 @@ export default function ProfilePage() {
 
                                 <button
                                     onClick={handleLogout}
+                                    disabled={isLoggingOut}
                                     className="w-full mt-10 py-5 bg-[#F4B8C1] hover:bg-[#E89BA5] text-[#c0392b] rounded-3xl font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-3 shadow-sm active:scale-95"
                                 >
-                                    <LogOut size={18} />
-                                    Terminate Session
+                                    {isLoggingOut ? <Loader2 size={18} className="animate-spin" /> : <LogOut size={18} />}
+                                    {isLoggingOut ? 'Terminating...' : 'Terminate Session'}
                                 </button>
                             </div>
                         </div>
@@ -375,9 +384,10 @@ export default function ProfilePage() {
                                 </h3>
                                 <button
                                     onClick={handleLogoutAll}
+                                    disabled={isLoggingOutAll}
                                     className="text-[10px] font-black text-[#c0392b] hover:underline uppercase tracking-widest"
                                 >
-                                    Force Global Sign-out
+                                    {isLoggingOutAll ? 'Terminating...' : 'Force Global Sign-out'}
                                 </button>
                             </div>
 

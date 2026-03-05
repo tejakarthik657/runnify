@@ -31,6 +31,8 @@ const C = {
 export default function NotificationsPage() {
     const { data: notificationsData, error, isLoading, mutate } = useSWR('/notifications/me', fetcher);
     const socket = useSocket('main');
+    const [isClearing, setIsClearing] = React.useState(false);
+    const [readingId, setReadingId] = React.useState<string | null>(null);
 
     useEffect(() => {
         if (!socket) return;
@@ -45,12 +47,29 @@ export default function NotificationsPage() {
     }, [socket, mutate]);
 
     const markAllAsRead = async () => {
+        if (isClearing) return;
+        setIsClearing(true);
         try {
             await api.patch('/notifications/read-all');
             mutate();
             toast.success('Frequency Cleared');
         } catch (err: any) {
             toast.error('Sync failed');
+        } finally {
+            setIsClearing(false);
+        }
+    };
+
+    const markOneAsRead = async (notificationId: string) => {
+        if (readingId) return;
+        setReadingId(notificationId);
+        try {
+            await api.patch(`/notifications/${notificationId}/read`);
+            mutate();
+        } catch {
+            toast.error('Failed to acknowledge dispatch');
+        } finally {
+            setReadingId(null);
         }
     };
 
@@ -95,10 +114,13 @@ export default function NotificationsPage() {
                     {notifications.length > 0 && (
                         <button
                             onClick={markAllAsRead}
+                            disabled={isClearing}
                             className="flex items-center gap-3 px-6 py-4 bg-white border border-black/5 rounded-2xl text-[#1A1A2E] hover:text-[#E89BA5] hover:border-[#F4B8C1]/30 transition-all shadow-sm active:scale-95 group"
                         >
-                            <Trash2 size={18} className="text-gray-300 group-hover:text-[#E89BA5] transition-colors" />
-                            <span className="text-xs font-black uppercase tracking-widest">Clear Uplink</span>
+                            {isClearing
+                                ? <Loader2 size={18} className="text-gray-300 animate-spin" />
+                                : <Trash2 size={18} className="text-gray-300 group-hover:text-[#E89BA5] transition-colors" />}
+                            <span className="text-xs font-black uppercase tracking-widest">{isClearing ? 'Clearing...' : 'Clear Uplink'}</span>
                         </button>
                     )}
                 </div>
@@ -169,10 +191,11 @@ export default function NotificationsPage() {
                                         <motion.button
                                             whileHover={{ scale: 1.02 }}
                                             whileTap={{ scale: 0.98 }}
-                                            onClick={() => api.patch(`/notifications/${notif._id}/read`).then(() => mutate())}
+                                            onClick={() => markOneAsRead(notif._id)}
+                                            disabled={readingId === notif._id}
                                             className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-3.5 bg-[#1A1A2E] text-white rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-[#2E7D52] transition-colors"
                                                         >
-                                                            Acknowledge dispatch
+                                                            {readingId === notif._id ? 'Acknowledging...' : 'Acknowledge dispatch'}
                                                         </motion.button>
 
                                                         <Link

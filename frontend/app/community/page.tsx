@@ -15,6 +15,7 @@ const fetcher = (url: string) => api.get(url).then(res => res.data);
 export default function CommunityPage() {
     const [activeRoom, setActiveRoom] = useState<any>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [startingDmId, setStartingDmId] = useState<string | null>(null);
 
     const { data: roomsData, isLoading: roomsLoading, mutate: mutateRooms } = useSWR('/chat/rooms', fetcher);
     const { data: onlineData, isLoading: onlineLoading } = useSWR('/user/online', fetcher, { refreshInterval: 5000 });
@@ -24,9 +25,12 @@ export default function CommunityPage() {
     const socket = useSocket('chat');
 
     const startDM = async (otherUser: any) => {
+        const targetId = otherUser._id || otherUser.userId;
+        if (!targetId || startingDmId) return;
+        setStartingDmId(targetId);
         try {
             // Updated target field name to targetUserId to match backend
-            const { data } = await api.post('/chat/dm/start', { targetUserId: otherUser._id || otherUser.userId });
+            const { data } = await api.post('/chat/dm/start', { targetUserId: targetId });
             mutateRooms();
             setActiveRoom({
                 roomId: data.roomId,
@@ -36,6 +40,8 @@ export default function CommunityPage() {
             setSearchTerm('');
         } catch (error: any) {
             console.error('DM Initialization Failed');
+        } finally {
+            setStartingDmId(null);
         }
     };
 
@@ -97,7 +103,9 @@ export default function CommunityPage() {
                                         ) : searchResults?.users?.length > 0 ? (
                                             searchResults.users.map((u: any) => (
                                                 <button
-                                                    key={u._id} onClick={() => startDM(u)}
+                                                    key={u._id}
+                                                    onClick={() => startDM(u)}
+                                                    disabled={startingDmId === (u._id || u.userId)}
                                                     className="w-full flex items-center gap-4 p-4 bg-[#F0F7F4] hover:bg-[#A8D5BA] hover:text-white rounded-[24px] transition-all text-left shadow-sm active:scale-95 group"
                                                 >
                                                     <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-sm font-black text-[#1a1a2e] shadow-inner overflow-hidden" style={{ color: u.color }}>
@@ -108,7 +116,9 @@ export default function CommunityPage() {
                                                         )}
                                                     </div>
                                                     <span className="flex-1 font-black text-sm uppercase tracking-tight">{u.username}</span>
-                                                    <UserPlus size={18} className="text-[#A8D5BA] group-hover:text-white" />
+                                                    {startingDmId === (u._id || u.userId)
+                                                        ? <Loader2 size={18} className="text-[#A8D5BA] animate-spin" />
+                                                        : <UserPlus size={18} className="text-[#A8D5BA] group-hover:text-white" />}
                                                 </button>
                                             ))
                                         ) : (
@@ -138,6 +148,7 @@ export default function CommunityPage() {
                                             initial={{ opacity: 0, x: -10 }}
                                             animate={{ opacity: 1, x: 0 }}
                                             onClick={() => startDM({ _id: user.userId, username: user.username, color: user.userColor })}
+                                            disabled={startingDmId === user.userId}
                                             className="w-full flex items-center gap-4 p-4 bg-white hover:bg-gray-50 rounded-[24px] transition-all text-left border border-black/5 hover:border-[#A8D5BA]/30 group"
                                         >
                                             <div className="relative">
@@ -158,7 +169,9 @@ export default function CommunityPage() {
                                                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Ready for Intel</p>
                                             </div>
                                             <div className="w-10 h-10 rounded-xl bg-[#F0F7F4] group-hover:bg-[#A8D5BA] flex items-center justify-center text-[#A8D5BA] group-hover:text-white transition-all scale-0 group-hover:scale-100 opacity-0 group-hover:opacity-100">
-                                                <MessageCircle size={18} />
+                                                {startingDmId === user.userId
+                                                    ? <Loader2 size={18} className="animate-spin" />
+                                                    : <MessageCircle size={18} />}
                                             </div>
                                         </motion.button>
                                     ))
