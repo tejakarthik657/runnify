@@ -307,32 +307,49 @@ export default function RunPage() {
                         <div className="flex flex-col gap-4">
                             <Link
                                 href="/map"
-                                className="w-full bg-[#B5D5F5] hover:bg-[#97c1eb] text-[#2980B9] p-6 rounded-[28px] shadow-[0_8px_24px_rgba(181,213,245,0.4)] transition-all active:scale-95 flex items-center justify-center gap-4 group"
+                                className="w-full group relative bg-gradient-to-br from-[#2980B9] to-[#1F618D] hover:from-[#3498DB] hover:to-[#2980B9] text-white p-6 rounded-[28px] shadow-[0_12px_32px_rgba(41,128,185,0.3)] transition-all active:scale-95 overflow-hidden"
                             >
-                                <div className="w-10 h-10 rounded-xl bg-white/40 flex items-center justify-center">
-                                    <Navigation size={20} />
+                                {/* Animated background gradient */}
+                                <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/0 via-cyan-400/10 to-cyan-400/0 group-hover:from-cyan-400/10 group-hover:via-cyan-400/20 group-hover:to-cyan-400/10 transition-all duration-500" />
+                                
+                                <div className="relative flex items-center justify-center gap-3 z-10">
+                                    <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-all">
+                                        <div className="w-5 h-5 rounded-full border-2 border-white/60 border-r-white animate-spin group-hover:border-r-cyan-300" />
+                                    </div>
+                                    <span className="text-base font-black uppercase tracking-wider">Live Tracker</span>
+                                    <div className="w-2 h-2 rounded-full bg-cyan-300 animate-pulse" />
                                 </div>
-                                <span className="text-lg font-black uppercase tracking-tight">View Tactical Map</span>
                             </Link>
 
                             <button
                                 onClick={endRun}
                                 disabled={isEnding}
-                                className="w-full bg-[#F4B8C1] hover:bg-[#E89BA5] text-[#c0392b] p-8 rounded-[32px] shadow-[0_12px_40px_rgba(244,184,193,0.4)] transition-all active:scale-95 flex items-center justify-center gap-4 group"
+                                className="w-full group relative bg-gradient-to-br from-[#E89BA5] to-[#E74C3C] hover:from-[#F4B8C1] hover:to-[#E89BA5] text-white p-8 rounded-[32px] shadow-[0_12px_40px_rgba(232,155,165,0.3)] transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
                             >
-                                {isEnding ? (
-                                    <Loader2 className="animate-spin" size={32} />
-                                ) : (
-                                    <>
-                                        <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                            <Square size={24} fill="currentColor" stroke="none" />
-                                        </div>
-                                        <div className="text-left">
-                                            <div className="text-xl font-black uppercase tracking-tight">Abort Mission</div>
-                                            <div className="text-xs font-bold text-[#c0392b]/70 uppercase tracking-widest">Terminate Active Sortie</div>
-                                        </div>
-                                    </>
-                                )}
+                                {/* Pulse effect on hover */}
+                                <div className="absolute inset-0 bg-white/10 group-hover:animate-pulse opacity-0 group-hover:opacity-100 transition-opacity" />
+                                
+                                <div className="relative z-10 flex items-center justify-center gap-4">
+                                    {isEnding ? (
+                                        <>
+                                            <Loader2 className="animate-spin" size={28} />
+                                            <div>
+                                                <div className="font-black text-lg uppercase tracking-tight">Concluding...</div>
+                                                <div className="text-xs text-white/70 font-bold uppercase tracking-widest">Syncing results</div>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="w-12 h-12 rounded-2xl bg-white/20 group-hover:bg-white/30 flex items-center justify-center transition-all">
+                                                <Square size={24} fill="currentColor" stroke="none" />
+                                            </div>
+                                            <div className="text-left">
+                                                <div className="text-xl font-black uppercase tracking-tight">End Mission</div>
+                                                <div className="text-xs font-bold text-white/70 uppercase tracking-widest">Complete sortie</div>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
                             </button>
                         </div>
                     )}

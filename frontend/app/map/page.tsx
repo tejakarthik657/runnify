@@ -102,7 +102,7 @@ export default function MapPage() {
         return R * c;
     };
 
-    const lastGpsPoint = useRef<{ lat: number; lng: number } | null>(null);
+    const lastGpsPoint = useRef<{ lat: number; lng: number; accuracy?: number } | null>(null);
     const lastGpsTs = useRef<number | null>(null);
 
     const handleLocateUser = useCallback((lat: number, lng: number) => {
@@ -118,85 +118,101 @@ export default function MapPage() {
     const handleGpsPoint = useCallback((point: { lat: number; lng: number; accuracy?: number; altitude?: number }) => {
         if (!isRunningRef.current || !runIdRef.current) return;
 
-        // Ignore poor-accuracy points for run metrics and socket emission
+        // Production-grade accuracy filtering with dynamic threshold
         const accuracy = point.accuracy ?? 999;
-        if (accuracy > MIN_ACCURACY_METERS) {
-            console.log(`[GPS] Ignoring inaccurate point: ${accuracy}m > ${MIN_ACCURACY_METERS}m`);
+        if (!lastGpsPoint.current) {
+            // First point - just record it
+            lastGpsPoint.current = { ...point, accuracy };
+            lastGpsTs.current = Date.now();
+            console.log(`[GPS-START] First point: [${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}]`);
             return;
         }
 
-        // Calculate distance from last point
-        let addedDist = 0;
+        // Dynamic accuracy threshold: max 2.2x previous accuracy
+        const lastAccuracy = lastGpsPoint.current.accuracy ?? accuracy;
+        const maxAccuracy = Math.max(30, Math.min(lastAccuracy * 2.2, 55));
+        if (accuracy > maxAccuracy) {
+            console.log(`[GPS-REJECT] Bad accuracy: ${accuracy}m > ${maxAccuracy}m threshold`);
+            return;
+        }
+
+        // Calculate validated distance
         const nowTs = Date.now();
-        if (lastGpsPoint.current) {
-            addedDist = getDistance(lastGpsPoint.current.lat, lastGpsPoint.current.lng, point.lat, point.lng);
-            const moveMeters = addedDist * 1000;
-            const minMoveMeters = MIN_DISTANCE_METERS;
-            const dtSec = lastGpsTs.current ? Math.max(1, Math.floor((nowTs - lastGpsTs.current) / 1000)) : 1;
-            const speedKmh = (addedDist / dtSec) * 3600;
+        const dtSec = Math.max(1, Math.floor((nowTs - lastGpsTs.current!) / 1000));
+        const addedDistKm = getDistance(lastGpsPoint.current.lat, lastGpsPoint.current.lng, point.lat, point.lng);
+        const addedDistMeters = addedDistKm * 1000;
+        const speedKmh = dtSec > 0 ? (addedDistKm * 3600) / dtSec : 0;
 
-            console.log(`[GPS] MovementCheck: ${moveMeters.toFixed(1)}m, Speed: ${speedKmh.toFixed(1)}km/h, Accuracy: ${accuracy}m`);
+        // Multi-layer anti-cheat validation
+        const isTooClose = addedDistMeters < MIN_DISTANCE_METERS && dtSec < 3;
+        const isTooFast = speedKmh > 50;
+        const hasIssues = isTooClose || isTooFast;
 
-            // More lenient movement validation
-            if (moveMeters < minMoveMeters) {
-                console.log(`[GPS] Ignoring small movement: ${moveMeters.toFixed(1)}m < ${minMoveMeters}m`);
-                addedDist = 0;
-            }
-
-            // Reject unrealistic speeds (> 50 km/h for walking/running)
-            if (speedKmh > 50) {
-                console.warn(`[GPS] Ignoring implausible jump: ${addedDist.toFixed(4)}km in ${dtSec}s (${speedKmh.toFixed(1)}km/h)`);
-                addedDist = 0;
-            }
+        if (isTooClose) {
+            console.log(`[GPS-NOISE] Too close: ${addedDistMeters.toFixed(1)}m in ${dtSec}s`);
+            return;
         }
-        if (lastGpsPoint.current && addedDist === 0) {
+        if (isTooFast) {
+            console.warn(`[GPS-CHEAT] Impossible speed: ${speedKmh.toFixed(1)}km/h`);
             return;
         }
 
-        lastGpsPoint.current = point;
+        // Point validated - update reference ONLY after validation passes
+        lastGpsPoint.current = { ...point, accuracy };
         lastGpsTs.current = nowTs;
+        const addedDist = addedDistKm;
 
-        // Emit only validated points (prevents phantom movement)
+        // Broadcast to other connected users
         socket?.emit('presence_sync', {
             lat: point.lat,
             lng: point.lng,
-            accuracy: point.accuracy || 10
+            accuracy: accuracy
         });
 
         socket?.emit('gps_update', {
             runId: runIdRef.current,
             lat: point.lat,
             lng: point.lng,
-            accuracy: point.accuracy || 10
+            accuracy: accuracy
         });
 
-        // Discovery Logic
+        // Territory tracking via H3 grid
         try {
             const h3Index = latLngToCell(point.lat, point.lng, 9);
-            if (!hexSetRef.current.has(h3Index)) {
-                hexSetRef.current.add(h3Index);
-            }
-        } catch (err) { /* index fail */ }
+            const isNew = !hexSetRef.current.has(h3Index);
+            hexSetRef.current.add(h3Index);
+            if (isNew) console.log(`[HEX] Territory discovered: ${h3Index.slice(-6)}`);
+        } catch (err) { 
+            console.error('[HEX-ERROR]', err);
+        }
 
-        // Path Recording
+        // Visual path trail
         setRunPath(prev => {
             const last = prev[prev.length - 1];
-            if (last && last[0] === point.lat && last[1] === point.lng) return prev;
+            if (last && Math.abs(last[0] - point.lat) < 0.00001 && Math.abs(last[1] - point.lng) < 0.00001) {
+                return prev; // Skip duplicates
+            }
             return [...prev, [point.lat, point.lng]];
         });
 
-        // Production Stat Calculation
+        // CRITICAL: Update stats with validated distance only
         setStats(prev => {
-            const newDist = parseFloat((prev.distance + addedDist).toFixed(5));
+            const newDist = parseFloat((prev.distance + addedDist).toFixed(6));
             const newHexCount = hexSetRef.current.size;
-            // GPS-based step estimate (fallback if accelerometer unavailable)
-            const gpsSteps = Math.max(0, Math.round((addedDist * 1000) / STEP_LENGTH_METERS));
-            // Use accelerometer steps if available, otherwise GPS estimate
-            const newSteps = accelStepsRef.current > prev.steps ? accelStepsRef.current : prev.steps + gpsSteps;
+            
+            // Step logic: Accelerometer is primary, GPS for fallback
+            let newSteps = prev.steps;
+            if (accelStepsRef.current > prev.steps) {
+                newSteps = accelStepsRef.current;
+            } else if (addedDistMeters > 5) {
+                const gpsSteps = Math.round(addedDistMeters / STEP_LENGTH_METERS);
+                newSteps = prev.steps + Math.max(0, gpsSteps);
+            }
+            
             const newCredits = Math.floor(newDist * 12) + (newHexCount * 2);
 
-            if (addedDist > 0.001) {
-                console.log(`[GPS] Distance: ${addedDist.toFixed(5)}km, Hex: ${newHexCount}, Steps: ${newSteps}, Credits: ${newCredits}`);
+            if (addedDist > 0.0005) {
+                console.log(`[STATS] Dist: ${newDist.toFixed(3)}km | Hex: ${newHexCount} | Steps: ${newSteps} | TRC: ${newCredits}`);
             }
 
             return {
