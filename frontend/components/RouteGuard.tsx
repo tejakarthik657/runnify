@@ -4,56 +4,69 @@ import React, { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
-import Loading from '../app/loading'; // Use our new tactical loading state
+import Loading from '../app/loading';
 
-// 5.1 Navigation Logic: Routes that don't require an encrypted uplink
 const PUBLIC_ROUTES = ['/landing', '/login', '/'];
 
 export default function RouteGuard({ children }: { children: React.ReactNode }) {
     const router = useRouter();
     const pathname = usePathname();
-    const { isAuthenticated, setAuth, logout } = useAuthStore();
+    const { isAuthenticated, user, accessToken, setAuth, logout } = useAuthStore();
 
-    // State to track if the current node (user) is authorized for this sector
-    const [status, setStatus] = useState<'IDLE' | 'AUTHORIZING' | 'GRANTED' | 'DENIED'>('IDLE');
+    const [status, setStatus] = useState<'INITIALIZING' | 'AUTHORIZED' | 'DENIED'>('INITIALIZING');
+    const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
 
+    // Wait for Zustand hydration from localStorage
     useEffect(() => {
-        const verifyUplink = async () => {
-            setStatus('AUTHORIZING');
+        const hydrateTimer = setTimeout(() => {
+            setHasCheckedAuth(true);
+        }, 50);
 
-            // 1. Session Validation Logic
-            if (isAuthenticated) {
-                try {
-                    // Verify signal with core auth node
-                    const { data } = await api.get('/auth/me');
-                    setAuth(data.user, useAuthStore.getState().accessToken!);
-                } catch (error) {
-                    // SIGNAL_LOST: Flush local credentials
-                    logout();
-                    setStatus('DENIED');
-                    return;
-                }
-            }
+        return () => clearTimeout(hydrateTimer);
+    }, []);
 
-            // 2. Sector Access Control
+    // Verify session and handle route access
+    useEffect(() => {
+        if (!hasCheckedAuth) return;
+
+        const verifySession = async () => {
             const path = pathname.split('?')[0];
-            const isPublicSector = PUBLIC_ROUTES.includes(path);
+            const isPublicRoute = PUBLIC_ROUTES.includes(path);
 
-            if (!isAuthenticated && !isPublicSector) {
+            if (isAuthenticated && user && accessToken) {
+                try {
+                    const { data } = await api.get('/auth/me');
+                    setAuth(data.user, accessToken);
+                    setStatus('AUTHORIZED');
+                } catch (error) {
+                    console.log('[RouteGuard] Session expired');
+                    logout();
+                    if (!isPublicRoute) {
+                        router.push(`/login?callback=${encodeURIComponent(pathname)}`);
+                    }
+                    setStatus('DENIED');
+                }
+            } else if (isAuthenticated && (!user || !accessToken)) {
+                logout();
+                if (!isPublicRoute) {
+                    router.push(`/login?callback=${encodeURIComponent(pathname)}`);
+                }
                 setStatus('DENIED');
-                router.push('/login?callback=' + pathname);
+            } else if (!isAuthenticated && !isPublicRoute) {
+                setStatus('DENIED');
+                router.push(`/login?callback=${encodeURIComponent(pathname)}`);
             } else {
-                setStatus('GRANTED');
+                setStatus('AUTHORIZED');
             }
         };
 
-        verifyUplink();
-    }, [pathname, isAuthenticated, router, setAuth, logout]);
+        verifySession();
+    }, [hasCheckedAuth, pathname, isAuthenticated, user, accessToken, setAuth, logout, router]);
 
-    // 6.0 Motion Rule: Show the tactical boot sequence during authorization
-    if (status === 'AUTHORIZING' || status === 'IDLE') {
+    // Show loading while initializing
+    if (status === 'INITIALIZING') {
         return <Loading />;
     }
 
-    return status === 'GRANTED' ? <>{children}</> : null;
+    return status === 'AUTHORIZED' ? <>{children}</> : null;
 }

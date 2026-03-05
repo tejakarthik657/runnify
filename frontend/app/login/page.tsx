@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -31,6 +31,7 @@ export default function LoginPage() {
     const [isLogin, setIsLogin] = useState(true);
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
+    const searchParams = useSearchParams();
     const setAuth = useAuthStore((state) => state.setAuth);
 
     const {
@@ -82,7 +83,14 @@ export default function LoginPage() {
             setAuth(user, accessToken);
 
             toast.success(isLogin ? 'Welcome back, Runner!' : 'Deployment Successful!');
-            router.replace('/dashboard');
+            
+            // Handle post-login redirect with callback parameter
+            const callback = searchParams.get('callback');
+            if (callback && callback.startsWith('/')) {
+                router.replace(callback);
+            } else {
+                router.replace('/dashboard');
+            }
         } catch (error: any) {
             const errorMessage = error.response?.data?.error || error.message || 'Authentication failed';
             toast.error(errorMessage);

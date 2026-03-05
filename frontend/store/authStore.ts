@@ -39,6 +39,15 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'territory-run-auth',
+      onRehydrateStorage: () => {
+        // Return a function that runs after hydration from localStorage
+        return (state, error) => {
+          if (error) {
+            console.warn('[Auth] Rehydration error:', error);
+            state?.logout?.();
+          }
+        };
+      },
     }
   )
 );
