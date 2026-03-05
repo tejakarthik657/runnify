@@ -9,15 +9,22 @@ const fetcher = (url: string) => api.get(url).then(res => res.data);
  * Hook that provides real-time leaderboard updates via Socket.IO
  * Combines initial SWR data with Socket.IO event listeners for instant updates
  */
-export const useRealtimeLeaderboard = (scope: 'global' | 'city', city: string) => {
+export const useRealtimeLeaderboard = (scope: 'global' | 'city', city: string, period: 'alltime' | '24hour' = 'alltime') => {
     const socket = useSocket('main');
     const [entries, setEntries] = useState<any[]>([]);
     const [meRank, setMeRank] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const entriesRef = useRef<Map<string, any>>(new Map());
 
-    // Initial fetch
-    const url = scope === 'global' ? '/leaderboard/global' : `/leaderboard/city/${city}`;
+    // Initial fetch with period support
+    const getUrl = () => {
+        if (period === '24hour') {
+            return scope === 'global' ? '/leaderboard/24hour' : `/leaderboard/24hour/city/${city}`;
+        }
+        return scope === 'global' ? '/leaderboard/global' : `/leaderboard/city/${city}`;
+    };
+
+    const url = getUrl();
     const { data, isLoading: swrLoading } = useSWR(url, fetcher);
     const { data: meData } = useSWR('/leaderboard/me', fetcher);
 

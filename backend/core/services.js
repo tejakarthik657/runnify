@@ -939,6 +939,62 @@ const LeaderboardService = {
     return entries;
   },
 
+  /** Build 24-hour leaderboard (resets daily) */
+  async build24HourGlobal() {
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    // Get top runners from last 24 hours
+    const runs = await Run.find({
+      endedAt: { $gte: twentyFourHoursAgo },
+      status: 'completed'
+    }).select('userId creditsEarned hexesTotal');
+
+    // Aggregate credits and hexes per user in last 24h
+    const userStats = {};
+    runs.forEach(run => {
+      if (!userStats[run.userId]) {
+        userStats[run.userId] = { credits: 0, hexes: 0, runCount: 0 };
+      }
+      userStats[run.userId].credits += run.creditsEarned || 0;
+      userStats[run.userId].hexes += run.hexesTotal || 0;
+      userStats[run.userId].runCount += 1;
+    });
+
+    // Sort by credits earned in last 24h
+    const sortedUsers = Object.entries(userStats)
+      .sort((a, b) => b[1].credits - a[1].credits)
+      .slice(0, 100);
+
+    // Fetch user details and build entries
+    const entries = await Promise.all(sortedUsers.map(async (entry, i) => {
+      const user = await User.findById(entry[0]).select('username color hashcode');
+      return {
+        rank: i + 1,
+        userId: entry[0],
+        username: user?.username || 'Unknown',
+        color: user?.color || '#A8D5BA',
+        hashcode: user?.hashcode,
+        credits24h: entry[1].credits,
+        hexes24h: entry[1].hexes,
+        runs24h: entry[1].runCount,
+      };
+    }));
+
+    // Calculate rotation info - when next reset happens
+    const now = new Date();
+    const nextReset = new Date(now);
+    nextReset.setHours(nextReset.getHours() + 1);
+    nextReset.setMinutes(0, 0, 0); // Next full hour
+
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // Cache 5 mins
+    await LeaderboardCache.findOneAndUpdate(
+      { scope: '24hour', city: null, period: null },
+      { $set: { scope: '24hour', entries, totalUsers: entries.length, computedAt: new Date(), expiresAt, nextReset } },
+      { upsert: true }
+    );
+
+    return entries;
+  },
+
   /** Build city leaderboard */
   async buildCity(city) {
     const users = await User.find({ city, isBanned: false })
@@ -962,6 +1018,57 @@ const LeaderboardService = {
     await LeaderboardCache.findOneAndUpdate(
       { scope: 'city', city, period: null },
       { $set: { scope: 'city', city, entries, totalUsers: entries.length, computedAt: new Date(), expiresAt } },
+      { upsert: true }
+    );
+
+    return entries;
+  },
+
+  /** Build 24-hour city leaderboard (resets daily per city) */
+  async build24HourCity(city) {
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    // Get top runners from this city in last 24 hours
+    const runs = await Run.find({
+      city,
+      endedAt: { $gte: twentyFourHoursAgo },
+      status: 'completed'
+    }).select('userId creditsEarned hexesTotal');
+
+    // Aggregate credits and hexes per user in last 24h
+    const userStats = {};
+    runs.forEach(run => {
+      if (!userStats[run.userId]) {
+        userStats[run.userId] = { credits: 0, hexes: 0, runCount: 0 };
+      }
+      userStats[run.userId].credits += run.creditsEarned || 0;
+      userStats[run.userId].hexes += run.hexesTotal || 0;
+      userStats[run.userId].runCount += 1;
+    });
+
+    // Sort by credits earned in last 24h
+    const sortedUsers = Object.entries(userStats)
+      .sort((a, b) => b[1].credits - a[1].credits)
+      .slice(0, 50);
+
+    // Fetch user details and build entries
+    const entries = await Promise.all(sortedUsers.map(async (entry, i) => {
+      const user = await User.findById(entry[0]).select('username color hashcode');
+      return {
+        rank: i + 1,
+        userId: entry[0],
+        username: user?.username || 'Unknown',
+        color: user?.color || '#A8D5BA',
+        hashcode: user?.hashcode,
+        credits24h: entry[1].credits,
+        hexes24h: entry[1].hexes,
+        runs24h: entry[1].runCount,
+      };
+    }));
+
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // Cache 5 mins
+    await LeaderboardCache.findOneAndUpdate(
+      { scope: '24hour', city, period: null },
+      { $set: { scope: '24hour', city, entries, totalUsers: entries.length, computedAt: new Date(), expiresAt } },
       { upsert: true }
     );
 

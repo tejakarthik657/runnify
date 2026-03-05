@@ -14,10 +14,28 @@ router.get('/global', optionalAuth, async (req, res, next) => {
 	}
 });
 
+router.get('/24hour', optionalAuth, async (req, res, next) => {
+	try {
+		const entries = await LeaderboardService.build24HourGlobal();
+		res.json({ scope: '24hour', period: 'daily', resetIn: 'check-nextReset', entries });
+	} catch (error) {
+		next(error);
+	}
+});
+
 router.get('/city/:city', optionalAuth, async (req, res, next) => {
 	try {
 		const entries = await LeaderboardService.get('city', req.params.city);
 		res.json({ scope: 'city', city: req.params.city, entries });
+	} catch (error) {
+		next(error);
+	}
+});
+
+router.get('/24hour/city/:city', optionalAuth, async (req, res, next) => {
+	try {
+		const entries = await LeaderboardService.build24HourCity(req.params.city);
+		res.json({ scope: '24hour', city: req.params.city, period: 'daily', entries });
 	} catch (error) {
 		next(error);
 	}

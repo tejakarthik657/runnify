@@ -101,9 +101,9 @@ export default function PathTraceLayer({ onTerritoryNotification }: PathTraceLay
                 const endedAt = new Date(trace.endedAt);
                 const hoursAgo = Math.round((Date.now() - endedAt.getTime()) / (1000 * 60 * 60));
                 
-                // Calculate opacity based on age (fade over 24 hours)
+                // Calculate opacity based on age: 100% opacity at start, 60% (40% transparent) after 24 hours
                 const ageRatio = Math.min(1, hoursAgo / 24);
-                const opacity = Math.max(0.2, 0.8 - (ageRatio * 0.6));
+                const opacity = Math.max(0.6, 1.0 - (ageRatio * 0.4)); // Fades from 1.0 to 0.6 over 24 hours
                 const weight = isOwnTrace ? 5 : 3;
                 
                 return (

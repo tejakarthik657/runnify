@@ -12,8 +12,9 @@ export default function LeaderboardPage() {
     const { user } = useAuthStore();
     const userCity = user?.city || 'Sector_01';
     const [scope, setScope] = useState<'global' | 'city'>('global');
+    const [period, setPeriod] = useState<'alltime' | '24hour'>('alltime');
 
-    const { entries, meRank, isLoading } = useRealtimeLeaderboard(scope, userCity);
+    const { entries, meRank, isLoading } = useRealtimeLeaderboard(scope, userCity, period);
     const currentData = entries;
 
     return (
@@ -30,25 +31,47 @@ export default function LeaderboardPage() {
                             <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black tracking-tight text-[#1a1a2e] truncate">Hall of Fame</h1>
                             <div className="flex items-center gap-1 sm:gap-2 mt-1 flex-wrap">
                                 <Badge variant="sage" className="text-[10px] sm:text-xs">Season 1</Badge>
-                                <span className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-widest hidden sm:inline">Active Rankings</span>
+                                {period === '24hour' ? (
+                                    <Badge variant="sage" className="text-[10px] sm:text-xs bg-[#F4B8C1] text-[#c0392b]">24h Reset</Badge>
+                                ) : (
+                                    <span className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-widest hidden sm:inline">All-Time Rankings</span>
+                                )}
                             </div>
                         </div>
                     </div>
 
-                    {/* Tab Selector */}
-                    <div className="flex bg-white rounded-2xl border border-black/5 p-1 sm:p-1.5 shadow-sm self-start">
-                        {(['global', 'city'] as const).map((s) => (
-                            <button
-                                key={s}
-                                onClick={() => setScope(s)}
-                                className={`px-3 sm:px-6 md:px-8 py-2 sm:py-2.5 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${scope === s
-                                        ? 'bg-[#A8D5BA] text-white shadow-md'
-                                        : 'text-gray-400 hover:text-[#1a1a2e]'
-                                    }`}
-                            >
-                                {s === 'city' ? userCity : s}
-                            </button>
-                        ))}
+                    {/* Tab Selector Scope */}
+                    <div className="flex gap-2">
+                        <div className="flex bg-white rounded-2xl border border-black/5 p-1 sm:p-1.5 shadow-sm">
+                            {(['global', 'city'] as const).map((s) => (
+                                <button
+                                    key={s}
+                                    onClick={() => setScope(s)}
+                                    className={`px-3 sm:px-6 md:px-8 py-2 sm:py-2.5 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${scope === s
+                                            ? 'bg-[#A8D5BA] text-white shadow-md'
+                                            : 'text-gray-400 hover:text-[#1a1a2e]'
+                                        }`}
+                                >
+                                    {s === 'city' ? userCity : s}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Period Selector */}
+                        <div className="flex bg-white rounded-2xl border border-black/5 p-1 sm:p-1.5 shadow-sm">
+                            {(['alltime', '24hour'] as const).map((p) => (
+                                <button
+                                    key={p}
+                                    onClick={() => setPeriod(p)}
+                                    className={`px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${period === p
+                                            ? 'bg-[#A8D5BA] text-white shadow-md'
+                                            : 'text-gray-400 hover:text-[#1a1a2e]'
+                                        }`}
+                                >
+                                    {p === '24hour' ? '24hr' : 'all-time'}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
 

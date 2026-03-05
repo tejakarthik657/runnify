@@ -411,9 +411,23 @@ export default function LandingPage() {
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-12">
-                        <FooterCol title="Network" links={['Strategic Map', 'Global Ranks', 'Economic Data', 'API Docs']} />
-                        <FooterCol title="Protocol" links={['Security', 'Whitepaper', 'Governance', 'Privacy']} />
-                        <FooterCol title="Social" links={['Discord', 'X / Twitter', 'Instagram']} />
+                        <FooterCol title="Network" links={[
+                            { label: 'Strategic Map', href: '/map' },
+                            { label: 'Global Ranks', href: '/leaderboard' },
+                            { label: 'Economic Data', href: '/dashboard' },
+                            { label: 'API Docs', href: '#' }
+                        ]} />
+                        <FooterCol title="Protocol" links={[
+                            { label: 'Security', href: '#' },
+                            { label: 'Whitepaper', href: '#' },
+                            { label: 'Governance', href: '#' },
+                            { label: 'Privacy', href: '#' }
+                        ]} />
+                        <FooterCol title="Social" links={[
+                            { label: 'Discord', href: '#', external: true },
+                            { label: 'X / Twitter', href: '#', external: true },
+                            { label: 'Instagram', href: 'https://www.instagram.com/start.up_hub?igsh=eWVtOW85YjRtMzA0', external: true }
+                        ]} />
                     </div>
                 </div>
                 <div className="max-w-7xl mx-auto mt-24 pt-12 border-t border-black/5 flex flex-col md:flex-row justify-between items-center gap-8">
@@ -438,9 +452,36 @@ function FooterCol({ title, links }: any) {
         <div className="space-y-8">
             <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-[#A8D5BA]">{title}</h4>
             <div className="flex flex-col gap-5">
-                {links.map((l: string) => (
-                    <Link key={l} href="#" className="text-sm font-bold text-[#1A1A2E] hover:text-[#A8D5BA] transition-colors">{l}</Link>
-                ))}
+                {links.map((link: any) => {
+                    const label = typeof link === 'string' ? link : link.label;
+                    const href = typeof link === 'string' ? '#' : (link.href || '#');
+                    const isExternal = typeof link === 'object' && link.external;
+                    
+                    // Use regular <a> tag for external links, Link for internal routes
+                    if (isExternal) {
+                        return (
+                            <a 
+                                key={label}
+                                href={href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm font-bold text-[#1A1A2E] hover:text-[#A8D5BA] transition-colors cursor-pointer"
+                            >
+                                {label}
+                            </a>
+                        );
+                    }
+                    
+                    return (
+                        <Link 
+                            key={label} 
+                            href={href}
+                            className="text-sm font-bold text-[#1A1A2E] hover:text-[#A8D5BA] transition-colors"
+                        >
+                            {label}
+                        </Link>
+                    );
+                })}
             </div>
         </div>
     );
