@@ -270,6 +270,8 @@ export default function MapPage() {
                         credits: Math.floor((run.hexesTotal || 0) * 1.5),
                         steps: Math.max(0, Math.round((run.distanceKm || 0) * 1312)),
                     });
+                    // Enable follow mode for live tracking when resuming run
+                    setFollowUser(true);
                     startTimer();
                     startGps();
                     startStepCounter();
