@@ -39,8 +39,9 @@ import { UserIcon } from '../../lib/mapIcons';
 const LeafletMap = dynamic(() => import('../../components/map/LeafletMap'), { ssr: false });
 const TerritoryLayer = dynamic(() => import('../../components/map/TerritoryLayer'), { ssr: false });
 
-const MIN_DISTANCE_METERS = 5;
+const MIN_DISTANCE_METERS = 2; // More lenient for accurate tracking
 const MIN_ACCURACY_METERS = 30;
+const STEP_LENGTH_METERS = 0.7; // Average human step length (0.7m)
 
 export default function MapPage() {
     const [isRunning, setIsRunning] = useState(false);
@@ -59,6 +60,7 @@ export default function MapPage() {
     const isRunningRef = useRef(false);
     const runIdRef = useRef<string | null>(null);
     const hexSetRef = useRef<Set<string>>(new Set());
+    const accelStepsRef = useRef(0); // Track accelerometer steps separately
 
     const [initialMapView] = useState<{ center: [number, number]; zoom: number }>(() => {
         try {
@@ -120,6 +122,7 @@ export default function MapPage() {
         // Ignore poor-accuracy points for run metrics and socket emission
         const accuracy = point.accuracy ?? 999;
         if (accuracy > MIN_ACCURACY_METERS) {
+            console.log(`[GPS] Ignoring inaccurate point: ${accuracy}m > ${MIN_ACCURACY_METERS}m`);
             return;
         }
 
@@ -133,12 +136,17 @@ export default function MapPage() {
             const dtSec = lastGpsTs.current ? Math.max(1, Math.floor((nowTs - lastGpsTs.current) / 1000)) : 1;
             const speedKmh = (addedDist / dtSec) * 3600;
 
+            console.log(`[GPS] MovementCheck: ${moveMeters.toFixed(1)}m, Speed: ${speedKmh.toFixed(1)}km/h, Accuracy: ${accuracy}m`);
+
+            // More lenient movement validation
             if (moveMeters < minMoveMeters) {
+                console.log(`[GPS] Ignoring small movement: ${moveMeters.toFixed(1)}m < ${minMoveMeters}m`);
                 addedDist = 0;
             }
 
-            if (addedDist > 0.03 || speedKmh > 22) {
-                console.warn(`[GPS] Ignoring suspicious jump: ${addedDist}km`);
+            // Reject unrealistic speeds (> 50 km/h for walking/running)
+            if (speedKmh > 50) {
+                console.warn(`[GPS] Ignoring implausible jump: ${addedDist.toFixed(4)}km in ${dtSec}s (${speedKmh.toFixed(1)}km/h)`);
                 addedDist = 0;
             }
         }
@@ -182,9 +190,15 @@ export default function MapPage() {
         setStats(prev => {
             const newDist = parseFloat((prev.distance + addedDist).toFixed(5));
             const newHexCount = hexSetRef.current.size;
-            const addedSteps = Math.max(0, Math.round(addedDist * 1312));
-            const newSteps = prev.steps + addedSteps;
+            // GPS-based step estimate (fallback if accelerometer unavailable)
+            const gpsSteps = Math.max(0, Math.round((addedDist * 1000) / STEP_LENGTH_METERS));
+            // Use accelerometer steps if available, otherwise GPS estimate
+            const newSteps = accelStepsRef.current > prev.steps ? accelStepsRef.current : prev.steps + gpsSteps;
             const newCredits = Math.floor(newDist * 12) + (newHexCount * 2);
+
+            if (addedDist > 0.001) {
+                console.log(`[GPS] Distance: ${addedDist.toFixed(5)}km, Hex: ${newHexCount}, Steps: ${newSteps}, Credits: ${newCredits}`);
+            }
 
             return {
                 ...prev,
@@ -218,10 +232,15 @@ export default function MapPage() {
         useAccelerometer: true,
         onUpdate: (state) => {
             // Update stats with accelerometer-detected steps
-            setStats(prev => ({
-                ...prev,
-                steps: Math.max(prev.steps, state.steps), // Use accelerometer if higher
-            }));
+            accelStepsRef.current = state.steps; // Store accelerometer steps
+            setStats(prev => {
+                // Prefer accelerometer steps if they're higher (more accurate for walking)
+                const newSteps = Math.max(prev.steps, state.steps);
+                return {
+                    ...prev,
+                    steps: newSteps,
+                };
+            });
         }
     });
 

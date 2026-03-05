@@ -22,11 +22,11 @@ type Options = {
 
 // Tuned constants for real-device walking/running detection
 const STEP_DETECTION_CONFIG = {
-  THRESHOLD_RISE: 1.05,      // Rising edge threshold (delta from smoothed baseline)
-  THRESHOLD_FALL: 0.65,      // Hysteresis reset threshold
-  MIN_STEP_INTERVAL_MS: 250, // Min milliseconds between steps (240 bpm max)
-  MAX_STEP_INTERVAL_MS: 1200, // Max milliseconds between steps (50 bpm min)
-  BUFFER_SIZE: 12,           // Rolling window for smoothing
+  THRESHOLD_RISE: 0.8,       // More sensitive rising edge (delta from smoothed baseline)
+  THRESHOLD_FALL: 0.5,       // More sensitive hysteresis reset threshold
+  MIN_STEP_INTERVAL_MS: 200, // Allows faster cadence (300 bpm theoretical max)
+  MAX_STEP_INTERVAL_MS: 1500, // Allows slower walks (40 bpm min)
+  BUFFER_SIZE: 8,            // Smaller rolling window for faster response
 };
 
 export function useStepCounter({ 
@@ -77,7 +77,7 @@ export function useStepCounter({
     }
 
     // Only detect steps if we have enough buffer
-    if (accelBufferRef.current.length < 4) return;
+    if (accelBufferRef.current.length < 2) return;
 
     // Smoothed baseline from rolling average
     const avgAccel = accelBufferRef.current.reduce((a, b) => a + b, 0) / accelBufferRef.current.length;
@@ -104,6 +104,11 @@ export function useStepCounter({
         }
 
         const stepRate = stepTimesRef.current.filter((timestamp) => now - timestamp < 60000).length;
+
+        // Debug logging every 10 steps
+        if (stepCountRef.current % 10 === 0) {
+          console.log(`[Steps] Detected ${stepCountRef.current} steps, Rate: ${stepRate}/min, Cadence: ${cadence} bpm`);
+        }
 
         setState({
           steps: stepCountRef.current,
