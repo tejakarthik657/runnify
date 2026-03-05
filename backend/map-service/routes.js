@@ -73,4 +73,88 @@ router.get('/invasions', optionalAuth, async (req, res, next) => {
 	}
 });
 
+// ═══════════════════════════════════════════════════════════════════════
+// NEW: Get path traces for last 24 hours within bounding box
+// ═══════════════════════════════════════════════════════════════════════
+router.get('/path-traces', optionalAuth, async (req, res, next) => {
+	try {
+		const { Run, User } = require('../core/schema');
+		const GpsPoint = require('mongoose').model('GpsPoint');
+		
+		const minLat = Number(req.query.minLat);
+		const minLng = Number(req.query.minLng);
+		const maxLat = Number(req.query.maxLat);
+		const maxLng = Number(req.query.maxLng);
+
+		// Validate bounding box
+		if (!Number.isFinite(minLat) || !Number.isFinite(minLng) || 
+		    !Number.isFinite(maxLat) || !Number.isFinite(maxLng)) {
+			return res.status(400).json({ error: 'Invalid bounding box coordinates' });
+		}
+
+		// Get runs from last 24 hours that overlap with bounding box
+		const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+		
+		const runs = await Run.find({
+			isActive: false,
+			endedAt: { $gte: twentyFourHoursAgo },
+			'boundingBox.minLat': { $lte: maxLat },
+			'boundingBox.maxLat': { $gte: minLat },
+			'boundingBox.minLng': { $lte: maxLng },
+			'boundingBox.maxLng': { $gte: minLng },
+		})
+		.select('userId username userColor endedAt distanceKm hexesTotal creditsEarned')
+		.lean()
+		.limit(100); // Limit to prevent excessive data
+
+		if (!runs || runs.length === 0) {
+			return res.json({ traces: [] });
+		}
+
+		// Fetch GPS points for these runs
+		const runIds = runs.map(r => r._id);
+		const gpsPoints = await GpsPoint.find({
+			runId: { $in: runIds },
+			'location.coordinates.1': { $gte: minLat, $lte: maxLat },
+			'location.coordinates.0': { $gte: minLng, $lte: maxLng },
+		})
+		.select('runId location recordedAt seq')
+		.sort({ runId: 1, seq: 1 })
+		.lean()
+		.limit(10000); // Safety limit
+
+		// Group GPS points by runId
+		const pointsByRun = {};
+		gpsPoints.forEach(point => {
+			const runIdStr = point.runId.toString();
+			if (!pointsByRun[runIdStr]) {
+				pointsByRun[runIdStr] = [];
+			}
+			pointsByRun[runIdStr].push({
+				lat: point.location.coordinates[1],
+				lng: point.location.coordinates[0],
+				recordedAt: point.recordedAt,
+			});
+		});
+
+		// Construct response
+		const traces = runs.map(run => ({
+			runId: run._id,
+			userId: run.userId,
+			username: run.username,
+			userColor: run.userColor || '#A8D5BA',
+			endedAt: run.endedAt,
+			distanceKm: run.distanceKm,
+			hexesTotal: run.hexesTotal,
+			creditsEarned: run.creditsEarned,
+			path: pointsByRun[run._id.toString()] || [],
+		})).filter(trace => trace.path.length > 0);
+
+		res.json({ traces });
+	} catch (error) {
+		console.error('[PathTraces] Error:', error);
+		next(error);
+	}
+});
+
 module.exports = router;

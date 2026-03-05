@@ -15,6 +15,7 @@ import {
     Radio
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { useCallback } from 'react';
 import { toast } from 'react-hot-toast';
@@ -29,6 +30,7 @@ const fetcher = (url: string) => api.get(url).then(res => res.data);
 
 export default function RunPage() {
     const { user, accessToken, updateUser } = useAuthStore();
+    const router = useRouter();
     const [isRunning, setIsRunning] = useState(false);
     const [runId, setRunId] = useState<string | null>(null);
     const [isStarting, setIsStarting] = useState(false);
@@ -185,6 +187,9 @@ export default function RunPage() {
             stopTimer();
             setStats({ distance: 0, time: 0, hexCount: 0, credits: 0, speed: 0, steps: 0 });
             toast.success(`Mission Accomplished • ${data?.summary?.hexesClaimed || 0} claims • ${data?.summary?.creditsEarned || 0} TRC`);
+            
+            // Navigate to map page after mission ends
+            router.push('/map');
         } catch (error: any) {
             const errorMsg = error.response?.data?.error || 'Sync error. Retrying...';
             toast.error(errorMsg);

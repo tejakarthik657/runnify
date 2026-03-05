@@ -37,7 +37,6 @@ import { UserIcon } from '../../lib/mapIcons';
 
 
 const LeafletMap = dynamic(() => import('../../components/map/LeafletMap'), { ssr: false });
-const TerritoryLayer = dynamic(() => import('../../components/map/TerritoryLayer'), { ssr: false });
 
 const MIN_DISTANCE_METERS = 2; // More lenient for accurate tracking
 const MIN_ACCURACY_METERS = 30;

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Polyline, Marker, Tooltip } from 'react-leaflet';
 import { UserIcon } from '../../lib/mapIcons';
-import TerritoryLayer from './TerritoryLayer';
+import PathTraceLayer from './PathTraceLayer';
 import UserLocationMarker from './UserLocationMarker';
 import { latLngToCell } from 'h3-js';
 
@@ -49,18 +49,19 @@ export default function MapContent({
 
     return (
         <>
-            <TerritoryLayer 
-                currentHexId={currentHexId}
-                onCurrentTerritoryChange={handleTerritoryChange}
-            />
+            {/* Path Trace Layer - Shows colored trails of all runs from last 24 hours */}
+            <PathTraceLayer />
 
+            {/* Current active run path (real-time) */}
             {runPath.length > 0 && (
                 <Polyline
                     positions={runPath}
                     color={userColor}
                     weight={6}
-                    opacity={isRunning ? 0.8 : 0.45}
+                    opacity={isRunning ? 0.9 : 0.6}
                     lineJoin="round"
+                    lineCap="round"
+                    dashArray={isRunning ? "10, 5" : undefined}
                 />
             )}
 

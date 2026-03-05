@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ChatPopup from './chat/ChatPopup';
 
 // Section 5.1: Navigation Exclusion Logic
-const HIDE_NAV_ROUTES = ['/login', '/landing', '/register', '/', '/map', '/run'];
+const HIDE_NAV_ROUTES = ['/login', '/landing', '/register', '/'];
 
 export default function NavigationWrapper({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
