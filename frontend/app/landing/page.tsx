@@ -82,12 +82,31 @@ function DecorativeHexGrid() {
 }
 
 function StatTicker({ stats }: { stats: any }) {
+    const isLoading = !stats;
+    
+    if (isLoading) {
+        return (
+            <div className="py-6 bg-white/80 backdrop-blur-md border-y border-black/5 overflow-hidden relative z-10">
+                <div className="flex gap-20 items-center justify-center">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                        <div key={i} className="flex items-center gap-4 animate-pulse">
+                            <div className="w-24 h-3 bg-slate-200 rounded" />
+                            <div className="w-16 h-4 bg-slate-300 rounded" />
+                            <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
     const items = [
-        { label: 'Territories Claimed', value: stats?.totalHexes?.toLocaleString() || '482,901', color: C.sage },
-        { label: 'Active Runners', value: stats?.onlineCount?.toLocaleString() || '1,204', color: C.sageDark },
-        { label: 'Total Players', value: stats?.totalUsers?.toLocaleString() || '48,200', color: C.sky },
-        { label: 'Credits Earned', value: stats?.totalCredits > 1000000 ? `${(stats.totalCredits / 1000000).toFixed(1)}M` : stats?.totalCredits?.toLocaleString() || '9.4M', color: C.lavender },
-        { label: '24h Invasions', value: stats?.activeSorties?.toLocaleString() || '38,290', color: C.rose },
+        { label: 'Territories Claimed', value: stats.totalHexes?.toLocaleString() || '0', color: C.sage },
+        { label: 'Active Runners', value: stats.onlineCount?.toLocaleString() || '0', color: C.sageDark },
+        { label: 'Total Players', value: stats.totalUsers?.toLocaleString() || '0', color: C.sky },
+        { label: 'Distance This Week', value: stats.distanceWeek ? `${stats.distanceWeek.toLocaleString()} km` : '0 km', color: C.peach },
+        { label: 'Credits In Circulation', value: stats.totalCredits > 1000000 ? `${(stats.totalCredits / 1000000).toFixed(1)}M` : stats.totalCredits?.toLocaleString() || '0', color: C.lavender },
+        { label: 'Invasions Today', value: stats.territoriesInvadedToday?.toLocaleString() || '0', color: C.rose },
     ];
 
     const scrollItems = [...items, ...items, ...items];
@@ -96,8 +115,8 @@ function StatTicker({ stats }: { stats: any }) {
         <div className="py-6 bg-white/80 backdrop-blur-md border-y border-black/5 overflow-hidden whitespace-nowrap relative z-10">
             <motion.div
                 className="flex gap-20 items-center"
-                animate={{ x: [0, -1000] }}
-                transition={{ duration: 35, repeat: Infinity, ease: "linear" }}
+                animate={{ x: [0, -1200] }}
+                transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
             >
                 {scrollItems.map((s, i) => (
                     <div key={i} className="flex items-center gap-4 group">
@@ -134,17 +153,196 @@ function FeatureCard({ icon: Icon, title, desc, color, delay }: any) {
     );
 }
 
+function TopCommandersPodium({ commanders }: { commanders: any[] }) {
+    if (!commanders || commanders.length === 0) {
+        return (
+            <div className="flex items-center justify-center gap-4 py-12">
+                {[1, 2, 3].map(i => (
+                    <div key={i} className="animate-pulse bg-slate-100 rounded-3xl p-6 w-48 h-56" />
+                ))}
+            </div>
+        );
+    }
+
+    const medals = ['🥇', '🥈', '🥉'];
+    const heights = ['h-64', 'h-56', 'h-48'];
+
+    return (
+        <div className="flex items-end justify-center gap-4 sm:gap-8 py-8 flex-wrap">
+            {commanders.map((c, i) => (
+                <motion.div
+                    key={c.userId}
+                    initial={{ opacity: 0, y: 40 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.6, delay: i * 0.15 }}
+                    className={`bg-white border-2 border-black/5 rounded-[32px] p-6 shadow-xl hover:shadow-2xl hover:-translate-y-2 transition-all group ${heights[i]} w-48 flex flex-col justify-between`}
+                    style={{ borderColor: i === 0 ? C.sage : 'rgba(0,0,0,0.05)' }}
+                >
+                    <div>
+                        <div className="flex items-center justify-between mb-4">
+                            <span className="text-4xl">{medals[i]}</span>
+                            <div className="w-3 h-3 rounded-full shadow-lg" style={{ backgroundColor: c.color }} />
+                        </div>
+                        <div className="mb-2">
+                            <p className="font-['Syne'] font-extrabold text-xl text-[#1A1A2E] truncate">{c.username}</p>
+                            <p className="text-[9px] font-black uppercase tracking-widest text-slate-300">{c.hashcode}</p>
+                        </div>
+                        {c.city && (
+                            <div className="bg-[#F0F7F4] px-2 py-1 rounded-lg inline-block mb-3">
+                                <span className="text-[9px] font-black uppercase tracking-wider text-[#2E7D52]">{c.city}</span>
+                            </div>
+                        )}
+                    </div>
+                    <div className="space-y-2 border-t border-black/5 pt-4">
+                        <div className="flex justify-between items-center">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Credits</span>
+                            <span className="text-sm font-black text-[#A8D5BA]">{(c.credits / 1000).toFixed(1)}K</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Hexes</span>
+                            <span className="text-sm font-black text-[#1A1A2E]">{c.hexesOwned}</span>
+                        </div>
+                        {c.currentStreak > 0 && (
+                            <div className="flex justify-between items-center">
+                                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Streak</span>
+                                <span className="text-sm font-black text-[#F4B8C1]">{c.currentStreak}🔥</span>
+                            </div>
+                        )}
+                    </div>
+                </motion.div>
+            ))}
+        </div>
+    );
+}
+
+function LiveCityHeatmap({ cities }: { cities: any[] }) {
+    if (!cities || cities.length === 0) {
+        return (
+            <div className="space-y-3">
+                {[1, 2, 3, 4, 5].map(i => (
+                    <div key={i} className="animate-pulse flex items-center gap-3">
+                        <div className="w-full h-8 bg-slate-100 rounded-xl" />
+                    </div>
+                ))}
+            </div>
+        );
+    }
+
+    const maxHexes = Math.max(...cities.map(c => c.hexesCaptured));
+
+    return (
+        <div className="space-y-3">
+            {cities.map((city, i) => (
+                <motion.div
+                    key={city.city}
+                    initial={{ opacity: 0, x: -20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.4, delay: i * 0.05 }}
+                    className="group cursor-pointer"
+                >
+                    <div className="flex items-center gap-3 mb-1">
+                        <span className="text-xs font-black text-slate-400 w-6">#{i + 1}</span>
+                        <span className="text-sm font-bold text-[#1A1A2E] flex-1">{city.city}</span>
+                        <span className="text-xs font-black text-[#A8D5BA]">{city.hexesCaptured} hexes</span>
+                    </div>
+                    <div className="relative h-2 bg-slate-100 rounded-full overflow-hidden ml-9">
+                        <motion.div
+                            initial={{ width: 0 }}
+                            whileInView={{ width: `${(city.hexesCaptured / maxHexes) * 100}%` }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 1, delay: i * 0.05 }}
+                            className="h-full rounded-full bg-gradient-to-r from-[#A8D5BA] to-[#6CC89A] group-hover:from-[#6CC89A] group-hover:to-[#2E7D52] transition-all"
+                        />
+                    </div>
+                </motion.div>
+            ))}
+        </div>
+    );
+}
+
+function RecentWinsFeed({ wins }: { wins: any[] }) {
+    const [currentIndex, setCurrentIndex] = useState(0);
+
+    useEffect(() => {
+        if (wins && wins.length > 0) {
+            const interval = setInterval(() => {
+                setCurrentIndex((prev) => (prev + 1) % wins.length);
+            }, 4000);
+            return () => clearInterval(interval);
+        }
+    }, [wins]);
+
+    if (!wins || wins.length === 0) {
+        return (
+            <div className="space-y-3">
+                {[1, 2, 3].map(i => (
+                    <div key={i} className="animate-pulse bg-slate-100 rounded-2xl p-4 h-20" />
+                ))}
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-3 min-h-[240px]">
+            <AnimatePresence mode="wait">
+                {wins.slice(currentIndex, currentIndex + 3).map((win, i) => (
+                    <motion.div
+                        key={`${win.username}-${win.timestamp}`}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.4, delay: i * 0.1 }}
+                        className="bg-white border border-black/5 rounded-2xl p-4 shadow-sm hover:shadow-lg transition-all flex items-start gap-3"
+                    >
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-xl"
+                            style={{ backgroundColor: win.type === 'achievement' ? '#C3B1E1' : '#A8D5BA' }}>
+                            {win.type === 'achievement' ? '🏆' : '⚔️'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            {win.type === 'achievement' ? (
+                                <>
+                                    <p className="text-sm font-black text-[#1A1A2E] truncate">
+                                        <span style={{ color: win.color || C.sage }}>{win.username}</span> unlocked
+                                    </p>
+                                    <p className="text-xs font-bold text-slate-400">"{win.achievement}"</p>
+                                </>
+                            ) : (
+                                <>
+                                    <p className="text-sm font-black text-[#1A1A2E] truncate">
+                                        <span style={{ color: win.color || C.sage }}>{win.username}</span>
+                                    </p>
+                                    <p className="text-xs font-bold text-slate-400">
+                                        {win.hexesInvaded > 0 ? `Invaded ${win.hexesInvaded} hexes` : `Captured ${win.hexesCaptured} hexes`} • {win.creditsEarned} credits
+                                    </p>
+                                </>
+                            )}
+                        </div>
+                        <span className="text-[8px] font-black uppercase tracking-widest text-slate-300 whitespace-nowrap">Just Now</span>
+                    </motion.div>
+                ))}
+            </AnimatePresence>
+        </div>
+    );
+}
+
 // --- MAIN PAGE ---
 
 export default function LandingPage() {
-    const { data: globalStats } = useSWR('/leaderboard/stats', fetcher, { refreshInterval: 60000 });
-    const { data: onlineData } = useSWR('/user/online', fetcher, { refreshInterval: 30000 });
+    const { data: enhancedStats } = useSWR('/leaderboard/enhanced-stats', fetcher, { refreshInterval: 120000 }); // 2 min
+    const { data: commandersData } = useSWR('/leaderboard/top-commanders?limit=3', fetcher, { refreshInterval: 300000 }); // 5 min
+    const { data: cityActivityData } = useSWR('/leaderboard/city-activity', fetcher, { refreshInterval: 300000 }); // 5 min
+    const { data: recentWinsData } = useSWR('/leaderboard/recent-wins?limit=9', fetcher, { refreshInterval: 60000 }); // 1 min
     const { data: invasionData } = useSWR('/map/invasions?limit=5', fetcher, { refreshInterval: 15000 });
 
     const [feedIndex, setFeedIndex] = useState(0);
 
     const invasions = invasionData?.invasions || [];
-    const onlineCount = onlineData?.count || globalStats?.onlineCount || 0;
+    const commanders = commandersData?.commanders || [];
+    const cities = cityActivityData?.cities || [];
+    const wins = recentWinsData?.wins || [];
+    const onlineCount = enhancedStats?.onlineCount || 0;
 
     useEffect(() => {
         if (invasions.length > 0) {
@@ -208,7 +406,7 @@ export default function LandingPage() {
                     >
                         <div className="flex h-1.5 w-1.5 sm:h-2.5 sm:w-2.5 rounded-full bg-[#A8D5BA] shadow-[0_0_10px_#A8D5BA]" />
                         <span className="text-[9px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-[0.2em] text-[#2E7D52]">
-                            {onlineCount.toLocaleString()} Online • S04 ACTIVE
+                            {onlineCount > 0 ? `${onlineCount.toLocaleString()} Claiming Territory Now` : 'S04 ACTIVE'}
                         </span>
                     </motion.div>
 
@@ -286,7 +484,68 @@ export default function LandingPage() {
                 </motion.div>
             </section>
 
-            <StatTicker stats={{ ...globalStats, onlineCount }} />
+            <StatTicker stats={enhancedStats} />
+
+            {/* ─── TOP COMMANDERS & LIVE ACTIVITY ─── */}
+            <section className="py-16 sm:py-24 md:py-32 px-4 sm:px-6 md:px-12 bg-[#F4F7F4] relative">
+                <div className="max-w-7xl mx-auto">
+                    {/* Top Commanders Podium */}
+                    <div className="mb-20">
+                        <div className="text-center mb-12">
+                            <div className="flex items-center justify-center gap-3 mb-6">
+                                <span className="text-[9px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-[0.3em] text-[#A8D5BA]">Elite Commanders</span>
+                                <div className="h-0.5 w-12 bg-[#A8D5BA]/30" />
+                            </div>
+                            <h2 className="font-['Syne'] font-extrabold text-3xl sm:text-5xl md:text-6xl tracking-tighter text-[#1A1A2E] leading-none">
+                                TOP RUNNERS <span className="text-[#A8D5BA]">RIGHT NOW</span>
+                            </h2>
+                        </div>
+                        <TopCommandersPodium commanders={commanders} />
+                    </div>
+
+                    {/* Live Activity Grid */}
+                    <div className="grid md:grid-cols-2 gap-8 md:gap-12">
+                        {/* City Activity Heatmap */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 30 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            className="bg-white border border-black/5 rounded-[32px] p-8 shadow-lg"
+                        >
+                            <div className="flex items-center gap-3 mb-8">
+                                <div className="w-12 h-12 rounded-xl bg-[#A8D5BA]/10 flex items-center justify-center">
+                                    <Globe size={24} className="text-[#A8D5BA]" />
+                                </div>
+                                <div>
+                                    <h3 className="font-['Syne'] font-extrabold text-xl text-[#1A1A2E]">Hottest Cities</h3>
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Last Hour</p>
+                                </div>
+                            </div>
+                            <LiveCityHeatmap cities={cities} />
+                        </motion.div>
+
+                        {/* Recent Wins Feed */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 30 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ delay: 0.2 }}
+                            className="bg-white border border-black/5 rounded-[32px] p-8 shadow-lg"
+                        >
+                            <div className="flex items-center gap-3 mb-8">
+                                <div className="w-12 h-12 rounded-xl bg-[#C3B1E1]/10 flex items-center justify-center">
+                                    <Sparkles size={24} className="text-[#C3B1E1]" />
+                                </div>
+                                <div>
+                                    <h3 className="font-['Syne'] font-extrabold text-xl text-[#1A1A2E]">Recent Wins</h3>
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Live Feed</p>
+                                </div>
+                            </div>
+                            <RecentWinsFeed wins={wins} />
+                        </motion.div>
+                    </div>
+                </div>
+            </section>
 
             {/* ─── FEATURES GRID ─── */}
             <section className="py-16 sm:py-24 md:py-40 px-4 sm:px-6 md:px-12 bg-white relative">
@@ -377,7 +636,12 @@ export default function LandingPage() {
                         </h2>
 
                         <p className="text-white/40 font-bold text-sm sm:text-lg md:text-xl mb-8 sm:mb-12 md:mb-16 max-w-2xl mx-auto leading-relaxed">
-                            Join {globalStats?.totalUsers?.toLocaleString() || '48,000'} runners who have claimed their first hex.
+                            Join {enhancedStats?.totalUsers ? enhancedStats.totalUsers.toLocaleString() : '48,000'} runners who have claimed their first hex.
+                            {enhancedStats?.weeklyGrowth > 0 && (
+                                <span className="block mt-2 text-[#A8D5BA] font-black text-sm">
+                                    +{enhancedStats.weeklyGrowth.toLocaleString()} joined this week
+                                </span>
+                            )}
                         </p>
 
                         <Link href="/login" className="px-8 sm:px-12 md:px-16 py-4 sm:py-6 md:py-8 bg-[#A8D5BA] text-white rounded-[24px] sm:rounded-[32px] font-black uppercase text-[10px] sm:text-xs md:text-[11px] tracking-[0.3em] shadow-[0_25px_50px_-12px_rgba(168,213,186,0.5)] hover:bg-[#6CC89A] hover:scale-105 active:scale-95 transition-all">

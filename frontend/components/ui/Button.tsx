@@ -22,6 +22,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   rounded?: 'sm' | 'md' | 'lg' | 'full';
   disabled?: boolean;
   tooltip?: string;
+  'data-testid'?: string;
 }
 
 const VARIANT_STYLES = {
