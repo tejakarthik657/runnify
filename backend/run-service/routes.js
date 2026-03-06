@@ -63,13 +63,14 @@ router.post('/:runId/gps', authenticateJWT, gpsRateLimit, async (req, res, next)
 
 router.post('/:runId/end', authenticateJWT, async (req, res, next) => {
 	try {
-		const { lat, lng } = req.body;
+		const { lat, lng, accelSteps } = req.body;
 		// Extract client IP (from proxy headers or direct)
 		const requestIp = req.headers['x-forwarded-for']?.split(',')[0] || req.ip || '0.0.0.0';
 		// Extract optional client metadata for anti-cheat
 		const clientMeta = {
 			isMockLocation: req.body.isMockLocation === true,
 			clientVersion: req.body.clientVersion || null,
+			accelSteps: accelSteps || 0  // Pass accelerometer steps
 		};
 		const result = await RunService.endRun(req.params.runId, req.userId, { lat, lng }, requestIp, clientMeta);
 		const { territoryChanges } = result;
@@ -120,7 +121,7 @@ router.post('/:runId/end', authenticateJWT, async (req, res, next) => {
 
 router.post('/end', authenticateJWT, async (req, res, next) => {
 	try {
-		const { runId, lat, lng } = req.body;
+		const { runId, lat, lng, accelSteps } = req.body;
 		if (!runId) return res.status(400).json({ error: 'runId required' });
 		// Extract client IP (from proxy headers or direct)
 		const requestIp = req.headers['x-forwarded-for']?.split(',')[0] || req.ip || '0.0.0.0';
@@ -128,6 +129,7 @@ router.post('/end', authenticateJWT, async (req, res, next) => {
 		const clientMeta = {
 			isMockLocation: req.body.isMockLocation === true,
 			clientVersion: req.body.clientVersion || null,
+			accelSteps: accelSteps || 0  // Pass accelerometer steps
 		};
 		const result = await RunService.endRun(runId, req.userId, { lat, lng }, requestIp, clientMeta);
 		const { territoryChanges } = result;

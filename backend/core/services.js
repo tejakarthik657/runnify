@@ -679,10 +679,11 @@ const RunService = {
     // Finalise run document
     const boundingBox = RunService._calcBoundingBox(points);
     
-    // Calculate steps: accelerometer-detected + GPS distance fallback
+    // Calculate steps: prioritize accelerometer-detected, fallback to GPS distance
     // Frontend sends accelSteps if available; backend calculates as 1312 steps per km
+    const accelSteps = clientMeta?.accelSteps || 0;
     const stepsFromDistance = Math.round(distanceKm * 1312);
-    const stepsCount = Math.max(stepsFromDistance, 0);
+    const stepsCount = accelSteps > 0 ? accelSteps : stepsFromDistance;
 
     const updatedRun = await Run.findByIdAndUpdate(runId, {
       $set: {

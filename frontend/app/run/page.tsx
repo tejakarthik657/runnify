@@ -170,7 +170,8 @@ export default function RunPage() {
         try {
             const { data } = await api.post(`/run/${runId}/end`, {
                 lat: position?.lat || 0,
-                lng: position?.lng || 0
+                lng: position?.lng || 0,
+                accelSteps: stats.steps || 0  // Send accelerometer-detected steps
             });
 
             if (data?.user) {
