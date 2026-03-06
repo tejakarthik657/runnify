@@ -129,9 +129,9 @@ export default function MapPage() {
             return;
         }
 
-        // Dynamic accuracy threshold: max 2.2x previous accuracy
+        // Dynamic accuracy threshold: max 2.2x previous accuracy, but more forgiving
         const lastAccuracy = lastGpsPoint.current.accuracy ?? accuracy;
-        const maxAccuracy = Math.max(30, Math.min(lastAccuracy * 2.2, 55));
+        const maxAccuracy = Math.max(40, Math.min(lastAccuracy * 3.0, 80));
         if (accuracy > maxAccuracy) {
             console.log(`[GPS-REJECT] Bad accuracy: ${accuracy}m > ${maxAccuracy}m threshold`);
             return;
@@ -193,7 +193,9 @@ export default function MapPage() {
             if (last && Math.abs(last[0] - point.lat) < 0.00001 && Math.abs(last[1] - point.lng) < 0.00001) {
                 return prev; // Skip duplicates
             }
-            return [...prev, [point.lat, point.lng]];
+            const newPath: [number, number][] = [...prev, [point.lat, point.lng]];
+            console.log(`[PATH] Added point #${newPath.length}: [${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}]`);
+            return newPath;
         });
 
         // CRITICAL: Update stats with validated distance only
@@ -451,22 +453,23 @@ export default function MapPage() {
             }
         });
 
-        // Stale runner cleanup - Relaxed to 60s for stability
+        // Stale runner cleanup - Extended to 120s for better stability
         const cleanup = setInterval(() => {
             const now = Date.now();
             setActiveRunners(prev => {
                 const next = { ...prev };
                 let changed = false;
                 Object.keys(next).forEach(id => {
-                    // 60-second threshold prevents vanishing on minor signal drops
-                    if (now - next[id].lastSeen > 60000) {
+                    // 120-second threshold prevents vanishing on GPS signal drops while running
+                    if (now - next[id].lastSeen > 120000) {
+                        console.log(`[Map] Removing stale runner: ${id}`);
                         delete next[id];
                         changed = true;
                     }
                 });
                 return changed ? next : prev;
             });
-        }, 10000);
+        }, 15000);
 
         // Listen for faction changes
         socket.on('faction_updated', (data: any) => {
