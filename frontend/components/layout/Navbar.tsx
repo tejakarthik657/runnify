@@ -5,6 +5,7 @@ import { useAuthStore } from '../../store/authStore';
 import { Bell, Search, Terminal, Crosshair, Cpu, Radio } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import Button from '../ui/Button';
 
 // Design Tokens from Documentation
 const COLORS = {
@@ -41,7 +42,7 @@ export default function Navbar() {
                     </div>
                     {/* Secondary metadata readout */}
                     <div className="mt-1 px-1 flex gap-3 text-[8px] font-black text-[#6B7280] uppercase tracking-widest opacity-60">
-                        <span>v1.0.4_Stable</span>
+                        <span>v1.1.0_Production</span>
                         <span className="text-[#00C896]">Encrypted_Link</span>
                     </div>
                 </Link>
@@ -50,19 +51,20 @@ export default function Navbar() {
                 <div className="flex items-start gap-3">
                     
                     {/* Tactical Icons Bar */}
-                    <div className="flex items-center bg-black/60 border border-white/10 backdrop-blur-md">
-                        <NavIconButton icon={<Search size={16} />} />
+                    <div className="flex items-center bg-black/60 border border-white/10 backdrop-blur-md rounded-xl">
+                        <NavIconButton icon={<Search size={16} />} tooltip="Search" />
                         <div className="w-[1px] h-6 bg-white/5" />
                         <NavIconButton 
                             icon={<Bell size={16} />} 
+                            tooltip="Notifications"
                             badge={<span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-[#FF2244] animate-pulse shadow-[0_0_8px_#FF2244]" />} 
                         />
                         <div className="w-[1px] h-6 bg-white/5" />
-                        <NavIconButton icon={<Radio size={16} />} color={COLORS.neonOrange} />
+                        <NavIconButton icon={<Radio size={16} />} color={COLORS.neonOrange} tooltip="Broadcast" />
                     </div>
 
                     {/* Combatant Profile Block */}
-                    <Link href="/profile" className="flex items-stretch border border-white/10 bg-black/60 backdrop-blur-md hover:border-[#00C896] transition-all group">
+                    <Link href="/profile" className="flex items-stretch border border-white/10 bg-black/60 backdrop-blur-md hover:border-[#00C896] transition-all group rounded-xl">
                         <div className="px-4 py-2 text-right flex flex-col justify-center border-r border-white/5">
                             <div className="text-[10px] font-black text-[#E8E8F0] uppercase tracking-wider group-hover:text-[#00C896] transition-colors">
                                 {user?.username || 'GUEST_USER'}
@@ -76,12 +78,12 @@ export default function Navbar() {
                         {/* 4.3 RankBadge Minimal Variant */}
                         <div className="p-2.5 flex items-center justify-center">
                             {user?.avatarUrl ? (
-                                <div className="w-10 h-10 border-2 overflow-hidden shadow-[inset_0_0_10px_rgba(0,0,0,0.5)] transition-transform group-active:scale-95" style={{ borderColor: user?.color || COLORS.electricGreen }}>
+                                <div className="w-10 h-10 border-2 overflow-hidden shadow-[inset_0_0_10px_rgba(0,0,0,0.5)] transition-transform group-active:scale-95 rounded-lg" style={{ borderColor: user?.color || COLORS.electricGreen }}>
                                     <img src={user.avatarUrl} alt={user.username} className="w-full h-full object-cover" />
                                 </div>
                             ) : (
                                 <div 
-                                    className="w-10 h-10 border-2 flex items-center justify-center text-xs font-black shadow-[inset_0_0_10px_rgba(0,0,0,0.5)] transition-transform group-active:scale-95"
+                                    className="w-10 h-10 border-2 flex items-center justify-center text-xs font-black shadow-[inset_0_0_10px_rgba(0,0,0,0.5)] transition-transform group-active:scale-95 rounded-lg"
                                     style={{ 
                                         borderColor: user?.color || COLORS.electricGreen, 
                                         color: user?.color || COLORS.electricGreen, 
@@ -99,16 +101,32 @@ export default function Navbar() {
     );
 }
 
-function NavIconButton({ icon, badge, color }: { icon: React.ReactNode, badge?: React.ReactNode, color?: string }) {
+interface NavIconButtonProps {
+    icon: React.ReactNode;
+    badge?: React.ReactNode;
+    color?: string;
+    tooltip?: string;
+}
+
+function NavIconButton({ icon, badge, color, tooltip }: NavIconButtonProps) {
     return (
-        <button 
-            className="p-3.5 relative transition-all hover:bg-white/5 group"
-            style={{ color: color || COLORS.mutedSlate }}
-        >
-            <div className="group-hover:text-[#E8E8F0] group-hover:scale-110 transition-all">
-                {icon}
-            </div>
-            {badge}
-        </button>
+        <div className="relative group">
+            <button 
+                className="p-3.5 relative transition-all hover:bg-white/5 group"
+                style={{ color: color || COLORS.mutedSlate }}
+                aria-label={tooltip}
+                title={tooltip}
+            >
+                <div className="group-hover:text-[#E8E8F0] group-hover:scale-110 transition-all">
+                    {icon}
+                </div>
+                {badge}
+            </button>
+            {tooltip && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-[10px] font-black rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-[1000]">
+                    {tooltip}
+                </div>
+            )}
+        </div>
     );
 }
