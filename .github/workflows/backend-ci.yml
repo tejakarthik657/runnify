@@ -1,51 +1,15 @@
-name: Backend CI/CD (All Branches)
+name: Backend CI (Manual Only)
+
 on:
-  pull_request:
-    branches: [main, test, develop]
-    paths: ["backend/**", ".github/workflows/backend-ci.yml"]
-  push:
-    branches: [main, test, develop]
-    paths: ["backend/**", ".github/workflows/backend-ci.yml"]
+  workflow_dispatch:
 
 jobs:
-  test:
-    name: Test Backend
+  info:
+    name: Backend Deployment Info
     runs-on: ubuntu-latest
-    env:
-      MONGODB_URI: ${{ secrets.MONGODB_URI_TEST }}
-      JWT_SECRET: ci_test_secret_github_actions_v1
-      JWT_REFRESH_SECRET: ci_test_refresh_secret_github_actions_v1
-      UPSTASH_REDIS_URL: ${{ secrets.UPSTASH_REDIS_URL }}
-      UPSTASH_REDIS_TOKEN: ${{ secrets.UPSTASH_REDIS_TOKEN }}
-      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-      BLOCKCHAIN_NETWORK: sepolia
-      ALCHEMY_RPC_URL: ${{ secrets.ALCHEMY_RPC_URL }}
-      WALLET_PRIVATE_KEY: ${{ secrets.WALLET_PRIVATE_KEY }}
-      NODE_ENV: test
-      PORT: 4000
-    
     steps:
-      - uses: actions/checkout@v4
-      
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: "npm"
-          cache-dependency-path: backend/package-lock.json
-      
-      - name: Install dependencies
-        run: cd backend && npm ci
-      
-      - name: Run unit tests
-        run: cd backend && npm test
-        continue-on-error: true
-      
-      - name: Run integration tests
-        run: cd backend && npm run test:integration
-      
-      - name: Lint check
-        run: cd backend && npm run lint
-        continue-on-error: true
-  
-  # Deployment jobs will be added after Render setup
-  # For now, tests passing is success ✅
+      - name: Use Render native auto deploy
+        run: |
+          echo "Backend deployment is handled by Render native Git integration."
+          echo "Render should auto-deploy when backend changes are pushed to main."
+          echo "This workflow is manual-only to avoid blocked GitHub billing runners."
