@@ -84,7 +84,7 @@ router.post('/:runId/end', authenticateJWT, async (req, res, next) => {
 		// ── Emit real-time leaderboard and stats updates ─────────────
 		const io = getIO();
 		if (io && req.userId) {
-			const user = await User.findById(req.userId).select('credits username city').lean();
+			const user = await User.findById(req.userId).select('credits username city faction').lean();
 			if (user) {
 				// Emit stats update for this user
 				io.to(`user:${req.userId}`).emit('user_stats_update', {
@@ -110,6 +110,16 @@ router.post('/:runId/end', authenticateJWT, async (req, res, next) => {
 					userId: req.userId,
 					rank: usersAbove + 1
 				});
+
+				// Emit faction update if user is in a faction
+				if (user.faction) {
+					io.emit('faction_updated', {
+						faction: user.faction,
+						hexesClaimed: result.summary?.hexesClaimed || 0,
+						city: user.city,
+						username: user.username,
+					});
+				}
 			}
 		}
 
@@ -143,7 +153,7 @@ router.post('/end', authenticateJWT, async (req, res, next) => {
 		// ── Emit real-time leaderboard and stats updates ─────────────
 		const io = getIO();
 		if (io && req.userId) {
-			const user = await User.findById(req.userId).select('credits username city').lean();
+			const user = await User.findById(req.userId).select('credits username city faction').lean();
 			if (user) {
 				// Emit stats update for this user
 				io.to(`user:${req.userId}`).emit('user_stats_update', {
@@ -169,6 +179,16 @@ router.post('/end', authenticateJWT, async (req, res, next) => {
 					userId: req.userId,
 					rank: usersAbove + 1
 				});
+
+				// Emit faction update if user is in a faction
+				if (user.faction) {
+					io.emit('faction_updated', {
+						faction: user.faction,
+						hexesClaimed: result.summary?.hexesClaimed || 0,
+						city: user.city,
+						username: user.username,
+					});
+				}
 			}
 		}
 

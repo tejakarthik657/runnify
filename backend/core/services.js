@@ -611,19 +611,7 @@ const RunService = {
         await redis.incrBy(cityKey, hexesClaimed.length + hexesInvaded.length);
       }
       
-      // Broadcast faction update to all clients
-      const io = require('socket.io');
-      try {
-        io.emit('faction_updated', {
-          faction: user.faction,
-          hexesClaimed: hexesClaimed.length + hexesInvaded.length,
-          city: run.city,
-          username: user.username,
-          totalHexes: (await redis.get(factionKey)) || 0,
-        });
-      } catch (e) {
-        // socket.io not available in non-socket context, skip
-      }
+      // Note: Socket.io broadcast moved to routes.js where io instance is available
     }
 
     // Create invasion records & notifications
