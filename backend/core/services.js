@@ -603,12 +603,17 @@ const RunService = {
 
     // Update faction stats in Redis (Global Territory Wars)
     if (user.faction) {
-      const factionKey = `faction:hexcount:${user.faction}`;
-      await redis.incrBy(factionKey, hexesClaimed.length + hexesInvaded.length);
+      try {
+        const factionKey = `faction:hexcount:${user.faction}`;
+        await redis.incrBy(factionKey, hexesClaimed.length + hexesInvaded.length);
 
-      if (run.city) {
-        const cityKey = `faction:city:${run.city}:${user.faction}`;
-        await redis.incrBy(cityKey, hexesClaimed.length + hexesInvaded.length);
+        if (run.city) {
+          const cityKey = `faction:city:${run.city}:${user.faction}`;
+          await redis.incrBy(cityKey, hexesClaimed.length + hexesInvaded.length);
+        }
+      } catch (err) {
+        console.warn('[Faction Stats] Redis update failed:', err.message);
+        // Continue - faction stats are non-critical for mission completion
       }
       
       // Note: Socket.io broadcast moved to routes.js where io instance is available
@@ -616,52 +621,57 @@ const RunService = {
 
     // Create invasion records & notifications
     if (invasionEvents.length > 0) {
-      const invasionsByVictim = {};
-      for (const { hexId, victim } of invasionEvents) {
-        const vid = victim.ownerId.toString();
-        if (!invasionsByVictim[vid]) invasionsByVictim[vid] = { victim, hexIds: [] };
-        invasionsByVictim[vid].hexIds.push(hexId);
-      }
+      try {
+        const invasionsByVictim = {};
+        for (const { hexId, victim } of invasionEvents) {
+          const vid = victim.ownerId.toString();
+          if (!invasionsByVictim[vid]) invasionsByVictim[vid] = { victim, hexIds: [] };
+          invasionsByVictim[vid].hexIds.push(hexId);
+        }
 
-      for (const [victimId, data] of Object.entries(invasionsByVictim)) {
-        const hexCount = data.hexIds.length;
-        const creditsLost = hexCount * INVASION_CREDIT_LOSS;
-        const creditsGained = hexCount * CREDITS_PER_INVASION;
+        for (const [victimId, data] of Object.entries(invasionsByVictim)) {
+          const hexCount = data.hexIds.length;
+          const creditsLost = hexCount * INVASION_CREDIT_LOSS;
+          const creditsGained = hexCount * CREDITS_PER_INVASION;
 
-        // Create invasion event
-        const invasion = await Invasion.create({
-          runId, invaderId: userId, invaderUsername: user.username,
-          invaderColor: user.color,
-          victimId: data.victim.ownerId, victimUsername: data.victim.ownerUsername,
-          victimColor: data.victim.ownerColor,
-          hexIds: data.hexIds, hexCount, hexCity: run.city,
-          creditsGained, creditsLost, occurredAt: new Date(),
-          schemaVersion: SCHEMA_VERSION,
-        });
+          // Create invasion event
+          const invasion = await Invasion.create({
+            runId, invaderId: userId, invaderUsername: user.username,
+            invaderColor: user.color,
+            victimId: data.victim.ownerId, victimUsername: data.victim.ownerUsername,
+            victimColor: data.victim.ownerColor,
+            hexIds: data.hexIds, hexCount, hexCity: run.city,
+            creditsGained, creditsLost, occurredAt: new Date(),
+            schemaVersion: SCHEMA_VERSION,
+          });
 
-        // Deduct credits from victim
-        await User.findByIdAndUpdate(victimId, {
-          $inc: { credits: -creditsLost, hexesOwned: -hexCount, 'stats.totalHexesLost': hexCount, 'stats.totalCreditsLost': creditsLost },
-        });
+          // Deduct credits from victim
+          await User.findByIdAndUpdate(victimId, {
+            $inc: { credits: -creditsLost, hexesOwned: -hexCount, 'stats.totalHexesLost': hexCount, 'stats.totalCreditsLost': creditsLost },
+          });
 
-        // Credit ledger entry for victim loss
-        await CreditLedger.create({
-          userId: victimId, amount: -creditsLost,
-          balanceAfter: 0, type: 'invaded_loss',
-          refId: invasion._id, hexIds: data.hexIds, hexCount,
-          note: `${hexCount} hexes invaded by ${user.username}`,
-          occurredAt: new Date(), schemaVersion: SCHEMA_VERSION,
-        });
+          // Credit ledger entry for victim loss
+          await CreditLedger.create({
+            userId: victimId, amount: -creditsLost,
+            balanceAfter: 0, type: 'invaded_loss',
+            refId: invasion._id, hexIds: data.hexIds, hexCount,
+            note: `${hexCount} hexes invaded by ${user.username}`,
+            occurredAt: new Date(), schemaVersion: SCHEMA_VERSION,
+          });
 
-        // Notify victim
-        await NotificationService.createInvasionAlert({
-          victimId, invaderUsername: user.username,
-          hexCount, creditsLost, city: run.city,
-          invasionId: invasion._id,
-        });
+          // Notify victim
+          await NotificationService.createInvasionAlert({
+            victimId, invaderUsername: user.username,
+            hexCount, creditsLost, city: run.city,
+            invasionId: invasion._id,
+          });
 
-        // Update rivalry
-        await RunService._updateRivalry(userId, victimId);
+          // Update rivalry
+          await RunService._updateRivalry(userId, victimId);
+        }
+      } catch (err) {
+        console.warn('[Invasion] creation failed:', err.message);
+        // Continue - invasions are non-critical for mission completion
       }
     }
 
@@ -688,17 +698,21 @@ const RunService = {
 
     const userAfter = await User.findByIdAndUpdate(userId, userUpdate, { new: true });
 
-    // Credit ledger for runner
-    await CreditLedger.create({
-      userId, username: user.username, amount: finalCreditsTotal,
-      balanceAfter: userAfter.credits,
-      type: 'run_claim',
-      hexIds: [...hexesClaimed, ...hexesInvaded],
-      hexCount: hexesClaimed.length + hexesInvaded.length,
-      multiplier: rawCredits.multiplier,
-      note: `Run: ${hexesClaimed.length} claims, ${hexesInvaded.length} invasions (AC: ${acResult.verdict})`,
-      occurredAt: new Date(), schemaVersion: SCHEMA_VERSION,
-    });
+    // Credit ledger for runner (non-critical)
+    try {
+      await CreditLedger.create({
+        userId, username: user.username, amount: finalCreditsTotal,
+        balanceAfter: userAfter.credits,
+        type: 'run_claim',
+        hexIds: [...hexesClaimed, ...hexesInvaded],
+        hexCount: hexesClaimed.length + hexesInvaded.length,
+        multiplier: rawCredits.multiplier,
+        note: `Run: ${hexesClaimed.length} claims, ${hexesInvaded.length} invasions (AC: ${acResult.verdict})`,
+        occurredAt: new Date(), schemaVersion: SCHEMA_VERSION,
+      });
+    } catch (err) {
+      console.warn('[CreditLedger] failed to create entry:', err.message);
+    }
 
     // Finalise run document
     const boundingBox = RunService._calcBoundingBox(points);
@@ -734,9 +748,23 @@ const RunService = {
     }, { new: true });
 
     // Streak, achievements, leaderboard
-    await UserService.updateStreak(userId);
-    await AchievementService.checkAll(userId, userAfter);
-    await UserService.checkPrestige(userId);
+    try {
+      await UserService.updateStreak(userId);
+    } catch (err) {
+      console.warn('[Streak] update failed:', err.message);
+    }
+    
+    try {
+      await AchievementService.checkAll(userId, userAfter);
+    } catch (err) {
+      console.warn('[Achievements] check failed:', err.message);
+    }
+    
+    try {
+      await UserService.checkPrestige(userId);
+    } catch (err) {
+      console.warn('[Prestige] check failed:', err.message);
+    }
 
     try {
       await LeaderboardService.buildGlobal();
