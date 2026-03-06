@@ -468,9 +468,37 @@ export default function MapPage() {
             });
         }, 10000);
 
+        // Listen for faction changes
+        socket.on('faction_updated', (data: any) => {
+            console.log('[Map] Faction updated:', data);
+            // Update activeRunners if this user is currently being tracked
+            if (data.userId) {
+                setActiveRunners(prev => {
+                    if (prev[data.userId]) {
+                        return {
+                            ...prev,
+                            [data.userId]: {
+                                ...prev[data.userId],
+                                faction: data.faction
+                            }
+                        };
+                    }
+                    return prev;
+                });
+            }
+            
+            // If the faction change is for the current user, refetch map data to update territories
+            if (data.userId === user?.id) {
+                console.log('[Map] Current user faction changed, reloading map');
+                // Optionally trigger a map refresh or data reload here
+                toast.success(`Faction changed to ${data.faction}!`);
+            }
+        });
+
         return () => {
             socket.off('live_runner');
             socket.off('global_live_runner');
+            socket.off('faction_updated');
             clearInterval(cleanup);
         };
     }, [socket, user?.id]); // no position dependency — was causing stale closures

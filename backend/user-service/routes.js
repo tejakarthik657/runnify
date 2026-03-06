@@ -148,6 +148,25 @@ router.patch('/me/faction', authenticateJWT, async (req, res, next) => {
 		).select('faction factionJoinedAt username');
 		
 		console.log(`[Faction] Successfully updated faction: ${JSON.stringify(updated)}`);
+		
+		// Emit socket event to notify clients of faction change
+		try {
+			const { getIO } = require('../run-service/socket.handlers');
+			const io = getIO();
+			if (io) {
+				io.emit('faction_updated', {
+					userId: userId.toString(),
+					username: updated.username,
+					faction: updated.faction,
+					factionJoinedAt: updated.factionJoinedAt
+				});
+				console.log(`[Faction] Emitted faction_updated event for user ${userId}`);
+			}
+		} catch (ioErr) {
+			// Socket emission is non-critical, just log the error
+			console.warn('[Faction] Failed to emit faction_updated event:', ioErr.message);
+		}
+		
 		res.json({ faction: updated.faction, factionJoinedAt: updated.factionJoinedAt, username: updated.username });
 	} catch (err) {
 		console.error('[Faction] PATCH /me/faction error:', err.message, err.stack);
