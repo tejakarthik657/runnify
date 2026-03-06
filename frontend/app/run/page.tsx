@@ -191,15 +191,25 @@ export default function RunPage() {
         }
     };
 
-    const endRun = async () => {
+    const endRun = async (attemptNumber = 1) => {
         if (!runId) return;
         setIsEnding(true);
+        const MAX_RETRIES = 3;
+        
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+            
             const { data } = await api.post(`/run/${runId}/end`, {
                 lat: position?.lat || 0,
                 lng: position?.lng || 0,
                 accelSteps: stats.steps || 0  // Send accelerometer-detected steps
+            }, { 
+                signal: controller.signal,
+                timeout: 60000 
             });
+
+            clearTimeout(timeoutId);
 
             if (data?.user) {
                 updateUser({
@@ -219,10 +229,18 @@ export default function RunPage() {
             // Navigate to map page after mission ends
             router.push('/map');
         } catch (error: any) {
-            const errorMsg = error.response?.data?.error || 'Sync error. Retrying...';
-            toast.error(errorMsg);
-        } finally {
-            setIsEnding(false);
+            // Retry logic with exponential backoff
+            if (attemptNumber < MAX_RETRIES && (error.code === 'ABORT_ERR' || error.response?.status >= 500)) {
+                const delayMs = Math.min(1000 * Math.pow(2, attemptNumber - 1), 10000);
+                // Retry silently without showing toast
+                setTimeout(() => {
+                    endRun(attemptNumber + 1);
+                }, delayMs);
+            } else {
+                const errorMsg = error.response?.data?.error || 'Sync error. Mission may have saved. Check map.';
+                toast.error(errorMsg);
+                setIsEnding(false);
+            }
         }
     };
 
@@ -350,7 +368,7 @@ export default function RunPage() {
                             </Link>
 
                             <button
-                                onClick={endRun}
+                                onClick={() => endRun()}
                                 disabled={isEnding}
                                 className="w-full group relative bg-gradient-to-br from-[#E89BA5] to-[#E74C3C] hover:from-[#F4B8C1] hover:to-[#E89BA5] text-white p-8 rounded-[32px] shadow-[0_12px_40px_rgba(232,155,165,0.3)] transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
                             >

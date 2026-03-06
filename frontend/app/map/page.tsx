@@ -345,14 +345,24 @@ export default function MapPage() {
         } finally { setIsStarting(false); }
     };
 
-    const endRun = async () => {
+    const endRun = async (attemptNumber = 1) => {
         if (!runId || !position) return;
         setIsEnding(true);
+        const MAX_RETRIES = 3;
+        
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+            
             const { data } = await api.post(`/run/${runId}/end`, {
                 lat: position.lat,
                 lng: position.lng
+            }, { 
+                signal: controller.signal,
+                timeout: 60000 
             });
+
+            clearTimeout(timeoutId);
 
             if (data?.user) {
                 updateUser({
@@ -377,9 +387,19 @@ export default function MapPage() {
             setStats({ distance: 0, time: 0, hexCount: 0, credits: 0, steps: 0 });
             lastGpsTs.current = null;
         } catch (error: any) {
-            const errorMsg = error.response?.data?.error || 'Uplink failed. Retrying sync...';
-            toast.error(errorMsg);
-        } finally { setIsEnding(false); }
+            // Retry logic with exponential backoff
+            if (attemptNumber < MAX_RETRIES && (error.code === 'ABORT_ERR' || error.response?.status >= 500)) {
+                const delayMs = Math.min(1000 * Math.pow(2, attemptNumber - 1), 10000);
+                // Retry silently without showing toast
+                setTimeout(() => {
+                    endRun(attemptNumber + 1);
+                }, delayMs);
+            } else {
+                const errorMsg = error.response?.data?.error || 'Uplink failed. Mission may have saved. Check leaderboard.';
+                toast.error(errorMsg);
+                setIsEnding(false);
+            }
+        }
     };
 
     useEffect(() => {
@@ -702,7 +722,7 @@ export default function MapPage() {
                         </button>
                     ) : (
                         <button
-                            onClick={endRun}
+                            onClick={() => endRun()}
                             disabled={isEnding}
                             className="group h-20 w-20 bg-[#F4B8C1] rounded-[28px] shadow-[0_12px_32px_rgba(244,184,193,0.4)] active:scale-95 transition-all flex flex-col items-center justify-center text-[#c0392b]"
                         >

@@ -108,66 +108,60 @@ export default function WarBanner({ isHidden = false }: WarBannerProps) {
       transition={{ type: 'spring', duration: 0.6 }}
       className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-black/60 to-black/30 backdrop-blur-sm border-b border-white/10"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
+      <div className="w-full px-2 sm:px-6 lg:px-8 py-2 sm:py-4">
         {/* Title */}
-        <div className="mb-2 sm:mb-4">
-          <h2 className="text-[10px] sm:text-xs md:text-sm font-black uppercase tracking-widest text-white/70 flex items-center gap-2">
-            <Zap size={12} className="text-yellow-400 sm:w-3.5 sm:h-3.5" />
+        <div className="mb-1.5 sm:mb-3">
+          <h2 className="text-[9px] sm:text-xs md:text-sm font-black uppercase tracking-widest text-white/70 flex items-center gap-1 sm:gap-2">
+            <Zap size={11} className="text-yellow-400 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Global Territory War</span>
-            <span className="sm:hidden">Territory War</span>
+            <span className="sm:hidden">War</span>
           </h2>
         </div>
 
         {/* Faction Bar */}
-        <div className="space-y-2 sm:space-y-3">
-          {/* Visual Bar */}
-          <div className="flex gap-0.5 sm:gap-1 h-4 sm:h-6 rounded-full overflow-hidden bg-black/30 border border-white/10">
+        <div className="space-y-1.5 sm:space-y-3">
+          {/* Visual Bar - Compact on mobile */}
+          <div className="flex gap-0 h-3 sm:h-6 rounded-full overflow-hidden bg-black/30 border border-white/10">
             <motion.div
               key={`red-${stats.red}`}
               initial={{ width: 0 }}
               animate={{ width: `${redPercent}%` }}
               transition={{ type: 'spring', stiffness: 50, damping: 20 }}
-              className="bg-gradient-to-r from-[#FF4444] to-[#FF6666] hover:from-[#FF5555] hover:to-[#FF7777] transition-all relative group"
-              style={{ minWidth: parseFloat(redPercent) > 5 ? 'auto' : '0' }}
-            >
-              <div className="absolute inset-0 bg-white/10 blur-sm animate-pulse" />
-            </motion.div>
+              className="bg-gradient-to-r from-[#FF4444] to-[#FF6666] hover:from-[#FF5555] hover:to-[#FF7777] transition-all relative"
+              style={{ minWidth: parseFloat(redPercent) > 3 ? 'auto' : '0' }}
+            />
 
             <motion.div
               key={`blue-${stats.blue}`}
               initial={{ width: 0 }}
               animate={{ width: `${bluePercent}%` }}
               transition={{ type: 'spring', stiffness: 50, damping: 20 }}
-              className="bg-gradient-to-r from-[#4488FF] to-[#6699FF] hover:from-[#5599FF] hover:to-[#77AAFF] transition-all relative group"
-              style={{ minWidth: parseFloat(bluePercent) > 5 ? 'auto' : '0' }}
-            >
-              <div className="absolute inset-0 bg-white/10 blur-sm animate-pulse" />
-            </motion.div>
+              className="bg-gradient-to-r from-[#4488FF] to-[#6699FF] hover:from-[#5599FF] hover:to-[#77AAFF] transition-all relative"
+              style={{ minWidth: parseFloat(bluePercent) > 3 ? 'auto' : '0' }}
+            />
 
             <motion.div
               key={`green-${stats.green}`}
               initial={{ width: 0 }}
               animate={{ width: `${greenPercent}%` }}
               transition={{ type: 'spring', stiffness: 50, damping: 20 }}
-              className="bg-gradient-to-r from-[#44FF88] to-[#66FF99] hover:from-[#55FF99] hover:to-[#77FFAA] transition-all relative group"
-              style={{ minWidth: parseFloat(greenPercent) > 5 ? 'auto' : '0' }}
-            >
-              <div className="absolute inset-0 bg-white/10 blur-sm animate-pulse" />
-            </motion.div>
+              className="bg-gradient-to-r from-[#44FF88] to-[#66FF99] hover:from-[#55FF99] hover:to-[#77FFAA] transition-all relative"
+              style={{ minWidth: parseFloat(greenPercent) > 3 ? 'auto' : '0' }}
+            />
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-2 sm:gap-4">
+          {/* Stats - Simplified on mobile */}
+          <div className="grid grid-cols-3 gap-1 sm:gap-4">
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="flex items-center gap-1.5 sm:gap-3 p-1.5 sm:p-2 rounded-lg bg-red-500/10 border border-red-500/20 hover:bg-red-500/15 transition-colors"
+              className="flex items-center gap-1 sm:gap-2 px-1.5 sm:px-2 py-1 sm:py-2 rounded bg-red-500/10 border border-red-500/20"
             >
-              <span className="text-sm sm:text-lg">{FACTION_CONFIG.red.icon}</span>
+              <span className="text-xs sm:text-lg">{FACTION_CONFIG.red.icon}</span>
               <div className="min-w-0">
-                <div className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-red-600/80 hidden sm:block">Red Legion</div>
-                <div className="text-xs sm:text-sm md:text-base font-black text-red-600 tabular-nums">{redPercent}%</div>
+                <div className="text-[7px] sm:text-[10px] font-black uppercase tracking-tighter text-red-600/70 leading-none hidden sm:block">Red</div>
+                <div className="text-[10px] sm:text-sm font-black text-red-600">{redPercent}%</div>
               </div>
             </motion.div>
 
@@ -175,12 +169,12 @@ export default function WarBanner({ isHidden = false }: WarBannerProps) {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="flex items-center gap-1.5 sm:gap-3 p-1.5 sm:p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/15 transition-colors"
+              className="flex items-center gap-1 sm:gap-2 px-1.5 sm:px-2 py-1 sm:py-2 rounded bg-blue-500/10 border border-blue-500/20"
             >
-              <span className="text-sm sm:text-lg">{FACTION_CONFIG.blue.icon}</span>
+              <span className="text-xs sm:text-lg">{FACTION_CONFIG.blue.icon}</span>
               <div className="min-w-0">
-                <div className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-blue-600/80 hidden sm:block">Blue Syndicate</div>
-                <div className="text-xs sm:text-sm md:text-base font-black text-blue-600 tabular-nums">{bluePercent}%</div>
+                <div className="text-[7px] sm:text-[10px] font-black uppercase tracking-tighter text-blue-600/70 leading-none hidden sm:block">Blue</div>
+                <div className="text-[10px] sm:text-sm font-black text-blue-600">{bluePercent}%</div>
               </div>
             </motion.div>
 
@@ -188,20 +182,20 @@ export default function WarBanner({ isHidden = false }: WarBannerProps) {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="flex items-center gap-1.5 sm:gap-3 p-1.5 sm:p-2 rounded-lg bg-green-500/10 border border-green-500/20 hover:bg-green-500/15 transition-colors"
+              className="flex items-center gap-1 sm:gap-2 px-1.5 sm:px-2 py-1 sm:py-2 rounded bg-green-500/10 border border-green-500/20"
             >
-              <span className="text-sm sm:text-lg">{FACTION_CONFIG.green.icon}</span>
+              <span className="text-xs sm:text-lg">{FACTION_CONFIG.green.icon}</span>
               <div className="min-w-0">
-                <div className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-green-600/80 hidden sm:block">Green Nomads</div>
-                <div className="text-xs sm:text-sm md:text-base font-black text-green-600 tabular-nums">{greenPercent}%</div>
+                <div className="text-[7px] sm:text-[10px] font-black uppercase tracking-tighter text-green-600/70 leading-none hidden sm:block">Green</div>
+                <div className="text-[10px] sm:text-sm font-black text-green-600">{greenPercent}%</div>
               </div>
             </motion.div>
           </div>
 
-          {/* Total hexes */}
+          {/* Total hexes - Hidden on mobile */}
           <div className="text-center hidden sm:block">
-            <p className="text-[9px] font-bold text-white/50 uppercase tracking-widest">
-              Total Hexes Controlled: <span className="text-white font-black">{stats.total.toLocaleString()}</span>
+            <p className="text-[8px] font-bold text-white/50 uppercase tracking-widest">
+              Total: <span className="text-white font-black">{stats.total.toLocaleString()}</span> Hexes
             </p>
           </div>
         </div>
