@@ -50,6 +50,48 @@ router.get('/stats', async (req, res, next) => {
 	}
 });
 
+// Enhanced stats for landing page with real-time metrics
+router.get('/enhanced-stats', async (req, res, next) => {
+	try {
+		const stats = await LeaderboardService.getEnhancedStats();
+		res.json(stats);
+	} catch (error) {
+		next(error);
+	}
+});
+
+// Top commanders for landing page podium
+router.get('/top-commanders', async (req, res, next) => {
+	try {
+		const limit = parseInt(req.query.limit) || 3;
+		const commanders = await LeaderboardService.getTopCommanders(limit);
+		res.json({ commanders });
+	} catch (error) {
+		next(error);
+	}
+});
+
+// City activity rankings for landing page heatmap
+router.get('/city-activity', async (req, res, next) => {
+	try {
+		const cities = await LeaderboardService.getCityActivity();
+		res.json({ cities });
+	} catch (error) {
+		next(error);
+	}
+});
+
+// Recent wins feed (achievements + high-performing runs)
+router.get('/recent-wins', async (req, res, next) => {
+	try {
+		const limit = parseInt(req.query.limit) || 5;
+		const wins = await LeaderboardService.getRecentWins(limit);
+		res.json({ wins });
+	} catch (error) {
+		next(error);
+	}
+});
+
 router.get('/me', authenticateJWT, async (req, res, next) => {
 	try {
 		const userId = req.userId || req.user?.userId || req.user?.sub;

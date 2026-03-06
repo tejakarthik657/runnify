@@ -1084,6 +1084,198 @@ const LeaderboardService = {
     if (scope === 'city' && city) return LeaderboardService.buildCity(city);
     throw new Error('Invalid leaderboard scope');
   },
+
+  /** Get top N commanders for landing page podium */
+  async getTopCommanders(limit = 3) {
+    const users = await User.find({ isBanned: false })
+      .sort({ credits: -1 })
+      .limit(limit)
+      .select('username hashcode color credits hexesOwned city stats.currentStreak isPrestige');
+
+    return users.map((u, i) => ({
+      rank: i + 1,
+      userId: u._id,
+      username: u.username,
+      color: u.color,
+      hashcode: u.hashcode,
+      credits: u.credits,
+      hexesOwned: u.hexesOwned,
+      city: u.city,
+      currentStreak: u.stats?.currentStreak || 0,
+      isPrestige: u.isPrestige,
+    }));
+  },
+
+  /** Get city activity rankings (hexes captured from recent runs) */
+  async getCityActivity() {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    
+    const cityStats = await Run.aggregate([
+      {
+        $match: {
+          endedAt: { $gte: oneHourAgo },
+          status: 'completed',
+          city: { $exists: true, $ne: null }
+        }
+      },
+      {
+        $group: {
+          _id: '$city',
+          hexesCaptured: { $sum: '$hexesTotal' },
+          runCount: { $sum: 1 },
+          totalCredits: { $sum: '$creditsEarned' }
+        }
+      },
+      { $sort: { hexesCaptured: -1 } },
+      { $limit: 10 }
+    ]);
+
+    return cityStats.map(c => ({
+      city: c._id,
+      hexesCaptured: c.hexesCaptured,
+      runCount: c.runCount,
+      totalCredits: c.totalCredits,
+    }));
+  },
+
+  /** Get recent achievements and high-performing runs for wins feed */
+  async getRecentWins(limit = 5) {
+    const wins = [];
+
+    // Get recent achievements
+    const achievements = await UserAchievement.find({
+      earnedAt: { $exists: true }
+    })
+      .sort({ earnedAt: -1 })
+      .limit(Math.ceil(limit / 2))
+      .populate('userId', 'username color')
+      .populate('achievementId', 'name description tier');
+
+    achievements.forEach(a => {
+      if (a.userId && a.achievementId) {
+        wins.push({
+          type: 'achievement',
+          username: a.userId.username,
+          color: a.userId.color,
+          achievement: a.achievementId.name,
+          tier: a.achievementId.tier,
+          timestamp: a.earnedAt,
+        });
+      }
+    });
+
+    // Get high-performing recent runs
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const impressiveRuns = await Run.find({
+      endedAt: { $gte: oneHourAgo },
+      status: 'completed',
+      $or: [
+        { hexesTotal: { $gte: 30 } },
+        { creditsEarned: { $gte: 500 } },
+      ]
+    })
+      .sort({ creditsEarned: -1 })
+      .limit(Math.floor(limit / 2))
+      .select('userId username creditsEarned hexesTotal hexesInvaded endedAt');
+
+    impressiveRuns.forEach(r => {
+      wins.push({
+        type: 'run',
+        username: r.username,
+        creditsEarned: r.creditsEarned,
+        hexesCaptured: r.hexesTotal,
+        hexesInvaded: r.hexesInvaded?.length || 0,
+        timestamp: r.endedAt,
+      });
+    });
+
+    // Sort by timestamp and limit
+    return wins.sort((a, b) => b.timestamp - a.timestamp).slice(0, limit);
+  },
+
+  /** Enhanced global stats with more real-time data */
+  async getEnhancedStats() {
+    const redis = getRedis();
+    const cacheKey = 'landing:enhanced_stats';
+    
+    // Try cache first (2 min TTL)
+    try {
+      const cached = await redis.get(cacheKey);
+      if (cached) return JSON.parse(cached);
+    } catch (e) { /* cache miss, continue */ }
+
+    // Basic stats
+    const totalUsers = await User.countDocuments({ isBanned: false });
+    const totalHexes = await Territory.countDocuments({});
+    
+    const creditsAgg = await User.aggregate([
+      { $match: { isBanned: false } },
+      { $group: { _id: null, total: { $sum: '$credits' } } }
+    ]);
+    const totalCredits = creditsAgg[0]?.total || 0;
+
+    // Time-based stats
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Runs and invasions today
+    const activeSorties = await Run.countDocuments({ 
+      startedAt: { $gte: oneDayAgo } 
+    });
+
+    // Distance today and this week
+    const distanceToday = await Run.aggregate([
+      { $match: { endedAt: { $gte: today }, status: 'completed' } },
+      { $group: { _id: null, total: { $sum: '$distanceKm' } } }
+    ]);
+
+    const distanceWeek = await Run.aggregate([
+      { $match: { endedAt: { $gte: oneWeekAgo }, status: 'completed' } },
+      { $group: { _id: null, total: { $sum: '$distanceKm' } } }
+    ]);
+
+    // Territories invaded today
+    const invasionsToday = await Run.aggregate([
+      { $match: { endedAt: { $gte: today }, status: 'completed' } },
+      { $group: { _id: null, total: { $sum: { $size: { $ifNull: ['$hexesInvaded', []] } } } } }
+    ]);
+
+    // Weekly growth (new users)
+    const weeklyGrowth = await User.countDocuments({
+      createdAt: { $gte: oneWeekAgo },
+      isBanned: false
+    });
+
+    // Online count from Redis
+    let onlineCount = 0;
+    try {
+      const onlineRaw = await redis.smembers('online_users');
+      onlineCount = new Set(onlineRaw.map(r => {
+        try { return JSON.parse(r).userId; } catch { return null; }
+      }).filter(Boolean)).size;
+    } catch (e) { /* redis error */ }
+
+    const stats = {
+      totalUsers,
+      totalHexes,
+      totalCredits,
+      activeSorties,
+      onlineCount,
+      distanceToday: Math.round((distanceToday[0]?.total || 0) * 10) / 10,
+      distanceWeek: Math.round((distanceWeek[0]?.total || 0) * 10) / 10,
+      territoriesInvadedToday: invasionsToday[0]?.total || 0,
+      weeklyGrowth,
+    };
+
+    // Cache for 2 minutes
+    try {
+      await redis.setex(cacheKey, 120, JSON.stringify(stats));
+    } catch (e) { /* cache write failure, non-critical */ }
+
+    return stats;
+  },
 };
 
 
