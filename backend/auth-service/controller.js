@@ -159,7 +159,14 @@ async function me(req, res, next) {
 	try {
 		const user = await User.findById(req.userId);
 		if (!user) return res.status(404).json({ error: 'User not found' });
-		res.json({ user: user.publicProfile });
+		const profile = user.publicProfile;
+		console.log('[Auth/me] User profile:', {
+			userId: user._id,
+			username: user.username,
+			faction: profile.faction,
+			factionJoinedAt: profile.factionJoinedAt
+		});
+		res.json({ user: profile });
 	} catch (error) {
 		next(error);
 	}

@@ -109,9 +109,16 @@ export default function DashboardPage() {
     // Check if user needs to select a faction
     useEffect(() => {
         const userFaction = meData?.user?.faction || user?.faction;
-        console.log('[Dashboard] Faction check:', { meDataFaction: meData?.user?.faction, userFaction });
+        console.log('[Dashboard] Faction check:', { 
+            meDataFaction: meData?.user?.faction,
+            userStoreFaction: user?.faction,
+            factionSelecting,
+            combinedFaction: userFaction,
+            shouldOpen: meData && !userFaction && !factionSelecting
+        });
+        
         if (meData && !userFaction && !factionSelecting) {
-            console.log('[Dashboard] Opening faction picker');
+            console.log('[Dashboard] User needs to select faction');
             setFactionPickerOpen(true);
         }
     }, [meData, user?.faction, factionSelecting]);

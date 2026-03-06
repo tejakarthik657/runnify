@@ -184,7 +184,12 @@ const UserSchema = new Schema({
   createdAt: { type: Date, default: Date.now },
   lastActiveAt: { type: Date, default: Date.now },
   lastRunAt: { type: Date, default: null },
-}, { timestamps: true, collection: 'users_v1' });
+}, { 
+  timestamps: true, 
+  collection: 'users_v1',
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
 
 // Indexes
 UserSchema.index({ city: 1, credits: -1 });
