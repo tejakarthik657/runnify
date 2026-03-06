@@ -534,7 +534,7 @@ export default function MapPage() {
     };
 
     return (
-        <div className="h-screen w-screen flex flex-col overflow-hidden relative bg-[#F4F7F4]">
+        <div className="h-screen w-full flex flex-col overflow-hidden relative bg-[#F4F7F4]">
             {/* War Banner - Global Faction Status */}
             <WarBanner isHidden={isRunning} />
 

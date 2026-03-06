@@ -15,7 +15,8 @@ import {
     Palette,
     Bell,
     CreditCard,
-    Play
+    Play,
+    Zap
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '../../store/authStore';
@@ -28,6 +29,7 @@ const NAV_ITEMS = [
     { label: 'Leaderboard', icon: Trophy, href: '/leaderboard' },
     { label: 'Credits', icon: CreditCard, href: '/credits' },
     { label: 'Community', icon: Users, href: '/community' },
+    { label: 'Faction', icon: Zap, href: '/faction' },
     { label: 'Alerts', icon: Bell, href: '/notifications', badge: 2 },
     { label: 'Profile', icon: User, href: '/profile' },
 ];

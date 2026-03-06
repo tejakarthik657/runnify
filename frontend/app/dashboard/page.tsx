@@ -26,7 +26,6 @@ import RunButton from '../../components/ui/RunButton';
 import Badge from '../../components/ui/Badge';
 import ActivityStrip from '../../components/ui/ActivityStrip';
 import MomentsTray from '../../components/dashboard/MomentsTray';
-import FactionPicker from '../../components/FactionPicker';
 
 const fetcher = (url: string) => {
     const controller = new AbortController();
@@ -52,8 +51,6 @@ export default function DashboardPage() {
     const { user, updateUser } = useAuthStore();
     const socket = useSocket('main');
     const [liveStats, setLiveStats] = useState<any>(null);
-    const [factionPickerOpen, setFactionPickerOpen] = useState(false);
-    const [factionSelecting, setFactionSelecting] = useState(false);
     
     const { data: meData, mutate: mutateMeData } = useSWR('/auth/me', fetcher, {
         errorRetryCount: 2,
@@ -106,38 +103,6 @@ export default function DashboardPage() {
         };
     }, [socket, user?.id, updateUser]);
 
-    // Check if user needs to select a faction
-    useEffect(() => {
-        const userFaction = meData?.user?.faction || user?.faction;
-        console.log('[Dashboard] Faction check:', { 
-            meDataFaction: meData?.user?.faction,
-            userStoreFaction: user?.faction,
-            factionSelecting,
-            combinedFaction: userFaction,
-            shouldOpen: meData && !userFaction && !factionSelecting
-        });
-        
-        if (meData && !userFaction && !factionSelecting) {
-            console.log('[Dashboard] User needs to select faction');
-            setFactionPickerOpen(true);
-        }
-    }, [meData, user?.faction, factionSelecting]);
-
-    // Handle faction selection
-    const handleFactionSelected = async (faction: 'red' | 'blue' | 'green') => {
-        console.log('[Dashboard] Faction selected:', faction);
-        updateUser({ faction, factionJoinedAt: new Date() });
-        setFactionSelecting(true);
-        setFactionPickerOpen(false);
-        
-        // Revalidate the user data to confirm the faction was saved
-        setTimeout(() => {
-            console.log('[Dashboard] Revalidating user data after faction selection');
-            mutateMeData();
-            setFactionSelecting(false);
-        }, 1000);
-    };
-
     // Derived ActivityStrip data
     const activities = (globalInvasions?.invasions || []).map((inv: any) => ({
         id: inv._id,
@@ -149,11 +114,6 @@ export default function DashboardPage() {
 
     return (
         <div className="space-y-8 pb-12">
-            {/* Faction Picker Modal */}
-            <FactionPicker 
-                isOpen={factionPickerOpen}
-                onFactionSelected={handleFactionSelected}
-            />
             {/* Activity Strip */}
             <div className="-mx-4 md:-mx-6 lg:-mx-8 -mt-4 md:-mt-6 lg:-mt-8">
                 <ActivityStrip activities={activities.length > 0 ? activities : [
