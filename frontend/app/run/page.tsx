@@ -41,6 +41,8 @@ export default function RunPage() {
     // Track state locally for the UI
     const [position, setPosition] = useState<any>(null);
     const [gpsError, setGpsError] = useState<string | null>(null);
+    const [isAcquiringGps, setIsAcquiringGps] = useState(false);
+    const [gpsAcquisitionTip, setGpsAcquisitionTip] = useState(0);
 
     // Initialize step counter with accelerometer
     const { steps: accelSteps, stepRate, cadence, isDetecting, start: startStepCounter, stop: stopStepCounter, reset: resetStepCounter } = useStepCounter({
@@ -61,6 +63,7 @@ export default function RunPage() {
         onUpdate: (state: any) => {
             if (state.error) {
                 setGpsError(state.error);
+                setIsAcquiringGps(false);
                 toast.error(state.error);
                 return;
             }
@@ -69,6 +72,7 @@ export default function RunPage() {
             if (state.lat && state.lng) {
                 const point = { lat: state.lat, lng: state.lng, accuracy: state.accuracy || 8 };
                 setPosition(point);
+                setIsAcquiringGps(false);
                 handleGpsPoint(point);
             }
         }
@@ -134,14 +138,35 @@ export default function RunPage() {
     }, [startTimer, stopTimer, startStepCounter]);
 
     const startRun = async () => {
+        // Cycle through motivational tips while acquiring GPS
+        const tips = [
+            "📡 Scanning for satellites...",
+            "🗺️ Mapping nearby territory...",
+            "⚡ Calibrating sensors...",
+            "🎯 Locking position..."
+        ];
+        setGpsAcquisitionTip(0);
+        const tipInterval = setInterval(() => {
+            setGpsAcquisitionTip(prev => (prev + 1) % tips.length);
+        }, 1500);
+
         setIsStarting(true);
+        setIsAcquiringGps(true);
+        
         try {
             if (!position || position.lat === null || position.lng === null) {
-                toast.error('Waiting for GPS location...');
-                setIsStarting(false);
-                return;
+                // Wait a bit for GPS to acquire
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                if (!position || position.lat === null || position.lng === null) {
+                    clearInterval(tipInterval);
+                    toast.error('GPS signal weak. Move to an open area.');
+                    setIsStarting(false);
+                    setIsAcquiringGps(false);
+                    return;
+                }
             }
 
+            clearInterval(tipInterval);
             const { data } = await api.post('/run/start', {
                 startPos: {
                     lat: position.lat,
@@ -157,10 +182,12 @@ export default function RunPage() {
             startTimer();
             toast.success('Campaign Initiated');
         } catch (error: any) {
+            clearInterval(tipInterval);
             const errorMsg = error.response?.data?.error || 'Initialization failed';
             toast.error(errorMsg);
         } finally {
             setIsStarting(false);
+            setIsAcquiringGps(false);
         }
     };
 
@@ -374,6 +401,89 @@ export default function RunPage() {
                     >
                         <Radio size={20} className="animate-pulse" />
                         Signal Lost: {gpsError}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* GPS Acquisition Overlay */}
+            <AnimatePresence>
+                {isAcquiringGps && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[3000] bg-black/40 backdrop-blur-md flex items-center justify-center p-4"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            className="bg-white rounded-[40px] p-8 sm:p-12 max-w-md w-full shadow-2xl border-2 border-[#A8D5BA]/20"
+                        >
+                            {/* Animated GPS Icon */}
+                            <motion.div
+                                animate={{ 
+                                    scale: [1, 1.2, 1],
+                                    rotate: [0, 180, 360]
+                                }}
+                                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                                className="w-24 h-24 mx-auto mb-6 rounded-3xl bg-gradient-to-br from-[#A8D5BA] to-[#6CC89A] flex items-center justify-center shadow-2xl shadow-[#A8D5BA]/30"
+                            >
+                                <Crosshair size={40} className="text-white" />
+                            </motion.div>
+
+                            {/* Status Text */}
+                            <div className="text-center space-y-4">
+                                <h3 className="text-2xl font-black text-[#1a1a2e]">
+                                    Acquiring GPS Signal
+                                </h3>
+                                <motion.p
+                                    key={gpsAcquisitionTip}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -10 }}
+                                    className="text-sm font-bold text-gray-500"
+                                >
+                                    {[
+                                        "📡 Scanning for satellites...",
+                                        "🗺️ Mapping nearby territory...",
+                                        "⚡ Calibrating sensors...",
+                                        "🎯 Locking position..."
+                                    ][gpsAcquisitionTip]}
+                                </motion.p>
+
+                                {/* Animated dots */}
+                                <div className="flex items-center justify-center gap-2 pt-2">
+                                    {[0, 1, 2].map((i) => (
+                                        <motion.div
+                                            key={i}
+                                            animate={{ 
+                                                scale: [1, 1.5, 1],
+                                                opacity: [0.3, 1, 0.3]
+                                            }}
+                                            transition={{
+                                                duration: 1.5,
+                                                repeat: Infinity,
+                                                delay: i * 0.2
+                                            }}
+                                            className="w-3 h-3 rounded-full bg-[#A8D5BA]"
+                                        />
+                                    ))}
+                                </div>
+
+                                {/* Tip */}
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ delay: 1 }}
+                                    className="mt-6 bg-[#F0F7F4] rounded-2xl p-4 border border-[#A8D5BA]/20"
+                                >
+                                    <p className="text-[10px] font-bold text-gray-600 leading-relaxed">
+                                        <span className="font-black text-[#2E7D52]">TIP:</span> For best accuracy, ensure you're outdoors with a clear view of the sky. GPS works best away from tall buildings.
+                                    </p>
+                                </motion.div>
+                            </div>
+                        </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>

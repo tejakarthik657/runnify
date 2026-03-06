@@ -255,58 +255,116 @@ export default function ProfilePage() {
                             </div>
                         </div>
 
-                        {/* Theme Customizer */}
-                        <div className="bg-white rounded-[32px] border border-black/5 p-8 shadow-sm">
+                        {/* Theme Customizer - Enhanced */}
+                        <div className="bg-gradient-to-br from-white to-gray-50 rounded-[32px] border border-black/5 p-8 shadow-sm">
                             <h3 className="text-xs font-black text-[#1a1a2e] uppercase tracking-widest mb-6 flex items-center gap-2">
-                                <Zap size={16} className="text-[#A8D5BA]" />
-                                Profile Theme
+                                <Palette size={16} className="text-[#A8D5BA]" />
+                                Territory Color Theme
                             </h3>
+                            
+                            {/* Preview Card */}
+                            <motion.div
+                                key={currentUser?.color}
+                                initial={{ scale: 0.95, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                className="mb-6 p-6 rounded-2xl border-2 transition-all"
+                                style={{ 
+                                    backgroundColor: `${currentUser?.color}10`,
+                                    borderColor: `${currentUser?.color}40`
+                                }}
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div 
+                                        className="w-16 h-16 rounded-2xl shadow-lg flex items-center justify-center text-white text-2xl font-black"
+                                        style={{ backgroundColor: currentUser?.color }}
+                                    >
+                                        {currentUser?.username?.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                        <div className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Preview</div>
+                                        <div className="text-sm font-black text-[#1a1a2e]">Your territory will appear in this color</div>
+                                    </div>
+                                </div>
+                            </motion.div>
+
                             <div className="grid grid-cols-4 gap-3">
                                 {ALLOWED_COLORS.map(color => (
-                                    <button
+                                    <motion.button
                                         key={color}
                                         onClick={() => updateColor(color)}
                                         disabled={isUpdating === 'color'}
+                                        whileHover={{ scale: 1.1 }}
+                                        whileTap={{ scale: 0.95 }}
                                         className={`
-                                            h-10 rounded-xl transition-all p-0.5 border-2
-                                            ${currentUser?.color === color ? 'border-[#1a1a2e] scale-110' : 'border-transparent hover:border-gray-100'}
+                                            relative h-12 rounded-2xl transition-all p-1 border-2 group
+                                            ${currentUser?.color === color ? 'border-[#1a1a2e] shadow-lg' : 'border-transparent hover:border-gray-200'}
                                             ${isUpdating === 'color' ? 'opacity-50' : ''}
                                         `}
                                     >
-                                        <div className="w-full h-full rounded-lg" style={{ backgroundColor: color }} />
-                                    </button>
+                                        <div 
+                                            className="w-full h-full rounded-xl shadow-inner relative overflow-hidden" 
+                                            style={{ backgroundColor: color }}
+                                        >
+                                            {/* Shine effect on hover */}
+                                            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/30 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500" />
+                                        </div>
+                                        {currentUser?.color === color && (
+                                            <motion.div
+                                                initial={{ scale: 0 }}
+                                                animate={{ scale: 1 }}
+                                                className="absolute -top-1 -right-1 w-5 h-5 bg-[#1a1a2e] rounded-full flex items-center justify-center shadow-lg"
+                                            >
+                                                <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                </svg>
+                                            </motion.div>
+                                        )}
+                                    </motion.button>
                                 ))}
 
-                                {/* Custom Color Picker */}
-                                <div className="col-span-4 mt-2 pt-4 border-t border-gray-50 flex items-center gap-4">
-                                    <div className="relative">
-                                        <div
-                                            className={`w-10 h-10 rounded-xl border-2 flex items-center justify-center cursor-pointer transition-all ${!ALLOWED_COLORS.includes(currentUser?.color) ? 'border-[#1a1a2e] scale-105 shadow-md' : 'border-gray-100'}`}
-                                            style={{ backgroundColor: currentUser?.color }}
-                                            onClick={() => document.getElementById('profileCustomColor')?.click()}
-                                        >
-                                            <Palette size={18} className="text-white mix-blend-difference" />
+                                {/* Custom Color Picker - Enhanced */}
+                                <div className="col-span-4 mt-4 pt-4 border-t border-gray-100">
+                                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-3">Custom Hex Code</p>
+                                    <div className="flex items-center gap-3">
+                                        <div className="relative">
+                                            <motion.div
+                                                whileHover={{ scale: 1.05 }}
+                                                whileTap={{ scale: 0.95 }}
+                                                className={`w-12 h-12 rounded-2xl border-2 flex items-center justify-center cursor-pointer transition-all shadow-md ${!ALLOWED_COLORS.includes(currentUser?.color) ? 'border-[#1a1a2e] ring-2 ring-[#A8D5BA]/30' : 'border-gray-200'}`}
+                                                style={{ backgroundColor: currentUser?.color }}
+                                                onClick={() => document.getElementById('profileCustomColor')?.click()}
+                                            >
+                                                <Palette size={20} className="text-white mix-blend-difference" />
+                                            </motion.div>
+                                            <input
+                                                id="profileCustomColor"
+                                                type="color"
+                                                className="absolute inset-0 opacity-0 w-12 h-12 cursor-pointer"
+                                                value={currentUser?.color || '#A8D5BA'}
+                                                onChange={(e) => updateColor(e.target.value)}
+                                            />
                                         </div>
                                         <input
-                                            id="profileCustomColor"
-                                            type="color"
-                                            className="absolute inset-0 opacity-0 w-10 h-10 cursor-pointer"
-                                            value={currentUser?.color || '#A8D5BA'}
-                                            onChange={(e) => updateColor(e.target.value)}
+                                            type="text"
+                                            className="flex-1 h-12 bg-white border-2 border-gray-100 rounded-2xl px-4 text-xs font-black uppercase tracking-widest text-[#1a1a2e] focus:ring-2 ring-[#A8D5BA]/20 focus:border-[#A8D5BA] outline-none transition-all"
+                                            value={currentUser?.color || ''}
+                                            placeholder="#HEXCODE"
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (/^#[0-9A-Fa-f]{0,6}$/.test(val)) {
+                                                    if (val.length === 7) updateColor(val);
+                                                }
+                                            }}
                                         />
                                     </div>
-                                    <input
-                                        type="text"
-                                        className="flex-1 h-10 bg-gray-50 border-none rounded-xl px-4 text-xs font-black uppercase tracking-widest text-[#1a1a2e] focus:ring-2 ring-[#A8D5BA]/20 outline-none"
-                                        value={currentUser?.color || ''}
-                                        placeholder="#HEXCODE"
-                                        onChange={(e) => {
-                                            const val = e.target.value;
-                                            if (/^#[0-9A-Fa-f]{0,6}$/.test(val)) {
-                                                if (val.length === 7) updateColor(val);
-                                            }
-                                        }}
-                                    />
+                                    <motion.p 
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        className="text-[9px] font-bold text-gray-400 mt-3 flex items-center gap-2"
+                                    >
+                                        <Zap size={12} className="text-[#FFD6A5]" />
+                                        <span>Your color is visible to all runners on the map</span>
+                                    </motion.p>
                                 </div>
                             </div>
                         </div>
@@ -354,22 +412,57 @@ export default function ProfilePage() {
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                                 {achievementsData?.achievements ? (
                                     achievementsData.achievements.map((ach: any) => (
-                                        <div
+                                        <motion.div
                                             key={ach.key}
+                                            initial={{ opacity: 0, scale: 0.9 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            whileHover={{ scale: ach.earned ? 1.05 : 1, y: ach.earned ? -5 : 0 }}
                                             className={`
-                                                relative p-5 rounded-3xl border transition-all text-center
-                                                ${ach.earned ? 'bg-[#F0F7F4] border-[#A8D5BA]/30 shadow-sm' : 'bg-gray-50/50 border-transparent opacity-40 grayscale'}
+                                                relative p-5 rounded-3xl border transition-all text-center group cursor-pointer
+                                                ${ach.earned 
+                                                    ? 'bg-gradient-to-br from-[#F0F7F4] to-white border-[#A8D5BA]/30 shadow-lg hover:shadow-2xl' 
+                                                    : 'bg-gray-50/50 border-transparent opacity-40 grayscale hover:opacity-60'}
                                             `}
                                         >
-                                            <div className="text-3xl mb-3">{ach.icon}</div>
-                                            <h4 className="text-[10px] font-black text-[#1a1a2e] uppercase tracking-tight mb-1">{ach.name}</h4>
+                                            {ach.earned && (
+                                                <motion.div
+                                                    initial={{ scale: 0 }}
+                                                    animate={{ scale: 1 }}
+                                                    className="absolute -top-2 -right-2 w-6 h-6 bg-[#A8D5BA] rounded-full flex items-center justify-center shadow-lg"
+                                                >
+                                                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                    </svg>
+                                                </motion.div>
+                                            )}
+                                            <motion.div 
+                                                className="text-4xl mb-3"
+                                                animate={ach.earned ? { rotate: [0, 10, -10, 0] } : {}}
+                                                transition={{ duration: 0.5 }}
+                                            >
+                                                {ach.icon}
+                                            </motion.div>
+                                            <h4 className="text-[10px] font-black text-[#1a1a2e] uppercase tracking-tight mb-1 leading-tight">{ach.name}</h4>
                                             <p className="text-[9px] font-bold text-gray-400 leading-tight uppercase line-clamp-2">{ach.description}</p>
-                                        </div>
+                                            
+                                            {!ach.earned && (
+                                                <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/5 transition-colors rounded-3xl">
+                                                    <Lock size={20} className="text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                </div>
+                                            )}
+                                        </motion.div>
                                     ))
                                 ) : (
-                                    <div className="col-span-full py-12 flex flex-col items-center justify-center">
-                                        <Loader2 className="animate-spin text-gray-200 mb-4" size={32} />
-                                        <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest italic">Syncing Dossier...</span>
+                                    <div className="col-span-full py-16 flex flex-col items-center justify-center">
+                                        <motion.div
+                                            animate={{ rotate: 360 }}
+                                            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                                            className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#C3B1E1] to-[#A594D3] flex items-center justify-center mb-4 shadow-lg"
+                                        >
+                                            <Award size={32} className="text-white" />
+                                        </motion.div>
+                                        <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Loading Achievement Dossier...</span>
+                                        <p className="text-[10px] font-bold text-gray-300 mt-2">Scanning mission records</p>
                                     </div>
                                 )}
                             </div>

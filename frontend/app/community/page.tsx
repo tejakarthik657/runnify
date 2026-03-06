@@ -122,9 +122,17 @@ export default function CommunityPage() {
                                                 </button>
                                             ))
                                         ) : (
-                                            <div className="text-center py-8 bg-gray-50 rounded-[24px] border border-dashed border-gray-200">
-                                                <p className="text-[10px] text-gray-300 uppercase font-black tracking-widest italic">Zero Matches Found</p>
-                                            </div>
+                                            <motion.div 
+                                                initial={{ opacity: 0, scale: 0.95 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                className="text-center py-10 bg-gradient-to-br from-gray-50 to-white rounded-[24px] border border-dashed border-gray-200"
+                                            >
+                                                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-300">
+                                                    <Search size={24} />
+                                                </div>
+                                                <p className="text-xs font-black text-gray-400 mb-2">No Runners Found</p>
+                                                <p className="text-[10px] font-bold text-gray-300 px-4">Try a different username or check back later</p>
+                                            </motion.div>
                                         )}
                                     </div>
                                 </motion.div>

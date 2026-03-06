@@ -17,7 +17,8 @@ import {
     CreditCard,
     Settings,
     Layers,
-    Navigation2
+    Navigation2,
+    Play
 } from 'lucide-react';
 import Link from 'next/link';
 import StatCard from '../../components/ui/StatCard';
@@ -193,9 +194,92 @@ export default function DashboardPage() {
                                     </div>
                                 ))
                             ) : (
-                                <div className="text-center py-12 border-2 border-dashed border-gray-100 rounded-2xl">
-                                    <p className="text-sm font-bold text-gray-400">No missions logged yet</p>
-                                </div>
+                                <motion.div 
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#F0F7F4] via-white to-[#F0F7F4] p-8 sm:p-12 border border-[#A8D5BA]/20"
+                                >
+                                    {/* Animated Background Hexagons */}
+                                    <div className="absolute inset-0 opacity-10">
+                                        {[...Array(6)].map((_, i) => (
+                                            <motion.div
+                                                key={i}
+                                                className="absolute w-16 h-16 border-2 border-[#A8D5BA]"
+                                                style={{
+                                                    left: `${20 + i * 15}%`,
+                                                    top: `${30 + (i % 3) * 20}%`,
+                                                    clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)'
+                                                }}
+                                                animate={{
+                                                    y: [0, -10, 0],
+                                                    opacity: [0.3, 0.6, 0.3]
+                                                }}
+                                                transition={{
+                                                    duration: 3 + i * 0.5,
+                                                    repeat: Infinity,
+                                                    ease: "easeInOut"
+                                                }}
+                                            />
+                                        ))}
+                                    </div>
+
+                                    {/* Content */}
+                                    <div className="relative z-10 text-center space-y-6">
+                                        <motion.div
+                                            animate={{ scale: [1, 1.05, 1] }}
+                                            transition={{ duration: 2, repeat: Infinity }}
+                                            className="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-br from-[#A8D5BA] to-[#6CC89A] flex items-center justify-center shadow-2xl shadow-[#A8D5BA]/30"
+                                        >
+                                            <MapIcon size={32} className="text-white" fill="white" fillOpacity={0.3} />
+                                        </motion.div>
+                                        
+                                        <div>
+                                            <h4 className="text-xl sm:text-2xl font-black text-[#1a1a2e] mb-3">Your Territory Awaits</h4>
+                                            <p className="text-sm text-gray-500 font-bold max-w-md mx-auto leading-relaxed">
+                                                <span className="text-[#2E7D52] font-black">Hundreds of hexes</span> are unclaimed in your area. Start your first run and watch your empire grow.
+                                            </p>
+                                        </div>
+
+                                        {/* Motivational Stats */}
+                                        <div className="grid grid-cols-3 gap-4 pt-4 max-w-sm mx-auto">
+                                            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-3 border border-[#A8D5BA]/10">
+                                                <div className="text-2xl font-black text-[#A8D5BA]">~50</div>
+                                                <div className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Avg First Run</div>
+                                            </div>
+                                            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-3 border border-[#C3B1E1]/10">
+                                                <div className="text-2xl font-black text-[#A594D3]">75+</div>
+                                                <div className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">TRC Possible</div>
+                                            </div>
+                                            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-3 border border-[#FFD6A5]/10">
+                                                <div className="text-2xl font-black text-[#E67E22]">2x</div>
+                                                <div className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Peak Multiplier</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-2">
+                                            <Link 
+                                                href="/map"
+                                                className="inline-flex items-center gap-3 bg-[#1a1a2e] text-white px-8 py-4 rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-2xl shadow-slate-900/20"
+                                            >
+                                                <Play size={16} fill="currentColor" />
+                                                Launch First Mission
+                                            </Link>
+                                        </div>
+
+                                        {/* Tip */}
+                                        <motion.div
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            transition={{ delay: 1 }}
+                                            className="flex items-start gap-3 bg-[#FFF7ED]/50 border border-[#FFD6A5]/30 rounded-2xl p-4 text-left max-w-md mx-auto"
+                                        >
+                                            <Zap size={16} className="text-[#E67E22] flex-shrink-0 mt-0.5" />
+                                            <p className="text-[10px] font-bold text-gray-600 leading-relaxed">
+                                                <span className="font-black text-[#E67E22]">PRO TIP:</span> Run during peak hours (6-9am, 5-8pm) for 2x territory multipliers. Your first 100 hexes unlock the <span className="font-black">Trailblazer</span> achievement.
+                                            </p>
+                                        </motion.div>
+                                    </div>
+                                </motion.div>
                             )}
                         </div>
                     </div>

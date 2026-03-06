@@ -125,9 +125,65 @@ export default function LeaderboardPage() {
                 {/* Leaderboard Table Container */}
                 <div className="bg-white rounded-[40px] border border-black/5 shadow-sm overflow-hidden min-h-[500px]">
                     {isLoading ? (
-                        <div className="h-[500px] flex flex-col items-center justify-center">
-                            <Loader2 className="animate-spin text-[#A8D5BA] mb-4" size={48} />
-                            <p className="text-xs font-black uppercase tracking-widest text-gray-400 italic">Syncing World Rankings...</p>
+                        <div className="h-[500px] flex flex-col items-center justify-center px-6">
+                            {/* Animated Loading State with Skeleton */}
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="w-full max-w-2xl space-y-6"
+                            >
+                                {/* Pulsing Trophy Icon */}
+                                <motion.div
+                                    animate={{ scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] }}
+                                    transition={{ duration: 2, repeat: Infinity }}
+                                    className="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-br from-[#A8D5BA] to-[#6CC89A] flex items-center justify-center shadow-2xl shadow-[#A8D5BA]/30"
+                                >
+                                    <Trophy size={36} className="text-white" fill="white" fillOpacity={0.3} />
+                                </motion.div>
+
+                                <div className="text-center mb-8">
+                                    <h3 className="text-xl font-black text-[#1a1a2e] mb-2">Syncing Global Ranks...</h3>
+                                    <p className="text-sm font-bold text-gray-400">Calculating territory dominance across {period === '24hour' ? '24 hours' : 'all time'}</p>
+                                </div>
+
+                                {/* Skeleton Leaderboard Entries */}
+                                <div className="space-y-3">
+                                    {[1, 2, 3, 4, 5].map((i) => (
+                                        <motion.div
+                                            key={i}
+                                            initial={{ opacity: 0, x: -20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: i * 0.1 }}
+                                            className="flex items-center gap-6 p-5 rounded-3xl bg-gray-50/80 border border-gray-100"
+                                        >
+                                            <div className="w-12 text-center">
+                                                <div className="inline-block w-8 h-8 rounded-xl bg-gray-200 animate-pulse" />
+                                            </div>
+                                            <div className="flex items-center gap-4 flex-1">
+                                                <div className="w-12 h-12 rounded-2xl bg-gray-200 animate-pulse" />
+                                                <div className="flex-1 space-y-2">
+                                                    <div className="h-4 bg-gray-200 rounded-lg w-32 animate-pulse" />
+                                                    <div className="h-3 bg-gray-200 rounded-lg w-24 animate-pulse" />
+                                                </div>
+                                            </div>
+                                            <div className="w-20 h-8 bg-gray-200 rounded-lg animate-pulse" />
+                                        </motion.div>
+                                    ))}
+                                </div>
+
+                                {/* Motivational Tip */}
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ delay: 1.5 }}
+                                    className="flex items-start gap-3 bg-[#F0F7F4] border border-[#A8D5BA]/20 rounded-2xl p-4 mt-6"
+                                >
+                                    <Zap size={16} className="text-[#A8D5BA] flex-shrink-0 mt-0.5" />
+                                    <p className="text-[10px] font-bold text-gray-600 leading-relaxed">
+                                        <span className="font-black text-[#2E7D52]">DID YOU KNOW?</span> The top 10 players change {period === '24hour' ? 'every few hours' : 'daily'}. One strategic run in unclaimed territory could boost your rank by 20+ positions.
+                                    </p>
+                                </motion.div>
+                            </motion.div>
                         </div>
                     ) : currentData && currentData.length > 0 ? (
                         <div className="p-4 md:p-8">
