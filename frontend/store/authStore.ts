@@ -11,6 +11,8 @@ interface User {
   credits?: number;
   hexesOwned?: number;
   rank?: string;
+  faction?: 'red' | 'blue' | 'green' | null;
+  factionJoinedAt?: Date | null;
 }
 
 interface AuthState {

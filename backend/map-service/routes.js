@@ -157,4 +157,94 @@ router.get('/path-traces', optionalAuth, async (req, res, next) => {
 	}
 });
 
+// ═══════════════════════════════════════════════════════════════════════
+// FACTION WARS: Get faction dominance per hex at specified resolution
+// ═══════════════════════════════════════════════════════════════════════
+router.get('/factions', async (req, res, next) => {
+	try {
+		const { Territory } = require('../core/schema');
+		const { cellToParent } = require('h3-js');
+		const { getRedis } = require('../config/redis');
+		const redis = getRedis();
+		
+		const resolution = parseInt(req.query.resolution) || 4;
+		const now = new Date();
+		
+		// Try to get from cache first
+		const cacheKey = `faction:dominance:${resolution}`;
+		try {
+			const cached = await redis.get(cacheKey);
+			if (cached) {
+				return res.json(JSON.parse(cached));
+			}
+		} catch (e) { /* cache miss */ }
+		
+		// Get all active hex ownerships
+		const ownerships = await Territory.find({})
+			.select('hexId faction')
+			.lean();
+		
+		// Map each fine-grained hex to its parent at requested resolution
+		const parentCount = {};
+		
+		ownerships.forEach(({ hexId, faction }) => {
+			try {
+				const parent = cellToParent(hexId, resolution);
+				if (!parentCount[parent]) {
+					parentCount[parent] = { red: 0, blue: 0, green: 0 };
+				}
+				if (faction) {
+					parentCount[parent][faction]++;
+				}
+			} catch (e) {
+				// invalid hex, skip
+			}
+		});
+		
+		// Determine dominant faction per parent hex
+		const result = Object.entries(parentCount).map(([hexId, counts]) => {
+			const total = counts.red + counts.blue + counts.green;
+			const dominant = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+			return {
+				hexId,
+				faction: dominant ? dominant[0] : null,
+				redCount: counts.red,
+				blueCount: counts.blue,
+				greenCount: counts.green,
+				total,
+			};
+		});
+		
+		// Global faction totals
+		const totals = { red: 0, blue: 0, green: 0 };
+		ownerships.forEach(({ faction }) => {
+			if (faction && totals[faction] !== undefined) {
+				totals[faction]++;
+			}
+		});
+		const totalHexes = ownerships.length;
+		
+		const response = {
+			hexes: result,
+			totals,
+			percentages: {
+				red: totalHexes ? Math.round(totals.red / totalHexes * 100) : 0,
+				blue: totalHexes ? Math.round(totals.blue / totalHexes * 100) : 0,
+				green: totalHexes ? Math.round(totals.green / totalHexes * 100) : 0,
+			},
+			totalHexes,
+		};
+		
+		// Cache for 5 minutes
+		try {
+			await redis.setex(cacheKey, 300, JSON.stringify(response));
+		} catch (e) { /* cache write failure */ }
+		
+		res.json(response);
+	} catch (error) {
+		console.error('[Factions] Error:', error);
+		next(error);
+	}
+});
+
 module.exports = router;

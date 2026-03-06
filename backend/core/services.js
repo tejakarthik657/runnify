@@ -516,7 +516,16 @@ const RunService = {
     }
 
     // Upsert territory ownership
-    const user = await User.findById(userId).select('username color hashcode');
+    const user = await User.findById(userId).select('username color hashcode faction');
+    
+    // Faction color mapping
+    const FACTION_COLORS = {
+      red: '#FF4444',
+      blue: '#4488FF',
+      green: '#44FF88'
+    };
+    const factionColor = user.faction ? FACTION_COLORS[user.faction] : null;
+    
     const bulkTerritoryOps = [];
 
     // Claims: new territories
@@ -534,6 +543,7 @@ const RunService = {
             $set: {
               ownerId: userId, ownerUsername: user.username,
               ownerColor: user.color, ownerHashcode: user.hashcode,
+              faction: user.faction, factionColor,
               claimedAt: new Date(), lastActiveAt: new Date(),
               creditValue: 10, decayFactor: 1.0,
               center: { type: 'Point', coordinates: [center.lng, center.lat] },
@@ -561,6 +571,7 @@ const RunService = {
             $set: {
               ownerId: userId, ownerUsername: user.username,
               ownerColor: user.color, ownerHashcode: user.hashcode,
+              faction: user.faction, factionColor,
               claimedAt: new Date(), lastActiveAt: new Date(),
             },
             $inc: { totalInvasions: 1 },
@@ -588,6 +599,31 @@ const RunService = {
 
     if (bulkTerritoryOps.length > 0) {
       await Territory.bulkWrite(bulkTerritoryOps);
+    }
+
+    // Update faction stats in Redis (Global Territory Wars)
+    if (user.faction) {
+      const factionKey = `faction:hexcount:${user.faction}`;
+      await redis.incrBy(factionKey, hexesClaimed.length + hexesInvaded.length);
+
+      if (run.city) {
+        const cityKey = `faction:city:${run.city}:${user.faction}`;
+        await redis.incrBy(cityKey, hexesClaimed.length + hexesInvaded.length);
+      }
+      
+      // Broadcast faction update to all clients
+      const io = require('socket.io');
+      try {
+        io.emit('faction_updated', {
+          faction: user.faction,
+          hexesClaimed: hexesClaimed.length + hexesInvaded.length,
+          city: run.city,
+          username: user.username,
+          totalHexes: (await redis.get(factionKey)) || 0,
+        });
+      } catch (e) {
+        // socket.io not available in non-socket context, skip
+      }
     }
 
     // Create invasion records & notifications

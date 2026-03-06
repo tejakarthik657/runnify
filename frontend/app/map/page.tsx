@@ -29,6 +29,7 @@ import Badge from '../../components/ui/Badge';
 import MinimizableStepCounter from '../../components/ui/MinimizableStepCounter';
 import MapContent from '../../components/map/MapContent';
 import MapSearch from '../../components/map/MapSearch';
+import WarBanner from '../../components/WarBanner';
 import L from 'leaflet';
 
 import { latLngToCell, gridDisk } from 'h3-js';
@@ -514,6 +515,9 @@ export default function MapPage() {
 
     return (
         <div className="h-screen w-screen flex flex-col overflow-hidden relative bg-[#F4F7F4]">
+            {/* War Banner - Global Faction Status */}
+            <WarBanner isHidden={isRunning} />
+
             {/* Top UI Overlays */}
             <div className="absolute top-4 left-4 right-4 z-[1000] flex flex-col gap-3 pointer-events-none">
                 <div className="flex items-center justify-between w-full">

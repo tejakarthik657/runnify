@@ -111,4 +111,63 @@ router.get('/me', authenticateJWT, async (req, res, next) => {
 	}
 });
 
+// Faction leaderboard — cities ranked by faction control
+router.get('/factions', async (req, res, next) => {
+	try {
+		const { Territory } = require('../core/schema');
+		const now = new Date();
+		
+		const pipeline = [
+			{ $match: { } },
+			{ $group: {
+				_id: { city: '$city', faction: '$faction' },
+				count: { $sum: 1 },
+			}},
+			{ $sort: { count: -1 } },
+		];
+		
+		const results = await Territory.aggregate(pipeline);
+		
+		// Group by city
+		const cities = {};
+		results.forEach(({ _id, count }) => {
+			if (!_id.city) return; // skip hexes without city
+			if (!cities[_id.city]) {
+				cities[_id.city] = {
+					city: _id.city,
+					red: 0,
+					blue: 0,
+					green: 0,
+					total: 0,
+					dominant: null
+				};
+			}
+			if (_id.faction) {
+				cities[_id.city][_id.faction] = count;
+				cities[_id.city].total += count;
+			}
+		});
+		
+		// Determine dominant faction per city
+		Object.values(cities).forEach(city => {
+			const factions = [
+				{ faction: 'red', count: city.red },
+				{ faction: 'blue', count: city.blue },
+				{ faction: 'green', count: city.green },
+			].sort((a, b) => b.count - a.count);
+			
+			if (factions[0].count > 0) {
+				city.dominant = factions[0].faction;
+			}
+		});
+		
+		// Convert to array and sort by total
+		const cityArray = Object.values(cities).sort((a, b) => b.total - a.total);
+		
+		res.json({ cities: cityArray });
+	} catch (error) {
+		next(error);
+	}
+});
+
 module.exports = router;

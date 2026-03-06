@@ -112,4 +112,45 @@ router.get('/me/achievements', authenticateJWT, async (req, res, next) => {
 	}
 });
 
+// Set faction for Global Territory Wars (one-time choice)
+router.patch('/me/faction', authenticateJWT, async (req, res, next) => {
+	try {
+		const { User } = require('../core/schema');
+		const { faction } = req.body;
+		
+		// Validate faction
+		if (!['red', 'blue', 'green'].includes(faction)) {
+			return res.status(400).json({ error: 'Invalid faction. Must be red, blue, or green.' });
+		}
+		
+		const userId = req.userId || req.user?.userId || req.user?.sub;
+		const user = await User.findById(userId);
+		
+		if (!user) {
+			return res.status(404).json({ error: 'User not found' });
+		}
+		
+		// Check if user already has a faction
+		if (user.faction) {
+			return res.status(400).json({ error: 'Faction already chosen. Cannot change once set.' });
+		}
+		
+		// Set faction
+		const updated = await User.findByIdAndUpdate(
+			userId,
+			{
+				$set: {
+					faction,
+					factionJoinedAt: new Date(),
+				}
+			},
+			{ new: true }
+		).select('faction factionJoinedAt username');
+		
+		res.json({ faction: updated.faction, factionJoinedAt: updated.factionJoinedAt });
+	} catch (err) {
+		next(err);
+	}
+});
+
 module.exports = router;

@@ -144,6 +144,10 @@ const UserSchema = new Schema({
   cityRank: { type: Number, default: null },
   isPrestige: { type: Boolean, default: false }, // City #1 ever
 
+  // Faction (Global Territory Wars)
+  faction: { type: String, enum: ['red', 'blue', 'green'], default: null, index: true }, // null = not chosen yet
+  factionJoinedAt: { type: Date, default: null },
+
   // Stats embedded for fast dashboard reads
   stats: { type: UserStatsSchema, default: () => ({}) },
 
@@ -246,6 +250,10 @@ const TerritorySchema = new Schema({
   ownerUsername: { type: String, required: true },
   ownerColor: { type: String, required: true },
   ownerHashcode: { type: String },
+
+  // Faction (Global Territory Wars)
+  faction: { type: String, enum: ['red', 'blue', 'green'], default: null },
+  factionColor: { type: String, default: null }, // '#FF4444', '#4488FF', '#44FF88'
 
   // Claim history
   firstClaimedAt: { type: Date, default: Date.now },

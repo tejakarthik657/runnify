@@ -26,6 +26,7 @@ import RunButton from '../../components/ui/RunButton';
 import Badge from '../../components/ui/Badge';
 import ActivityStrip from '../../components/ui/ActivityStrip';
 import MomentsTray from '../../components/dashboard/MomentsTray';
+import FactionPicker from '../../components/FactionPicker';
 
 const fetcher = (url: string) => api.get(url).then(res => res.data);
 
@@ -33,6 +34,7 @@ export default function DashboardPage() {
     const { user, updateUser } = useAuthStore();
     const socket = useSocket('main');
     const [liveStats, setLiveStats] = useState<any>(null);
+    const [factionPickerOpen, setFactionPickerOpen] = useState(false);
     
     const { data: meData } = useSWR('/auth/me', fetcher);
     const { data: rankData } = useSWR('/leaderboard/me', fetcher);
@@ -71,6 +73,20 @@ export default function DashboardPage() {
         };
     }, [socket, user?.id, updateUser]);
 
+    // Check if user needs to select a faction
+    useEffect(() => {
+        const userFaction = meData?.user?.faction || user?.faction;
+        if (meData && !userFaction) {
+            setFactionPickerOpen(true);
+        }
+    }, [meData, user?.faction]);
+
+    // Handle faction selection
+    const handleFactionSelected = (faction: 'red' | 'blue' | 'green') => {
+        updateUser({ faction, factionJoinedAt: new Date() });
+        setFactionPickerOpen(false);
+    };
+
     // Derived ActivityStrip data
     const activities = (globalInvasions?.invasions || []).map((inv: any) => ({
         id: inv._id,
@@ -82,6 +98,11 @@ export default function DashboardPage() {
 
     return (
         <div className="space-y-8 pb-12">
+            {/* Faction Picker Modal */}
+            <FactionPicker 
+                isOpen={factionPickerOpen}
+                onFactionSelected={handleFactionSelected}
+            />
             {/* Activity Strip */}
             <div className="-mx-4 md:-mx-6 lg:-mx-8 -mt-4 md:-mt-6 lg:-mt-8">
                 <ActivityStrip activities={activities.length > 0 ? activities : [
