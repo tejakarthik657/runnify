@@ -2,7 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const { authenticateJWT } = require('../middleware/auth');
 const { getProfile, searchUsers } = require('./profile.controller');
-const { UserAchievement, AchievementDef } = require('../core/schema');
+const { User, UserAchievement, AchievementDef } = require('../core/schema');
 
 const router = express.Router();
 
@@ -43,7 +43,6 @@ router.get('/online', authenticateJWT, async (req, res, next) => {
 		});
 		console.log(`[Presence] Parsed unique users:`, onlineUsers.length);
 
-		const { User } = require('../core/schema');
 		const userIds = onlineUsers.map(u => u.userId);
 		const users = await User.find({ _id: { $in: userIds } })
 			.select('_id username color credits globalRank')
@@ -115,11 +114,14 @@ router.get('/me/achievements', authenticateJWT, async (req, res, next) => {
 // Set faction for Global Territory Wars (one-time choice)
 router.patch('/me/faction', authenticateJWT, async (req, res, next) => {
 	try {
-		const { User } = require('../core/schema');
 		const { faction } = req.body;
 		
-		// Validate faction
-		if (!['red', 'blue', 'green'].includes(faction)) {
+		// Validate faction exists and is valid
+		if (!faction) {
+			return res.status(400).json({ error: 'Faction required. Provide one of: red, blue, green.' });
+		}
+		
+		if (!['red', 'blue', 'green'].includes(faction.toString().toLowerCase())) {
 			return res.status(400).json({ error: 'Invalid faction. Must be red, blue, or green.' });
 		}
 		
@@ -140,15 +142,16 @@ router.patch('/me/faction', authenticateJWT, async (req, res, next) => {
 			userId,
 			{
 				$set: {
-					faction,
+					faction: faction.toString().toLowerCase(),
 					factionJoinedAt: new Date(),
 				}
 			},
 			{ new: true }
 		).select('faction factionJoinedAt username');
 		
-		res.json({ faction: updated.faction, factionJoinedAt: updated.factionJoinedAt });
+		res.json({ faction: updated.faction, factionJoinedAt: updated.factionJoinedAt, username: updated.username });
 	} catch (err) {
+		console.error('[Faction] PATCH /me/faction error:', err.message);
 		next(err);
 	}
 });
