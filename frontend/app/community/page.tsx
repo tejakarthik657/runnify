@@ -18,7 +18,7 @@ export default function CommunityPage() {
     const [startingDmId, setStartingDmId] = useState<string | null>(null);
 
     const { data: roomsData, isLoading: roomsLoading, mutate: mutateRooms } = useSWR('/chat/rooms', fetcher);
-    const { data: onlineData, isLoading: onlineLoading } = useSWR('/user/online', fetcher, { refreshInterval: 5000 });
+    const { data: onlineData, isLoading: onlineLoading } = useSWR('/chat/online-users', fetcher, { refreshInterval: 8000 });
     const { data: searchResults, isLoading: searchLoading } = useSWR(searchTerm.length > 2 ? `/user/search?q=${searchTerm}` : null, fetcher);
 
     // Signal online status by connecting to chat socket
@@ -144,15 +144,15 @@ export default function CommunityPage() {
                                 ) : onlineData?.onlineUsers?.length > 0 ? (
                                     onlineData.onlineUsers.map((user: any) => (
                                         <motion.button
-                                            key={user.userId + user.socketId}
+                                            key={user.userId}
                                             initial={{ opacity: 0, x: -10 }}
                                             animate={{ opacity: 1, x: 0 }}
-                                            onClick={() => startDM({ _id: user.userId, username: user.username, color: user.userColor })}
+                                            onClick={() => startDM({ _id: user.userId, username: user.username, color: user.color, avatarUrl: user.avatarUrl })}
                                             disabled={startingDmId === user.userId}
                                             className="w-full flex items-center gap-4 p-4 bg-white hover:bg-gray-50 rounded-[24px] transition-all text-left border border-black/5 hover:border-[#A8D5BA]/30 group"
                                         >
                                             <div className="relative">
-                                                <div className="w-12 h-12 rounded-2xl bg-[#F8FAF8] flex items-center justify-center text-sm font-black shadow-inner overflow-hidden" style={{ color: user.userColor }}>
+                                                <div className="w-12 h-12 rounded-2xl bg-[#F8FAF8] flex items-center justify-center text-sm font-black shadow-inner overflow-hidden" style={{ color: user.color }}>
                                                     {user.avatarUrl ? (
                                                         <img src={user.avatarUrl} alt={user.username} className="w-full h-full object-cover" />
                                                     ) : (

@@ -77,6 +77,51 @@ router.get('/:roomId/history', requireAuth, async (req, res, next) => {
   }
 });
 
+// ── GET /chat/online-users ────────────────────────────────────
+// Get all currently online users for DM feature (excluding self)
+router.get('/online-users', requireAuth, async (req, res, next) => {
+  try {
+    const { getRedis } = require('../config/redis');
+    const redis = getRedis();
+    
+    // Get all online users from Redis
+    const onlineRecords = await redis.smembers('online_users');
+    const onlineUsers = [];
+    const seenUserIds = new Set();
+    
+    // Parse and deduplicate by userId (keep latest socket only)
+    for (const record of onlineRecords) {
+      try {
+        const user = JSON.parse(record);
+        // Skip self
+        if (user.userId === req.userId) continue;
+        
+        // If we already have this user, skip (we'll take first in set)
+        if (seenUserIds.has(user.userId)) continue;
+        seenUserIds.add(user.userId);
+        
+        onlineUsers.push({
+          userId: user.userId,
+          username: user.username || 'Anonymous',
+          color: user.userColor || '#A8D5BA',
+          avatarUrl: user.avatarUrl,
+          status: 'online'
+        });
+      } catch (e) {
+        // Skip malformed records
+        continue;
+      }
+    }
+    
+    // Sort by username for consistent UX
+    onlineUsers.sort((a, b) => (a.username || '').localeCompare(b.username || ''));
+    
+    res.json({ onlineUsers, count: onlineUsers.length });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ── POST /chat/dm/start ───────────────────────────────────────
 // Initiate a DM with another user — returns the room ID
 router.post('/dm/start', requireAuth, async (req, res, next) => {
@@ -85,7 +130,7 @@ router.post('/dm/start', requireAuth, async (req, res, next) => {
     if (!targetUserId) return res.status(400).json({ error: 'targetUserId required' });
     if (targetUserId === req.userId) return res.status(400).json({ error: 'Cannot DM yourself' });
 
-    const targetUser = await User.findById(targetUserId).select('username').lean();
+    const targetUser = await User.findById(targetUserId).select('username color avatarUrl').lean();
     if (!targetUser) return res.status(404).json({ error: 'Target user not found' });
 
     const roomId = dmRoomId(req.userId, targetUserId);
@@ -102,7 +147,12 @@ router.post('/dm/start', requireAuth, async (req, res, next) => {
 
     res.json({
       roomId,
-      targetUser: { id: targetUserId, username: targetUser.username },
+      targetUser: { 
+        id: targetUserId, 
+        username: targetUser.username,
+        color: targetUser.color,
+        avatarUrl: targetUser.avatarUrl
+      },
     });
   } catch (err) {
     next(err);

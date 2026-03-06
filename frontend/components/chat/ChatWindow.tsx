@@ -24,7 +24,23 @@ export default function ChatWindow({ roomId, roomName, type }: any) {
                 const { data } = await api.get(`/chat/${roomId}/history?limit=50`);
                 setMessages(data.messages || []);
             } catch (error: any) {
-                toast.error('Sync failed');
+                // Log error for debugging but don't show "Sync failed" - it's confusing
+                console.warn('Chat history load error:', error.response?.status, error.message);
+                
+                // If 401 (unauthorized), let auth handle it
+                if (error.response?.status === 401) {
+                    toast.error('Please login to chat');
+                } 
+                // If 404 (room not found), just load empty - it's normal for new rooms
+                else if (error.response?.status === 404) {
+                    setMessages([]);
+                    console.log('New chat room - empty history');
+                } 
+                // Network error or server error - retry silently
+                else {
+                    console.warn('Chat connection issue - retrying on next room change');
+                    setMessages([]);
+                }
             } finally {
                 setIsLoading(false);
             }
