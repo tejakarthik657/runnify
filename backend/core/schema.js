@@ -217,6 +217,8 @@ UserSchema.virtual('publicProfile').get(function () {
       : { lat: null, lng: null, city: null, updatedAt: null },
     stats: this.privacy.hideStatsFromPublic ? null : this.stats,
     isPrestige: this.isPrestige,
+    faction: this.faction,
+    factionJoinedAt: this.factionJoinedAt,
     createdAt: this.createdAt,
   };
 });

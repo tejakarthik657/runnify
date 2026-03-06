@@ -51,12 +51,16 @@ export default function FactionPicker({
     setError(null);
 
     try {
+      console.log('[FactionPicker] Sending faction request:', { faction: factionId });
       const response = await api.patch('/user/me/faction', { faction: factionId });
+      console.log('[FactionPicker] Faction response:', response.data);
       if (response.status === 200) {
         onFactionSelected(factionId);
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to select faction');
+      const errorMsg = err.response?.data?.error || err.message || 'Failed to select faction';
+      console.error('[FactionPicker] Error selecting faction:', errorMsg, err);
+      setError(errorMsg);
       setSelected(null);
     } finally {
       setIsLoading(false);
@@ -70,7 +74,7 @@ export default function FactionPicker({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4"
+      className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 pointer-events-auto"
     >
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
@@ -84,16 +88,16 @@ export default function FactionPicker({
 
         <div className="relative z-10">
           {/* Header */}
-          <div className="text-center mb-6 sm:mb-12">
+          <div className="text-center mb-8 sm:mb-12">
             <motion.div
               initial={{ y: -20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.1 }}
-              className="inline-flex items-center justify-center gap-2 sm:gap-3 mb-3 sm:mb-6"
+              className="inline-flex items-center justify-center gap-3 sm:gap-4 mb-4 sm:mb-6"
             >
-              <Zap size={24} className="sm:w-8 sm:h-8 text-[#A8D5BA]" />
-              <h1 className="font-['Syne'] font-extrabold text-2xl sm:text-4xl md:text-5xl text-[#1A1A2E]">
-                Choose <span className="text-[#A8D5BA]">Faction</span>
+              <Zap size={32} className="sm:w-10 sm:h-10 text-[#A8D5BA]" />
+              <h1 className="font-['Syne'] font-extrabold text-3xl sm:text-4xl md:text-5xl text-[#1A1A2E]">
+                Join Your <span className="text-[#A8D5BA]">Faction</span>
               </h1>
             </motion.div>
 
@@ -101,9 +105,17 @@ export default function FactionPicker({
               initial={{ y: -10, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.2 }}
-              className="text-xs sm:text-sm text-slate-400 font-bold max-w-xl mx-auto"
+              className="text-sm sm:text-base text-slate-600 font-semibold max-w-2xl mx-auto mb-2"
             >
-              Permanent choice. Control the world map for your faction.
+              This is a one-time permanent choice. Your faction will control territory on the global map.
+            </motion.p>
+            <motion.p
+              initial={{ y: -10, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.25 }}
+              className="text-xs sm:text-sm text-slate-500 max-w-2xl mx-auto"
+            >
+              Select a faction and click to join. You cannot change this later.
             </motion.p>
           </div>
 
@@ -112,14 +124,14 @@ export default function FactionPicker({
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-4 sm:mb-6 p-3 sm:p-4 bg-[#FF4444]/10 border border-[#FF4444]/30 rounded-xl sm:rounded-2xl text-[#FF4444] font-bold text-xs sm:text-sm"
+              className="mb-6 sm:mb-8 p-4 sm:p-5 bg-red-50 border-2 border-red-300 rounded-2xl sm:rounded-3xl text-red-700 font-bold text-sm sm:text-base"
             >
-              {error}
+              ⚠️ {error}
             </motion.div>
           )}
 
           {/* Faction cards grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6 mb-6 sm:mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8 mb-8 sm:mb-10">
             {FACTIONS.map((faction, i) => (
               <motion.button
                 key={faction.id}
@@ -128,28 +140,28 @@ export default function FactionPicker({
                 transition={{ delay: 0.3 + i * 0.1 }}
                 onClick={() => handleSelectFaction(faction.id)}
                 disabled={isLoading}
-                className={`relative group p-3 sm:p-6 rounded-2xl sm:rounded-3xl border-2 transition-all duration-300 ${
+                className={`relative group p-6 sm:p-8 rounded-3xl sm:rounded-4xl border-3 transition-all duration-300 ${
                   selected === faction.id
-                    ? `border-[${faction.color}] bg-[${faction.color}]/5 shadow-lg sm:shadow-[0_0_30px_rgba(255,68,68,0.2)]`
-                    : 'border-black/5 hover:border-black/10 hover:shadow-md sm:hover:shadow-lg'
+                    ? `shadow-xl sm:shadow-2xl`
+                    : 'border-slate-200 hover:border-slate-300 hover:shadow-lg'
                 } ${isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                 style={
                   selected === faction.id
                     ? {
                         borderColor: faction.color,
-                        backgroundColor: `${faction.color}08`,
-                        boxShadow: `0 0 20px ${faction.color}15`,
+                        backgroundColor: `${faction.color}0a`,
+                        boxShadow: `0 0 30px ${faction.color}30`,
                       }
                     : {}
                 }
               >
-                <div className="relative z-10">
+                <div className="relative z-10 text-center">
                   {/* Icon */}
-                  <div className="text-3xl sm:text-5xl mb-2 sm:mb-4">{faction.icon}</div>
+                  <div className="text-6xl sm:text-7xl mb-4 sm:mb-6 transform transition-transform group-hover:scale-110">{faction.icon}</div>
 
                   {/* Faction name */}
                   <h3
-                    className="font-['Syne'] font-extrabold text-lg sm:text-2xl mb-1 sm:mb-2 transition-colors"
+                    className="font-['Syne'] font-extrabold text-2xl sm:text-3xl mb-2 sm:mb-3 transition-colors"
                     style={{
                       color: selected === faction.id ? faction.color : '#1A1A2E',
                     }}
@@ -158,36 +170,35 @@ export default function FactionPicker({
                   </h3>
 
                   {/* Tagline */}
-                  <p className="text-[10px] sm:text-xs font-black uppercase tracking-widest mb-2 sm:mb-3 text-slate-400">
+                  <p className="text-xs sm:text-sm font-black uppercase tracking-widest mb-3 sm:mb-4 text-slate-500">
                     {faction.tagline}
                   </p>
 
                   {/* Description */}
-                  <p className="text-xs sm:text-sm font-bold text-slate-500 mb-3 sm:mb-6 min-h-[40px] sm:min-h-[60px]">
+                  <p className="text-sm sm:text-base font-semibold text-slate-600 mb-4 sm:mb-6 min-h-[50px] sm:min-h-[60px] leading-relaxed">
                     {faction.description}
                   </p>
 
-                  {/* Selection indicator */}
-                  {selected === faction.id && (
+                  {/* Selection button */}
+                  {selected === faction.id ? (
                     <motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      className="inline-block px-3 sm:px-4 py-1 sm:py-2 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-widest text-white"
+                      className="inline-block px-6 sm:px-8 py-2 sm:py-3 rounded-full text-sm sm:text-base font-black uppercase tracking-widest text-white transition-all"
                       style={{ backgroundColor: faction.color }}
                     >
-                      ✓ Selected
+                      ✓ SELECTED
                     </motion.div>
-                  )}
-
-                  {selected !== faction.id && (
+                  ) : (
                     <div
-                      className="inline-block px-3 sm:px-4 py-1 sm:py-2 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-widest group-hover:text-white transition-colors"
+                      className="inline-block px-6 sm:px-8 py-2 sm:py-3 rounded-full text-sm sm:text-base font-black uppercase tracking-widest transition-all border-2"
                       style={{
                         color: faction.color,
                         borderColor: faction.color,
+                        backgroundColor: 'transparent',
                       }}
                     >
-                      Choose
+                      SELECT
                     </div>
                   )}
                 </div>
@@ -202,8 +213,8 @@ export default function FactionPicker({
             transition={{ delay: 0.7 }}
             className="text-center"
           >
-            <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-slate-400">
-              Permanent • Visible on map
+            <p className="text-xs sm:text-sm font-bold uppercase tracking-widest text-slate-400">
+              🔒 Permanent Choice • 🗺️ Visible on Map • ⚔️ Global Wars
             </p>
           </motion.div>
         </div>

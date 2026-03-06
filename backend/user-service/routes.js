@@ -132,26 +132,30 @@ router.patch('/me/faction', authenticateJWT, async (req, res, next) => {
 			return res.status(404).json({ error: 'User not found' });
 		}
 		
-		// Check if user already has a faction
+			// Check if user already has a faction
 		if (user.faction) {
+			console.log(`[Faction] User ${userId} already has faction: ${user.faction}`);
 			return res.status(400).json({ error: 'Faction already chosen. Cannot change once set.' });
 		}
 		
 		// Set faction
+		const factionLower = faction.toString().toLowerCase();
+		console.log(`[Faction] Setting faction ${factionLower} for user ${userId}`);
 		const updated = await User.findByIdAndUpdate(
 			userId,
 			{
 				$set: {
-					faction: faction.toString().toLowerCase(),
+					faction: factionLower,
 					factionJoinedAt: new Date(),
 				}
 			},
 			{ new: true }
 		).select('faction factionJoinedAt username');
 		
+		console.log(`[Faction] Successfully set faction: ${JSON.stringify(updated)}`);
 		res.json({ faction: updated.faction, factionJoinedAt: updated.factionJoinedAt, username: updated.username });
 	} catch (err) {
-		console.error('[Faction] PATCH /me/faction error:', err.message);
+		console.error('[Faction] PATCH /me/faction error:', err.message, err.stack);
 		next(err);
 	}
 });

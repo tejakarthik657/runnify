@@ -53,8 +53,9 @@ export default function DashboardPage() {
     const socket = useSocket('main');
     const [liveStats, setLiveStats] = useState<any>(null);
     const [factionPickerOpen, setFactionPickerOpen] = useState(false);
+    const [factionSelecting, setFactionSelecting] = useState(false);
     
-    const { data: meData } = useSWR('/auth/me', fetcher, {
+    const { data: meData, mutate: mutateMeData } = useSWR('/auth/me', fetcher, {
         errorRetryCount: 2,
         errorRetryInterval: 2000,
         dedupingInterval: 30000,
@@ -108,15 +109,26 @@ export default function DashboardPage() {
     // Check if user needs to select a faction
     useEffect(() => {
         const userFaction = meData?.user?.faction || user?.faction;
-        if (meData && !userFaction) {
+        console.log('[Dashboard] Faction check:', { meDataFaction: meData?.user?.faction, userFaction });
+        if (meData && !userFaction && !factionSelecting) {
+            console.log('[Dashboard] Opening faction picker');
             setFactionPickerOpen(true);
         }
-    }, [meData, user?.faction]);
+    }, [meData, user?.faction, factionSelecting]);
 
     // Handle faction selection
-    const handleFactionSelected = (faction: 'red' | 'blue' | 'green') => {
+    const handleFactionSelected = async (faction: 'red' | 'blue' | 'green') => {
+        console.log('[Dashboard] Faction selected:', faction);
         updateUser({ faction, factionJoinedAt: new Date() });
+        setFactionSelecting(true);
         setFactionPickerOpen(false);
+        
+        // Revalidate the user data to confirm the faction was saved
+        setTimeout(() => {
+            console.log('[Dashboard] Revalidating user data after faction selection');
+            mutateMeData();
+            setFactionSelecting(false);
+        }, 1000);
     };
 
     // Derived ActivityStrip data
