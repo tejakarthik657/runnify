@@ -28,7 +28,25 @@ import ActivityStrip from '../../components/ui/ActivityStrip';
 import MomentsTray from '../../components/dashboard/MomentsTray';
 import FactionPicker from '../../components/FactionPicker';
 
-const fetcher = (url: string) => api.get(url).then(res => res.data);
+const fetcher = (url: string) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
+    return api.get(url, { signal: controller.signal })
+        .then(res => {
+            clearTimeout(timeoutId);
+            return res.data;
+        })
+        .catch(err => {
+            clearTimeout(timeoutId);
+            // Return fallback data on timeout
+            if (err.code === 'ECONNABORTED' || err.signal?.aborted) {
+                console.warn(`Dashboard request timeout for ${url}, using fallback`);
+                return null; // Let component handle null gracefully
+            }
+            throw err;
+        });
+};
 
 export default function DashboardPage() {
     const { user, updateUser } = useAuthStore();
@@ -36,10 +54,24 @@ export default function DashboardPage() {
     const [liveStats, setLiveStats] = useState<any>(null);
     const [factionPickerOpen, setFactionPickerOpen] = useState(false);
     
-    const { data: meData } = useSWR('/auth/me', fetcher);
-    const { data: rankData } = useSWR('/leaderboard/me', fetcher);
-    const { data: runHistory } = useSWR('/run/history/me', fetcher);
-    const { data: globalInvasions } = useSWR('/map/invasions?limit=10', fetcher, { refreshInterval: 10000 });
+    const { data: meData } = useSWR('/auth/me', fetcher, {
+        errorRetryCount: 2,
+        errorRetryInterval: 2000,
+        dedupingInterval: 30000,
+    });
+    const { data: rankData } = useSWR('/leaderboard/me', fetcher, {
+        errorRetryCount: 1,
+        dedupingInterval: 30000,
+    });
+    const { data: runHistory } = useSWR('/run/history/me', fetcher, {
+        errorRetryCount: 1,
+        dedupingInterval: 60000,
+    });
+    const { data: globalInvasions } = useSWR('/map/invasions?limit=10', fetcher, { 
+        refreshInterval: 10000,
+        dedupingInterval: 5000,
+        errorRetryCount: 1,
+    });
 
     const currentUser = liveStats ? { ...meData?.user || user, ...liveStats } : (meData?.user || user);
 

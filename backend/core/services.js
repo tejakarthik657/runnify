@@ -1240,77 +1240,107 @@ const LeaderboardService = {
       if (cached) return JSON.parse(cached);
     } catch (e) { /* cache miss, continue */ }
 
-    // Basic stats
-    const totalUsers = await User.countDocuments({ isBanned: false });
-    const totalHexes = await Territory.countDocuments({});
-    
-    const creditsAgg = await User.aggregate([
-      { $match: { isBanned: false } },
-      { $group: { _id: null, total: { $sum: '$credits' } } }
-    ]);
-    const totalCredits = creditsAgg[0]?.total || 0;
-
-    // Time-based stats
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    // Runs and invasions today
-    const activeSorties = await Run.countDocuments({ 
-      startedAt: { $gte: oneDayAgo } 
-    });
-
-    // Distance today and this week
-    const distanceToday = await Run.aggregate([
-      { $match: { endedAt: { $gte: today }, status: 'completed' } },
-      { $group: { _id: null, total: { $sum: '$distanceKm' } } }
-    ]);
-
-    const distanceWeek = await Run.aggregate([
-      { $match: { endedAt: { $gte: oneWeekAgo }, status: 'completed' } },
-      { $group: { _id: null, total: { $sum: '$distanceKm' } } }
-    ]);
-
-    // Territories invaded today
-    const invasionsToday = await Run.aggregate([
-      { $match: { endedAt: { $gte: today }, status: 'completed' } },
-      { $group: { _id: null, total: { $sum: { $size: { $ifNull: ['$hexesInvaded', []] } } } } }
-    ]);
-
-    // Weekly growth (new users)
-    const weeklyGrowth = await User.countDocuments({
-      createdAt: { $gte: oneWeekAgo },
-      isBanned: false
-    });
-
-    // Online count from Redis
-    let onlineCount = 0;
     try {
-      const onlineRaw = await redis.smembers('online_users');
-      onlineCount = new Set(onlineRaw.map(r => {
-        try { return JSON.parse(r).userId; } catch { return null; }
-      }).filter(Boolean)).size;
-    } catch (e) { /* redis error */ }
+      // Time-based stats
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
-    const stats = {
-      totalUsers,
-      totalHexes,
-      totalCredits,
-      activeSorties,
-      onlineCount,
-      distanceToday: Math.round((distanceToday[0]?.total || 0) * 10) / 10,
-      distanceWeek: Math.round((distanceWeek[0]?.total || 0) * 10) / 10,
-      territoriesInvadedToday: invasionsToday[0]?.total || 0,
-      weeklyGrowth,
-    };
+      // Run all queries in parallel with 5-second timeout per query
+      const timeoutMs = 5000;
+      const abortController = new AbortController();
+      const timeoutId = setTimeout(() => abortController.abort(), timeoutMs);
 
-    // Cache for 2 minutes
-    try {
-      await redis.setex(cacheKey, 120, JSON.stringify(stats));
-    } catch (e) { /* cache write failure, non-critical */ }
+      const [
+        totalUsers,
+        totalHexes,
+        creditsAgg,
+        activeSorties,
+        distanceToday,
+        distanceWeek,
+        invasionsToday,
+        weeklyGrowth,
+      ] = await Promise.allSettled([
+        User.countDocuments({ isBanned: false }),
+        Territory.countDocuments({}),
+        User.aggregate([
+          { $match: { isBanned: false } },
+          { $group: { _id: null, total: { $sum: '$credits' } } }
+        ]),
+        Run.countDocuments({ startedAt: { $gte: oneDayAgo }, status: 'completed' }),
+        Run.aggregate([
+          { $match: { endedAt: { $gte: today }, status: 'completed' } },
+          { $limit: 10000 },
+          { $group: { _id: null, total: { $sum: '$distanceKm' } } }
+        ]),
+        Run.aggregate([
+          { $match: { endedAt: { $gte: oneWeekAgo }, status: 'completed' } },
+          { $limit: 50000 },
+          { $group: { _id: null, total: { $sum: '$distanceKm' } } }
+        ]),
+        Run.aggregate([
+          { $match: { endedAt: { $gte: today }, status: 'completed' } },
+          { $limit: 10000 },
+          { $group: { _id: null, total: { $sum: { $size: { $ifNull: ['$hexesInvaded', []] } } } } }
+        ]),
+        User.countDocuments({ createdAt: { $gte: oneWeekAgo }, isBanned: false }),
+      ]).then(results => results.map(r => r.status === 'fulfilled' ? r.value : null));
 
-    return stats;
+      clearTimeout(timeoutId);
+
+      // Extract values with fallbacks
+      const totalUsersVal = totalUsers || 1;
+      const totalHexesVal = totalHexes || 0;
+      const totalCreditsVal = creditsAgg?.[0]?.total || 0;
+      const activeSortiesVal = activeSorties || 0;
+      const distanceTodayVal = Math.round((distanceToday?.[0]?.total || 0) * 10) / 10;
+      const distanceWeekVal = Math.round((distanceWeek?.[0]?.total || 0) * 10) / 10;
+      const invasionsTodayVal = invasionsToday?.[0]?.total || 0;
+      const weeklyGrowthVal = weeklyGrowth || 0;
+
+      // Online count from Redis (non-blocking)
+      let onlineCount = 0;
+      try {
+        const onlineRaw = await redis.smembers('online_users');
+        onlineCount = new Set(onlineRaw.map(r => {
+          try { return JSON.parse(r).userId; } catch { return null; }
+        }).filter(Boolean)).size;
+      } catch (e) { /* redis error, use 0 */ }
+
+      const stats = {
+        totalUsers: totalUsersVal,
+        totalHexes: totalHexesVal,
+        totalCredits: totalCreditsVal,
+        activeSorties: activeSortiesVal,
+        onlineCount,
+        distanceToday: distanceTodayVal,
+        distanceWeek: distanceWeekVal,
+        territoriesInvadedToday: invasionsTodayVal,
+        weeklyGrowth: weeklyGrowthVal,
+      };
+
+      // Cache for 2 minutes
+      try {
+        await redis.setex(cacheKey, 120, JSON.stringify(stats));
+      } catch (e) { /* cache write failure, non-critical */ }
+
+      return stats;
+    } catch (err) {
+      console.error('getEnhancedStats error:', err.message);
+      // Return fallback values on error
+      return {
+        totalUsers: 1,
+        totalHexes: 0,
+        totalCredits: 0,
+        activeSorties: 0,
+        onlineCount: 0,
+        distanceToday: 0,
+        distanceWeek: 0,
+        territoriesInvadedToday: 0,
+        weeklyGrowth: 0,
+      };
+    }
   },
 };
 

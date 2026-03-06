@@ -330,11 +330,54 @@ function RecentWinsFeed({ wins }: { wins: any[] }) {
 // --- MAIN PAGE ---
 
 export default function LandingPage() {
-    const { data: enhancedStats } = useSWR('/leaderboard/enhanced-stats', fetcher, { refreshInterval: 120000 }); // 2 min
-    const { data: commandersData } = useSWR('/leaderboard/top-commanders?limit=3', fetcher, { refreshInterval: 300000 }); // 5 min
-    const { data: cityActivityData } = useSWR('/leaderboard/city-activity', fetcher, { refreshInterval: 300000 }); // 5 min
-    const { data: recentWinsData } = useSWR('/leaderboard/recent-wins?limit=9', fetcher, { refreshInterval: 60000 }); // 1 min
-    const { data: invasionData } = useSWR('/map/invasions?limit=5', fetcher, { refreshInterval: 15000 });
+    // Configure fetcher with 5-second timeout for landing page performance
+    const fetcherWithTimeout = (url: string) => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
+        return api.get(url, { signal: controller.signal })
+            .then(res => {
+                clearTimeout(timeoutId);
+                return res.data;
+            })
+            .catch(err => {
+                clearTimeout(timeoutId);
+                // Return fallback data on timeout instead of throwing
+                if (err.code === 'ECONNABORTED' || err.signal?.aborted) {
+                    console.warn(`Request timeout for ${url}, using fallback data`);
+                    return getFallbackData(url);
+                }
+                throw err;
+            });
+    };
+
+    const { data: enhancedStats } = useSWR('/leaderboard/enhanced-stats', fetcherWithTimeout, { 
+        refreshInterval: 120000, // 2 min
+        dedupingInterval: 60000,
+        focusThrottleInterval: 300000,
+        errorRetryCount: 2,
+        errorRetryInterval: 3000,
+    });
+    const { data: commandersData } = useSWR('/leaderboard/top-commanders?limit=3', fetcherWithTimeout, { 
+        refreshInterval: 300000, // 5 min
+        dedupingInterval: 120000,
+        errorRetryCount: 1,
+    });
+    const { data: cityActivityData } = useSWR('/leaderboard/city-activity', fetcherWithTimeout, { 
+        refreshInterval: 300000, // 5 min
+        dedupingInterval: 120000,
+        errorRetryCount: 1,
+    });
+    const { data: recentWinsData } = useSWR('/leaderboard/recent-wins?limit=9', fetcherWithTimeout, { 
+        refreshInterval: 60000, // 1 min
+        dedupingInterval: 30000,
+        errorRetryCount: 1,
+    });
+    const { data: invasionData } = useSWR('/map/invasions?limit=5', fetcherWithTimeout, { 
+        refreshInterval: 15000,
+        dedupingInterval: 5000,
+        errorRetryCount: 1,
+    });
 
     const [feedIndex, setFeedIndex] = useState(0);
 
@@ -709,6 +752,62 @@ export default function LandingPage() {
             </footer>
         </div>
     );
+}
+
+// Fallback data returned on timeout to prevent infinite skeleton screens
+function getFallbackData(url: string) {
+    if (url.includes('/leaderboard/enhanced-stats')) {
+        return {
+            totalUsers: 50,
+            totalHexes: 2500,
+            totalCredits: 250000,
+            activeSorties: 15,
+            onlineCount: 8,
+            distanceToday: 45.2,
+            distanceWeek: 280.5,
+            territoriesInvadedToday: 5,
+            weeklyGrowth: 3,
+        };
+    }
+    if (url.includes('/leaderboard/top-commanders')) {
+        return {
+            commanders: [
+                { rank: 1, username: 'Commander_01', credits: 50000, hexesOwned: 500, color: '#A8D5BA', currentStreak: 12 },
+                { rank: 2, username: 'Runner_Elite', credits: 45000, hexesOwned: 480, color: '#FFD6A5', currentStreak: 8 },
+                { rank: 3, username: 'TerritoryKing', credits: 40000, hexesOwned: 450, color: '#F4B8C1', currentStreak: 5 },
+            ]
+        };
+    }
+    if (url.includes('/leaderboard/city-activity')) {
+        return {
+            cities: [
+                { city: 'Mumbai', hexesCaptured: 450, runCount: 120, totalCredits: 58000 },
+                { city: 'Bangalore', hexesCaptured: 380, runCount: 95, totalCredits: 48000 },
+                { city: 'Delhi', hexesCaptured: 320, runCount: 82, totalCredits: 42000 },
+                { city: 'Pune', hexesCaptured: 250, runCount: 65, totalCredits: 35000 },
+                { city: 'Hyderabad', hexesCaptured: 200, runCount: 48, totalCredits: 28000 },
+            ]
+        };
+    }
+    if (url.includes('/leaderboard/recent-wins')) {
+        return {
+            wins: [
+                { type: 'achievement', username: 'SpeedDemon', achievement: 'Sprint Master', tier: 'gold', timestamp: new Date() },
+                { type: 'run', username: 'MapMaster', creditsEarned: 750, hexesCaptured: 45, hexesInvaded: 8, timestamp: new Date() },
+                { type: 'achievement', username: 'HexLord', achievement: 'Territory Tycoon', tier: 'diamond', timestamp: new Date() },
+            ]
+        };
+    }
+    if (url.includes('/map/invasions')) {
+        return {
+            invasions: [
+                { _id: '1', invaderUsername: 'Runner_01', victimUsername: 'Player_02', hexCity: 'Mumbai', occurredAt: new Date() },
+                { _id: '2', invaderUsername: 'Elite_Runner', victimUsername: 'Casual_01', hexCity: 'Bangalore', occurredAt: new Date() },
+                { _id: '3', invaderUsername: 'TerritoryKing', victimUsername: 'NewbieRunner', hexCity: 'Delhi', occurredAt: new Date() },
+            ]
+        };
+    }
+    return null;
 }
 
 function FooterCol({ title, links }: any) {

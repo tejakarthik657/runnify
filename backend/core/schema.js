@@ -191,6 +191,8 @@ UserSchema.index({ city: 1, credits: -1 });
 UserSchema.index({ globalRank: 1 });
 UserSchema.index({ 'stats.currentStreak': -1 });
 UserSchema.index({ lastActiveAt: -1 });
+UserSchema.index({ createdAt: -1 }); // for weekly growth calculations
+UserSchema.index({ isBanned: 1, createdAt: -1 }); // landing page stats
 UserSchema.index({ 'antiCheat.shadowBanned': 1 }); // filter for leaderboards
 
 // Virtual: public profile (strips sensitive fields)
@@ -365,6 +367,8 @@ RunSchema.index({ userId: 1, startedAt: -1 });
 RunSchema.index({ city: 1, startedAt: -1 });
 RunSchema.index({ isProcessed: 1, isActive: 1 });
 RunSchema.index({ startedAt: -1 }); // global timeline
+RunSchema.index({ endedAt: -1 }); // for landing page aggregations
+RunSchema.index({ endedAt: 1, status: 1 }); // landing page stats queries
 RunSchema.index({ 'antiCheat.verdict': 1 }); // filter disqualified for leaderboards
 RunSchema.index({ 'antiCheat.checkedAt': 1 });
 

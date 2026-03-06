@@ -53,8 +53,34 @@ router.get('/stats', async (req, res, next) => {
 // Enhanced stats for landing page with real-time metrics
 router.get('/enhanced-stats', async (req, res, next) => {
 	try {
+		// Set response timeout - 5 seconds max
+		let responded = false;
+		const timeoutHandle = setTimeout(() => {
+			if (!responded) {
+				responded = true;
+				res.status(504).json({ 
+					error: 'Backend request timeout', 
+					fallback: {
+						totalUsers: 1,
+						totalHexes: 0,
+						totalCredits: 0,
+						activeSorties: 0,
+						onlineCount: 0,
+						distanceToday: 0,
+						distanceWeek: 0,
+						territoriesInvadedToday: 0,
+						weeklyGrowth: 0,
+					}
+				});
+			}
+		}, 5000);
+
 		const stats = await LeaderboardService.getEnhancedStats();
-		res.json(stats);
+		clearTimeout(timeoutHandle);
+		if (!responded) {
+			responded = true;
+			res.json(stats);
+		}
 	} catch (error) {
 		next(error);
 	}
