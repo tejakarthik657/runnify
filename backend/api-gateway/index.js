@@ -93,6 +93,99 @@ app.use('/reports', reportsRoutes);
 // ── OAuth routes (Google + Apple) ────────────────────────────
 setupOAuthRoutes(app);
 
+// ── Python Microservices Proxy ────────────────────────────────
+// Proxy requests to Python FastAPI services
+const axios = require('axios');
+
+// Python service routing map.
+// In production, set PY_*_URL env vars to deployed service URLs.
+const PYTHON_SERVICES = {
+  stats: {
+    localPort: 8001,
+    envUrl: process.env.PY_STATS_URL,
+  },
+  hex: {
+    localPort: 8002,
+    envUrl: process.env.PY_HEX_URL,
+  },
+  engagement: {
+    localPort: 8003,
+    envUrl: process.env.PY_ENGAGEMENT_URL,
+  },
+  leaderboard: {
+    localPort: 8004,
+    envUrl: process.env.PY_LEADERBOARD_URL,
+  },
+  routes: {
+    localPort: 8006,
+    envUrl: process.env.PY_ROUTES_URL,
+  },
+  badges: {
+    localPort: 8011,
+    envUrl: process.env.PY_BADGES_URL,
+  },
+  challenges: {
+    localPort: 8016,
+    envUrl: process.env.PY_CHALLENGES_URL,
+  },
+  names: {
+    localPort: 8017,
+    envUrl: process.env.PY_NAMES_URL,
+  },
+  streak: {
+    localPort: 8018,
+    envUrl: process.env.PY_STREAK_URL,
+  },
+  credits: {
+    localPort: 8019,
+    envUrl: process.env.PY_CREDITS_URL,
+  },
+};
+
+// Generic proxy handler for Python services
+app.use('/python/:service/*path', async (req, res) => {
+  const { service } = req.params;
+  const path = Array.isArray(req.params.path) ? req.params.path.join('/') : req.params.path;
+  const serviceConfig = PYTHON_SERVICES[service];
+  
+  if (!serviceConfig) {
+    return res.status(404).json({ error: `Python service '${service}' not found` });
+  }
+  
+  const baseUrl = serviceConfig.envUrl || `http://localhost:${serviceConfig.localPort}`;
+  const url = `${baseUrl.replace(/\/$/, '')}/${path}`;
+  
+  try {
+    const response = await axios({
+      method: req.method,
+      url: url,
+      data: req.body,
+      params: req.query,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      timeout: 30000, // 30 second timeout
+    });
+    
+    res.status(response.status).json(response.data);
+  } catch (error) {
+    console.error(`[Python Proxy Error] Service: ${service}, Path: ${path}`, error.message);
+    
+    if (error.code === 'ECONNREFUSED') {
+      return res.status(503).json({
+        error: `Python service '${service}' is not running`,
+        message: 'Please start the Python microservice',
+        service: service,
+        port: serviceConfig.localPort
+      });
+    }
+    
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data || error.message
+    });
+  }
+});
+
 // ── Socket.IO handlers ────────────────────────────────────────
 initSocketHandlers(io);   // main namespace: GPS tracking
 initChatHandlers(io);     // /chat namespace: community chat

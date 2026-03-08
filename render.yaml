@@ -45,6 +45,26 @@ services:
         value: https://territoryrun.com
       - key: API_BASE_URL
         value: https://territory-run-api.onrender.com
+      - key: PY_STATS_URL
+        value: https://territory-run-py-stats.onrender.com
+      - key: PY_HEX_URL
+        value: https://territory-run-py-hex.onrender.com
+      - key: PY_ENGAGEMENT_URL
+        value: https://territory-run-py-engagement.onrender.com
+      - key: PY_LEADERBOARD_URL
+        value: https://territory-run-py-leaderboard.onrender.com
+      - key: PY_ROUTES_URL
+        value: https://territory-run-py-routes.onrender.com
+      - key: PY_BADGES_URL
+        value: https://territory-run-py-badges.onrender.com
+      - key: PY_CHALLENGES_URL
+        value: https://territory-run-py-challenges.onrender.com
+      - key: PY_NAMES_URL
+        value: https://territory-run-py-names.onrender.com
+      - key: PY_STREAK_URL
+        value: https://territory-run-py-streak.onrender.com
+      - key: PY_CREDITS_URL
+        value: https://territory-run-py-credits.onrender.com
 
   # ── Staging API ────────────────────────────────────────────
   - type: web
@@ -138,4 +158,155 @@ services:
       - key: MONGODB_URI
         sync: false
       - key: GROQ_API_KEY
+        sync: false
+
+  # ── Python Microservices (FastAPI) ────────────────────────
+  - type: web
+    name: territory-run-py-stats
+    runtime: python
+    plan: free
+    branch: main
+    rootDir: backend/python-services
+    buildCommand: pip install -r requirements.txt
+    startCommand: cd 01-run-statistics && uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+
+  - type: web
+    name: territory-run-py-hex
+    runtime: python
+    plan: free
+    branch: main
+    rootDir: backend/python-services
+    buildCommand: pip install -r requirements.txt
+    startCommand: cd 02-hex-analyzer && uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+
+  - type: web
+    name: territory-run-py-engagement
+    runtime: python
+    plan: free
+    branch: main
+    rootDir: backend/python-services
+    buildCommand: pip install -r requirements.txt
+    startCommand: cd 03-engagement-engine && uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+
+  - type: web
+    name: territory-run-py-leaderboard
+    runtime: python
+    plan: free
+    branch: main
+    rootDir: backend/python-services
+    buildCommand: pip install -r requirements.txt
+    startCommand: cd 04-leaderboard-predictor && uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+
+  - type: web
+    name: territory-run-py-routes
+    runtime: python
+    plan: free
+    branch: main
+    rootDir: backend/python-services
+    buildCommand: pip install -r requirements.txt
+    startCommand: cd 06-route-optimization && uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+
+  - type: web
+    name: territory-run-py-badges
+    runtime: python
+    plan: free
+    branch: main
+    rootDir: backend/python-services
+    buildCommand: pip install -r requirements.txt
+    startCommand: cd 11-badge-generator && uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+
+  - type: web
+    name: territory-run-py-challenges
+    runtime: python
+    plan: free
+    branch: main
+    rootDir: backend/python-services
+    buildCommand: pip install -r requirements.txt
+    startCommand: cd 16-challenge-recommender && uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+
+  - type: web
+    name: territory-run-py-names
+    runtime: python
+    plan: free
+    branch: main
+    rootDir: backend/python-services
+    buildCommand: pip install -r requirements.txt
+    startCommand: cd 17-run-name-generator && uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+
+  - type: web
+    name: territory-run-py-streak
+    runtime: python
+    plan: free
+    branch: main
+    rootDir: backend/python-services
+    buildCommand: pip install -r requirements.txt
+    startCommand: cd 18-streak-calculator && uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+
+  - type: web
+    name: territory-run-py-credits
+    runtime: python
+    plan: free
+    branch: main
+    rootDir: backend/python-services
+    buildCommand: pip install -r requirements.txt
+    startCommand: cd 19-credit-optimizer && uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
         sync: false
