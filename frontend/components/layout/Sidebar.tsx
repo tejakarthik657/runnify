@@ -29,7 +29,7 @@ const NAV_ITEMS = [
     { label: 'Leaderboard', icon: Trophy, href: '/leaderboard' },
     { label: 'Credits', icon: CreditCard, href: '/credits' },
     { label: 'Community', icon: Users, href: '/community' },
-    { label: 'Faction', icon: Zap, href: '/faction' },
+    { label: 'Faction', icon: Zap, href: '/faction', showBadge: true, badgeText: 'NEW' },
     { label: 'Alerts', icon: Bell, href: '/notifications', badge: 2 },
     { label: 'Profile', icon: User, href: '/profile' },
 ];
@@ -67,6 +67,9 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
                 {NAV_ITEMS.map((item) => {
                     const isActive = pathname === item.href;
                     const Icon = item.icon;
+                    
+                    // Show "NEW" badge for Faction if user hasn't joined one yet
+                    const shouldShowFactionBadge = item.showBadge && item.href === '/faction' && !user?.faction;
 
                     return (
                         <Link
@@ -94,12 +97,20 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
                                 </span>
                             )}
 
-                            {item.badge && (
+                            {/* Numeric badge (e.g. notification count) */}
+                            {item.badge && typeof item.badge === 'number' && (
                                 <div className={`
                                     absolute bg-[#F4B8C1] text-[#c0392b] font-black rounded-full flex items-center justify-center
                                     ${collapsed ? 'top-2 right-2 w-4 h-4 text-[8px]' : 'right-3 w-4 h-4 text-[9px]'}
                                 `}>
                                     {item.badge}
+                                </div>
+                            )}
+                            
+                            {/* Text badge (e.g. "NEW" for Faction) */}
+                            {shouldShowFactionBadge && !collapsed && (
+                                <div className="absolute right-3 px-2 py-0.5 bg-gradient-to-r from-[#A8D5BA] to-[#6CC89A] text-white font-black rounded-full text-[9px] uppercase tracking-wide">
+                                    {item.badgeText || 'NEW'}
                                 </div>
                             )}
                         </Link>

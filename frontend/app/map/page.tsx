@@ -119,62 +119,72 @@ export default function MapPage() {
     const handleGpsPoint = useCallback((point: { lat: number; lng: number; accuracy?: number; altitude?: number }) => {
         if (!isRunningRef.current || !runIdRef.current) return;
 
-        // Production-grade accuracy filtering with dynamic threshold
+        // Production-grade accuracy filtering with adaptive threshold based on movement
         const accuracy = point.accuracy ?? 999;
         if (!lastGpsPoint.current) {
-            // First point - just record it
+            // First point - just record it with lenient threshold
             lastGpsPoint.current = { ...point, accuracy };
             lastGpsTs.current = Date.now();
-            console.log(`[GPS-START] First point: [${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}]`);
+            console.log(`[GPS-START] First point: [${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}], accuracy: ${accuracy}m`);
             return;
         }
 
-        // Dynamic accuracy threshold: max 2.2x previous accuracy, but more forgiving
+        // Adaptive accuracy threshold: 3x multiplier for better tolerance during movement
+        // More forgiving for stationary (40m min) and fast movement (80m max)
         const lastAccuracy = lastGpsPoint.current.accuracy ?? accuracy;
         const maxAccuracy = Math.max(40, Math.min(lastAccuracy * 3.0, 80));
         if (accuracy > maxAccuracy) {
-            console.log(`[GPS-REJECT] Bad accuracy: ${accuracy}m > ${maxAccuracy}m threshold`);
+            console.log(`[GPS-REJECT] Poor accuracy: ${accuracy.toFixed(1)}m exceeds ${maxAccuracy.toFixed(1)}m threshold (base: ${lastAccuracy.toFixed(1)}m)`);
             return;
         }
 
-        // Calculate validated distance
+        // Calculate validated distance with precision
         const nowTs = Date.now();
         const dtSec = Math.max(1, Math.floor((nowTs - lastGpsTs.current!) / 1000));
         const addedDistKm = getDistance(lastGpsPoint.current.lat, lastGpsPoint.current.lng, point.lat, point.lng);
         const addedDistMeters = addedDistKm * 1000;
         const speedKmh = dtSec > 0 ? (addedDistKm * 3600) / dtSec : 0;
 
-        // Multi-layer anti-cheat validation
+        // Multi-layer anti-cheat validation with detailed logging
         const isTooClose = addedDistMeters < MIN_DISTANCE_METERS && dtSec < 3;
-        const isTooFast = speedKmh > 50;
-        const hasIssues = isTooClose || isTooFast;
+        const isTooFast = speedKmh > 50; // 50 km/h max (generous for cyclists)
+        const isJump = addedDistMeters > 500 && dtSec < 5; // 500m in 5s = unrealistic teleport
 
         if (isTooClose) {
-            console.log(`[GPS-NOISE] Too close: ${addedDistMeters.toFixed(1)}m in ${dtSec}s`);
+            console.log(`[GPS-NOISE] Point too close: ${addedDistMeters.toFixed(1)}m in ${dtSec}s (min: ${MIN_DISTANCE_METERS}m)`);
             return;
         }
         if (isTooFast) {
-            console.warn(`[GPS-CHEAT] Impossible speed: ${speedKmh.toFixed(1)}km/h`);
+            console.warn(`[GPS-CHEAT] Impossible speed detected: ${speedKmh.toFixed(1)}km/h (${addedDistMeters.toFixed(0)}m in ${dtSec}s) - exceeds 50km/h limit`);
+            return;
+        }
+        if (isJump) {
+            console.warn(`[GPS-CHEAT] Teleport detected: ${addedDistMeters.toFixed(0)}m in ${dtSec}s - unrealistic jump`);
             return;
         }
 
-        // Point validated - update reference ONLY after validation passes
+        // Point validated - update reference ONLY after all checks pass
         lastGpsPoint.current = { ...point, accuracy };
         lastGpsTs.current = nowTs;
         const addedDist = addedDistKm;
 
-        // Broadcast to other connected users
+        // Broadcast to other connected users with enhanced data
         socket?.emit('presence_sync', {
             lat: point.lat,
             lng: point.lng,
-            accuracy: accuracy
+            accuracy: accuracy,
+            speed: speedKmh,
+            timestamp: nowTs
         });
 
         socket?.emit('gps_update', {
             runId: runIdRef.current,
             lat: point.lat,
             lng: point.lng,
-            accuracy: accuracy
+            accuracy: accuracy,
+            altitude: point.altitude,
+            speed: speedKmh,
+            timestamp: nowTs
         });
 
         // Territory tracking via H3 grid
@@ -182,19 +192,21 @@ export default function MapPage() {
             const h3Index = latLngToCell(point.lat, point.lng, 9);
             const isNew = !hexSetRef.current.has(h3Index);
             hexSetRef.current.add(h3Index);
-            if (isNew) console.log(`[HEX] Territory discovered: ${h3Index.slice(-6)}`);
+            if (isNew) console.log(`[HEX] Territory discovered: ${h3Index.slice(-6)}, total: ${hexSetRef.current.size}`);
         } catch (err) { 
             console.error('[HEX-ERROR]', err);
         }
 
-        // Visual path trail
+        // Visual path trail with smart deduplication
         setRunPath(prev => {
             const last = prev[prev.length - 1];
+            // Stricter deduplication: 0.1m threshold (0.00001° ≈ 1.1m)
             if (last && Math.abs(last[0] - point.lat) < 0.00001 && Math.abs(last[1] - point.lng) < 0.00001) {
+                console.log(`[PATH] Skipping duplicate point at [${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}]`);
                 return prev; // Skip duplicates
             }
             const newPath: [number, number][] = [...prev, [point.lat, point.lng]];
-            console.log(`[PATH] Added point #${newPath.length}: [${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}]`);
+            console.log(`[PATH] Added point #${newPath.length}: [${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}], accuracy: ${accuracy.toFixed(1)}m, speed: ${speedKmh.toFixed(1)}km/h`);
             return newPath;
         });
 
@@ -453,27 +465,34 @@ export default function MapPage() {
             }
         });
 
-        // Stale runner cleanup - Extended to 120s for better stability
+        // Enhanced stale runner cleanup with adaptive timeout and detailed logging
         const cleanup = setInterval(() => {
             const now = Date.now();
             setActiveRunners(prev => {
                 const next = { ...prev };
                 let changed = false;
                 Object.keys(next).forEach(id => {
-                    // 120-second threshold prevents vanishing on GPS signal drops while running
-                    if (now - next[id].lastSeen > 120000) {
-                        console.log(`[Map] Removing stale runner: ${id}`);
+                    const age = now - next[id].lastSeen;
+                    // Adaptive timeout: 120s base, extended to 180s for active runners
+                    const timeoutMs = isRunningRef.current ? 180000 : 120000;
+                    
+                    if (age > timeoutMs) {
+                        console.log(
+                            `[Cleanup] Removing stale runner ${next[id].username} (${id.slice(-6)}), ` +
+                            `last seen ${Math.floor(age / 1000)}s ago (threshold: ${timeoutMs / 1000}s)`
+                        );
                         delete next[id];
                         changed = true;
                     }
                 });
                 return changed ? next : prev;
             });
-        }, 15000);
+        }, 15000); // Check every 15s for responsive cleanup
 
-        // Listen for faction changes
+        // Listen for faction changes with comprehensive UI updates
         socket.on('faction_updated', (data: any) => {
             console.log('[Map] Faction updated:', data);
+            
             // Update activeRunners if this user is currently being tracked
             if (data.userId) {
                 setActiveRunners(prev => {
@@ -482,7 +501,9 @@ export default function MapPage() {
                             ...prev,
                             [data.userId]: {
                                 ...prev[data.userId],
-                                faction: data.faction
+                                faction: data.faction,
+                                color: data.color || prev[data.userId].color,
+                                username: data.username || prev[data.userId].username
                             }
                         };
                     }
@@ -490,11 +511,36 @@ export default function MapPage() {
                 });
             }
             
-            // If the faction change is for the current user, refetch map data to update territories
+            // If the faction change is for the current user
             if (data.userId === user?.id) {
-                console.log('[Map] Current user faction changed, reloading map');
-                // Optionally trigger a map refresh or data reload here
-                toast.success(`Faction changed to ${data.faction}!`);
+                console.log('[Map] Current user faction changed to', data.faction);
+                
+                // Show detailed toast notification
+                const factionNames: Record<string, string> = {
+                    red: 'Red Legion 🔴',
+                    blue: 'Blue Syndicate 🔵',
+                    green: 'Green Nomads 🟢'
+                };
+                
+                const message = data.isChange 
+                    ? `Faction changed to ${factionNames[data.faction] || data.faction}!`
+                    : `Joined ${factionNames[data.faction] || data.faction}!`;
+                
+                toast.success(message, {
+                    duration: 4000,
+                    icon: data.isChange ? '🔄' : '⚡'
+                });
+                
+                // Optional: Refresh territories or map data to reflect faction change
+                // mutate('/map/territories') if using SWR
+            } else {
+                // Another user changed faction - show subtle notification
+                const factionNames: Record<string, string> = {
+                    red: 'Red Legion',
+                    blue: 'Blue Syndicate',
+                    green: 'Green Nomads'
+                };
+                console.log(`[Map] ${data.username} ${data.isChange ? 'switched to' : 'joined'} ${factionNames[data.faction]}`);
             }
         });
 

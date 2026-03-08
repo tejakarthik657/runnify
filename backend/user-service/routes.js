@@ -118,24 +118,35 @@ router.patch('/me/faction', authenticateJWT, async (req, res, next) => {
 		
 		// Validate faction exists and is valid
 		if (!faction) {
-			return res.status(400).json({ error: 'Faction required. Provide one of: red, blue, green.' });
-		}
-		
-		if (!['red', 'blue', 'green'].includes(faction.toString().toLowerCase())) {
-			return res.status(400).json({ error: 'Invalid faction. Must be red, blue, or green.' });
-		}
-		
-		const userId = req.userId || req.user?.userId || req.user?.sub;
-		const user = await User.findById(userId);
-		
-		if (!user) {
-			return res.status(404).json({ error: 'User not found' });
+			return res.status(400).json({ 
+				error: 'Faction required. Provide one of: red, blue, green.',
+				validFactions: ['red', 'blue', 'green']
+			});
 		}
 		
 		const factionLower = faction.toString().toLowerCase();
-		console.log(`[Faction] Updating faction to ${factionLower} for user ${userId}`);
+		if (!['red', 'blue', 'green'].includes(factionLower)) {
+			return res.status(400).json({ 
+				error: `Invalid faction: "${faction}". Must be red, blue, or green.`,
+				provided: faction,
+				validFactions: ['red', 'blue', 'green']
+			});
+		}
 		
-		// Update faction (allow changes anytime)
+		const userId = req.userId || req.user?.userId || req.user?.sub;
+		const user = await User.findById(userId).select('faction factionJoinedAt username color credits hexesOwned globalRank');
+		
+		if (!user) {
+			return res.status(404).json({ error: 'User not found', userId });
+		}
+		
+		// Track if this is a change (not initial selection)
+		const isChange = user.faction && user.faction !== factionLower;
+		const previousFaction = user.faction;
+		
+		console.log(`[Faction] ${isChange ? 'Changing' : 'Setting'} faction ${previousFaction ? `from ${previousFaction} ` : ''}to ${factionLower} for user ${userId}`);
+		
+		// Update faction (allow changes anytime - unlimited)
 		const updated = await User.findByIdAndUpdate(
 			userId,
 			{
@@ -145,29 +156,43 @@ router.patch('/me/faction', authenticateJWT, async (req, res, next) => {
 				}
 			},
 			{ new: true }
-		).select('faction factionJoinedAt username');
+		).select('faction factionJoinedAt username color credits hexesOwned globalRank');
 		
 		console.log(`[Faction] Successfully updated faction: ${JSON.stringify(updated)}`);
 		
-		// Emit socket event to notify clients of faction change
+		// Emit socket event to notify ALL clients of faction change
 		try {
 			const { getIO } = require('../run-service/socket.handlers');
 			const io = getIO();
 			if (io) {
+				// Broadcast to all users (including map viewers)
 				io.emit('faction_updated', {
 					userId: userId.toString(),
 					username: updated.username,
 					faction: updated.faction,
-					factionJoinedAt: updated.factionJoinedAt
+					previousFaction: previousFaction || null,
+					factionJoinedAt: updated.factionJoinedAt,
+					isChange: isChange,
+					color: updated.color,
+					credits: updated.credits,
+					globalRank: updated.globalRank
 				});
-				console.log(`[Faction] Emitted faction_updated event for user ${userId}`);
+				console.log(`[Faction] Emitted faction_updated event for user ${userId} (${isChange ? 'change' : 'initial'})`);  
 			}
 		} catch (ioErr) {
-			// Socket emission is non-critical, just log the error
+			// Socket emission is non-critical, log warning but don't fail request
 			console.warn('[Faction] Failed to emit faction_updated event:', ioErr.message);
 		}
 		
-		res.json({ faction: updated.faction, factionJoinedAt: updated.factionJoinedAt, username: updated.username });
+		res.json({ 
+			success: true,
+			faction: updated.faction, 
+			factionJoinedAt: updated.factionJoinedAt, 
+			username: updated.username,
+			isChange: isChange,
+			previousFaction: previousFaction || null,
+			message: isChange ? `Faction changed from ${previousFaction} to ${factionLower}` : `Joined ${factionLower} faction`
+		});
 	} catch (err) {
 		console.error('[Faction] PATCH /me/faction error:', err.message, err.stack);
 		next(err);
