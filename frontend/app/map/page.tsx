@@ -61,6 +61,8 @@ export default function MapPage() {
     const runIdRef = useRef<string | null>(null);
     const hexSetRef = useRef<Set<string>>(new Set());
     const accelStepsRef = useRef(0); // Track accelerometer steps separately
+    const gpsFallbackStepsRef = useRef(0); // GPS-based backup steps when accelerometer is weak
+    const isDetectingRef = useRef(false);
 
     const [initialMapView] = useState<{ center: [number, number]; zoom: number }>(() => {
         try {
@@ -215,13 +217,15 @@ export default function MapPage() {
             const newDist = parseFloat((prev.distance + addedDist).toFixed(6));
             const newHexCount = hexSetRef.current.size;
             
-            // Step logic: Accelerometer is primary, GPS for fallback
-            let newSteps = prev.steps;
-            if (accelStepsRef.current > prev.steps) {
-                newSteps = accelStepsRef.current;
-            } else if (addedDistMeters > 5) {
-                const gpsSteps = Math.round(addedDistMeters / STEP_LENGTH_METERS);
-                newSteps = prev.steps + Math.max(0, gpsSteps);
+            // Step logic: accelerometer primary + GPS fallback without double counting
+            let newSteps = Math.max(accelStepsRef.current, gpsFallbackStepsRef.current);
+            const shouldUseGpsFallback = !isDetectingRef.current || accelStepsRef.current < 5;
+            if (shouldUseGpsFallback && addedDistMeters > 6) {
+                const gpsSteps = Math.floor(addedDistMeters / STEP_LENGTH_METERS);
+                if (gpsSteps > 0) {
+                    gpsFallbackStepsRef.current += gpsSteps;
+                    newSteps = Math.max(newSteps, gpsFallbackStepsRef.current);
+                }
             }
             
             const newCredits = Math.floor(newDist * 12) + (newHexCount * 2);
@@ -263,9 +267,9 @@ export default function MapPage() {
         onUpdate: (state) => {
             // Update stats with accelerometer-detected steps
             accelStepsRef.current = state.steps; // Store accelerometer steps
+            isDetectingRef.current = state.isDetecting;
             setStats(prev => {
-                // Prefer accelerometer steps if they're higher (more accurate for walking)
-                const newSteps = Math.max(prev.steps, state.steps);
+                const newSteps = Math.max(state.steps, gpsFallbackStepsRef.current);
                 return {
                     ...prev,
                     steps: newSteps,
@@ -301,6 +305,8 @@ export default function MapPage() {
                         credits: Math.floor((run.hexesTotal || 0) * 1.5),
                         steps: Math.max(0, Math.round((run.distanceKm || 0) * 1312)),
                     });
+                    accelStepsRef.current = Math.max(0, Math.round((run.distanceKm || 0) * 1312));
+                    gpsFallbackStepsRef.current = accelStepsRef.current;
                     // Enable follow mode for live tracking when resuming run
                     setFollowUser(true);
                     startTimer();
@@ -346,6 +352,8 @@ export default function MapPage() {
             hexSetRef.current = new Set();
             setRunPath([]);
             setStats({ distance: 0, time: 0, hexCount: 0, credits: 0, steps: 0 });
+            accelStepsRef.current = 0;
+            gpsFallbackStepsRef.current = 0;
             lastGpsPoint.current = null;
             lastGpsTs.current = null;
             resetStepCounter();
@@ -370,7 +378,8 @@ export default function MapPage() {
             
             const { data } = await api.post(`/run/${runId}/end`, {
                 lat: position.lat,
-                lng: position.lng
+                lng: position.lng,
+                accelSteps: Math.max(stats.steps || 0, accelStepsRef.current, gpsFallbackStepsRef.current)
             }, { 
                 signal: controller.signal,
                 timeout: 60000 
@@ -399,6 +408,8 @@ export default function MapPage() {
 
             // Soft reset stats for next run
             setStats({ distance: 0, time: 0, hexCount: 0, credits: 0, steps: 0 });
+            accelStepsRef.current = 0;
+            gpsFallbackStepsRef.current = 0;
             lastGpsTs.current = null;
         } catch (error: any) {
             // Retry logic with exponential backoff
@@ -562,6 +573,8 @@ export default function MapPage() {
             // Reset local active run visuals for a clean new day
             setRunPath([]);
             setStats({ distance: 0, time: 0, hexCount: 0, credits: 0, steps: 0 });
+            accelStepsRef.current = 0;
+            gpsFallbackStepsRef.current = 0;
             setCurrentTerritory(null);
 
             if (podium) {
@@ -660,6 +673,24 @@ export default function MapPage() {
                             </motion.div>
                         )}
                     </AnimatePresence>
+                </div>
+
+                <div className="lg:hidden flex gap-2 overflow-x-auto no-scrollbar pointer-events-auto px-0.5">
+                    {[
+                        { href: '/dashboard', label: 'Dashboard' },
+                        { href: '/run', label: 'Run' },
+                        { href: '/leaderboard', label: 'Leaderboard' },
+                        { href: '/faction', label: 'Faction' },
+                        { href: '/profile', label: 'Profile' },
+                    ].map((item) => (
+                        <Link
+                            key={item.href}
+                            href={item.href}
+                            className="shrink-0 rounded-xl bg-white/90 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-[#1a1a2e] border border-black/5"
+                        >
+                            {item.label}
+                        </Link>
+                    ))}
                 </div>
             </div>
 

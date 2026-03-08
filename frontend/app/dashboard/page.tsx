@@ -18,7 +18,8 @@ import {
     Settings,
     Layers,
     Navigation2,
-    Play
+    Play,
+    ArrowRight
 } from 'lucide-react';
 import Link from 'next/link';
 import StatCard from '../../components/ui/StatCard';
@@ -146,6 +147,26 @@ export default function DashboardPage() {
             </div>
 
             {/* Run Moments Tray */}
+            <div className="lg:hidden">
+                <Link
+                    href="/faction"
+                    className="group w-full inline-flex items-center justify-between rounded-2xl border border-[#A8D5BA]/30 bg-white px-4 py-3 shadow-sm"
+                >
+                    <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-9 h-9 rounded-xl bg-[#F0F7F4] text-[#2E7D52] flex items-center justify-center">
+                            <Zap size={18} />
+                        </div>
+                        <div className="min-w-0">
+                            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Global Wars</div>
+                            <div className="text-sm font-extrabold text-[#1a1a2e] truncate">
+                                {currentUser?.faction ? 'Manage Your Faction' : 'Choose Your Faction'}
+                            </div>
+                        </div>
+                    </div>
+                    <ArrowRight size={16} className="text-[#2E7D52] group-active:translate-x-0.5 transition-transform" />
+                </Link>
+            </div>
+
             <div className="bg-white/50 backdrop-blur-sm rounded-[40px] p-6 border border-black/5 shadow-sm">
                 <MomentsTray />
             </div>

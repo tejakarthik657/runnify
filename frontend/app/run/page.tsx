@@ -43,19 +43,34 @@ export default function RunPage() {
     const [gpsError, setGpsError] = useState<string | null>(null);
     const [isAcquiringGps, setIsAcquiringGps] = useState(false);
     const [gpsAcquisitionTip, setGpsAcquisitionTip] = useState(0);
+    const accelStepsRef = useRef(0);
+    const gpsFallbackStepsRef = useRef(0);
+    const lastGpsPointRef = useRef<{ lat: number; lng: number } | null>(null);
+    const lastGpsTsRef = useRef<number | null>(null);
 
     // Initialize step counter with accelerometer
     const { steps: accelSteps, stepRate, cadence, isDetecting, start: startStepCounter, stop: stopStepCounter, reset: resetStepCounter } = useStepCounter({
         enabled: true,
         useAccelerometer: true,
         onUpdate: (state) => {
-            // Update stats with accelerometer-detected steps  
+            accelStepsRef.current = state.steps;
             setStats(prev => ({
                 ...prev,
-                steps: Math.max(prev.steps || 0, state.steps),
+                steps: Math.max(state.steps, gpsFallbackStepsRef.current),
             }));
         }
     });
+
+    const getDistanceKm = useCallback((lat1: number, lon1: number, lat2: number, lon2: number) => {
+        const R = 6371;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    }, []);
 
     // useGPS handles real-time GPS tracking with production-ready filtering
     const { start: startGps, stop: stopGps, active: gpsActive } = useGps({
@@ -81,6 +96,36 @@ export default function RunPage() {
     const handleGpsPoint = useCallback((point: { lat: number; lng: number; accuracy?: number; altitude?: number }) => {
         if (!isRunning || !runId) return;
 
+        const nowTs = Date.now();
+        if (lastGpsPointRef.current && lastGpsTsRef.current) {
+            const addedKm = getDistanceKm(lastGpsPointRef.current.lat, lastGpsPointRef.current.lng, point.lat, point.lng);
+            const addedMeters = addedKm * 1000;
+            const dtSec = Math.max(1, Math.floor((nowTs - lastGpsTsRef.current) / 1000));
+            const speedKph = (addedKm * 3600) / dtSec;
+
+            // Reject obvious GPS jumps/noise to improve live-trace quality
+            if (addedMeters >= 1 && addedMeters < 500 && speedKph <= 50) {
+                setStats(prev => {
+                    const distance = parseFloat((prev.distance + addedKm).toFixed(5));
+                    let mergedSteps = Math.max(accelStepsRef.current, gpsFallbackStepsRef.current);
+                    const shouldUseGpsFallback = !isDetecting || accelStepsRef.current < 5;
+                    if (shouldUseGpsFallback && addedMeters > 6) {
+                        gpsFallbackStepsRef.current += Math.floor(addedMeters / 0.7);
+                        mergedSteps = Math.max(mergedSteps, gpsFallbackStepsRef.current);
+                    }
+                    return {
+                        ...prev,
+                        distance,
+                        speed: speedKph,
+                        steps: mergedSteps,
+                    };
+                });
+            }
+        }
+
+        lastGpsPointRef.current = { lat: point.lat, lng: point.lng };
+        lastGpsTsRef.current = nowTs;
+
         api.post(`/run/${runId}/gps`, {
             points: [
                 {
@@ -94,7 +139,7 @@ export default function RunPage() {
             const errorMsg = err.response?.data?.error || err.message;
             console.error('[GPS Upload Failed]', { message: errorMsg, status: err.response?.status });
         });
-    }, [isRunning, runId]);
+    }, [isRunning, runId, getDistanceKm, isDetecting]);
 
     const startTimer = useCallback(() => {
         if (statsInterval.current) return;
@@ -128,6 +173,8 @@ export default function RunPage() {
                         speed: 0, // Placeholder
                         steps: Math.max(0, Math.round((run.distanceKm || 0) * 1312)),
                     });
+                    accelStepsRef.current = Math.max(0, Math.round((run.distanceKm || 0) * 1312));
+                    gpsFallbackStepsRef.current = accelStepsRef.current;
                     startTimer();
                     startStepCounter();
                 }
@@ -176,6 +223,10 @@ export default function RunPage() {
             setRunId(data.run._id);
             setIsRunning(true);
             setStats({ distance: 0, time: 0, hexCount: 0, credits: 0, speed: 0, steps: 0 });
+            accelStepsRef.current = 0;
+            gpsFallbackStepsRef.current = 0;
+            lastGpsPointRef.current = null;
+            lastGpsTsRef.current = null;
             resetStepCounter();
             startGps();
             startStepCounter();
@@ -203,7 +254,7 @@ export default function RunPage() {
             const { data } = await api.post(`/run/${runId}/end`, {
                 lat: position?.lat || 0,
                 lng: position?.lng || 0,
-                accelSteps: stats.steps || 0  // Send accelerometer-detected steps
+                accelSteps: Math.max(stats.steps || 0, accelStepsRef.current, gpsFallbackStepsRef.current)
             }, { 
                 signal: controller.signal,
                 timeout: 60000 
@@ -224,6 +275,10 @@ export default function RunPage() {
             stopStepCounter();
             stopTimer();
             setStats({ distance: 0, time: 0, hexCount: 0, credits: 0, speed: 0, steps: 0 });
+            accelStepsRef.current = 0;
+            gpsFallbackStepsRef.current = 0;
+            lastGpsPointRef.current = null;
+            lastGpsTsRef.current = null;
             toast.success(`Mission Accomplished • ${data?.summary?.hexesClaimed || 0} claims • ${data?.summary?.creditsEarned || 0} TRC`);
             
             // Navigate to map page after mission ends
@@ -264,6 +319,24 @@ export default function RunPage() {
                     <div className="text-sm sm:text-lg font-black text-[#1a1a2e]">Central_Sortie_Alpha</div>
                 </div>
             </header>
+
+            <div className="lg:hidden mb-4 flex gap-2 overflow-x-auto no-scrollbar">
+                {[
+                    { href: '/dashboard', label: 'Dashboard' },
+                    { href: '/map', label: 'Map' },
+                    { href: '/leaderboard', label: 'Leaderboard' },
+                    { href: '/faction', label: 'Faction' },
+                    { href: '/profile', label: 'Profile' },
+                ].map((item) => (
+                    <Link
+                        key={item.href}
+                        href={item.href}
+                        className="shrink-0 rounded-xl bg-white px-3 py-2 text-[10px] font-black uppercase tracking-wider text-[#1a1a2e] border border-black/5"
+                    >
+                        {item.label}
+                    </Link>
+                ))}
+            </div>
 
             <div className="max-w-2xl mx-auto space-y-6 sm:space-y-8">
                 {/* Dynamic Timer Display */}

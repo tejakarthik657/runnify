@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Globe, MapPin, ChevronRight, Loader2, ArrowLeft, TrendingUp, Medal, Zap } from 'lucide-react';
+import { Trophy, Globe, MapPin, ChevronRight, Loader2, ArrowLeft, TrendingUp, Medal, Zap, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useAuthStore } from '../../store/authStore';
 import { useRealtimeLeaderboard } from '../../hooks/useRealtimeLeaderboard';
@@ -13,9 +13,19 @@ export default function LeaderboardPage() {
     const userCity = user?.city || 'Sector_01';
     const [scope, setScope] = useState<'global' | 'city'>('global');
     const [period, setPeriod] = useState<'alltime' | '24hour'>('alltime');
+    const [query, setQuery] = useState('');
 
     const { entries, meRank, isLoading } = useRealtimeLeaderboard(scope, userCity, period);
     const currentData = entries;
+    const normalizedQuery = query.trim().toLowerCase();
+    const filteredData = normalizedQuery
+        ? currentData.filter((entry: any) => {
+            const username = (entry.username || '').toLowerCase();
+            const city = (entry.city || '').toLowerCase();
+            const rank = String(entry.rank || '');
+            return username.includes(normalizedQuery) || city.includes(normalizedQuery) || rank.includes(normalizedQuery);
+        })
+        : currentData;
 
     return (
         <div className="min-h-screen pb-20">
@@ -124,6 +134,23 @@ export default function LeaderboardPage() {
 
                 {/* Leaderboard Table Container */}
                 <div className="bg-white rounded-[40px] border border-black/5 shadow-sm overflow-hidden min-h-[500px]">
+                    <div className="p-4 md:px-8 md:pt-8 md:pb-2 border-b border-black/5 bg-[#FAFCFA]">
+                        <div className="relative max-w-md">
+                            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <input
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                                placeholder="Search by username, city, or rank"
+                                className="w-full rounded-xl border border-black/10 bg-white pl-9 pr-3 py-2 text-sm font-semibold text-[#1a1a2e] outline-none focus:ring-2 focus:ring-[#A8D5BA]/40"
+                            />
+                        </div>
+                        {normalizedQuery && (
+                            <p className="mt-2 text-[11px] font-bold text-gray-500">
+                                Showing {filteredData.length} result{filteredData.length === 1 ? '' : 's'} for "{query}"
+                            </p>
+                        )}
+                    </div>
+
                     {isLoading ? (
                         <div className="h-[500px] flex flex-col items-center justify-center px-6">
                             {/* Animated Loading State with Skeleton */}
@@ -185,10 +212,10 @@ export default function LeaderboardPage() {
                                 </motion.div>
                             </motion.div>
                         </div>
-                    ) : currentData && currentData.length > 0 ? (
+                    ) : filteredData && filteredData.length > 0 ? (
                         <div className="p-4 md:p-8">
                             <div className="space-y-3">
-                                {currentData.map((entry: any, index: number) => {
+                                {filteredData.map((entry: any, index: number) => {
                                     const rank = entry.rank || index + 1;
                                     const isMe = entry.userId === user?.id;
                                     return (
@@ -264,9 +291,13 @@ export default function LeaderboardPage() {
                             <div className="w-24 h-24 bg-gray-50 rounded-[40px] flex items-center justify-center text-gray-200 mb-6">
                                 <Trophy size={48} />
                             </div>
-                            <h3 className="text-xl font-black text-[#1a1a2e] mb-2">The Stadium is Empty</h3>
+                            <h3 className="text-xl font-black text-[#1a1a2e] mb-2">
+                                {normalizedQuery ? 'No Matching Players' : 'The Stadium is Empty'}
+                            </h3>
                             <p className="text-sm font-bold text-gray-400 uppercase tracking-widest italic max-w-xs">
-                                No intel recovered in this sector yet. Be the first to claim your spot on the grid!
+                                {normalizedQuery
+                                    ? 'Try another username, city, or rank search.'
+                                    : 'No intel recovered in this sector yet. Be the first to claim your spot on the grid!'}
                             </p>
                         </div>
                     )}
