@@ -104,7 +104,6 @@ services:
   - type: cron
     name: territory-run-decay
     runtime: node
-    plan: free
     branch: main
     rootDir: backend
     buildCommand: npm install
@@ -120,7 +119,6 @@ services:
   - type: cron
     name: territory-run-leaderboard
     runtime: node
-    plan: free
     branch: main
     rootDir: backend
     buildCommand: npm install
@@ -136,7 +134,6 @@ services:
   - type: cron
     name: territory-run-blockchain
     runtime: node
-    plan: free
     branch: main
     rootDir: backend
     buildCommand: npm install
@@ -154,7 +151,6 @@ services:
   - type: cron
     name: territory-run-rag-ingest
     runtime: node
-    plan: free
     branch: main
     rootDir: backend
     buildCommand: npm install
