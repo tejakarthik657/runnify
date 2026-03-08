@@ -32,7 +32,10 @@ $services = @(
     @{Name="02-hex-analyzer"; Port=8002},
     @{Name="03-engagement-engine"; Port=8003},
     @{Name="04-leaderboard-predictor"; Port=8004},
+    @{Name="05-territory-analyzer"; Port=8005},
     @{Name="06-route-optimization"; Port=8006},
+    @{Name="07-elevation-analyzer"; Port=8007},
+    @{Name="08-heatmap-generator"; Port=8008},
     @{Name="11-badge-generator"; Port=8011},
     @{Name="16-challenge-recommender"; Port=8016},
     @{Name="17-run-name-generator"; Port=8017},
@@ -85,7 +88,10 @@ if ($jobs.Count -gt 0) {
     Write-Host "  • /python/hex/*         → Hex Analyzer (8002)" -ForegroundColor Gray
     Write-Host "  • /python/engagement/*  → Engagement Engine (8003)" -ForegroundColor Gray
     Write-Host "  • /python/leaderboard/* → Leaderboard Predictor (8004)" -ForegroundColor Gray
+    Write-Host "  • /python/territory/*   → Territory Analyzer (8005)" -ForegroundColor Gray
     Write-Host "  • /python/routes/*      → Route Optimizer (8006)" -ForegroundColor Gray
+    Write-Host "  • /python/elevation/*   → Elevation Analyzer (8007)" -ForegroundColor Gray
+    Write-Host "  • /python/heatmap/*     → Heatmap Generator (8008)" -ForegroundColor Gray
     Write-Host "  • /python/badges/*      → Badge Generator (8011)" -ForegroundColor Gray
     Write-Host "  • /python/challenges/*  → Challenge Recommender (8016)" -ForegroundColor Gray
     Write-Host "  • /python/names/*       → Name Generator (8017)" -ForegroundColor Gray

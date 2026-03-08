@@ -116,9 +116,21 @@ const PYTHON_SERVICES = {
     localPort: 8004,
     envUrl: process.env.PY_LEADERBOARD_URL,
   },
+  territory: {
+    localPort: 8005,
+    envUrl: process.env.PY_TERRITORY_URL,
+  },
   routes: {
     localPort: 8006,
     envUrl: process.env.PY_ROUTES_URL,
+  },
+  elevation: {
+    localPort: 8007,
+    envUrl: process.env.PY_ELEVATION_URL,
+  },
+  heatmap: {
+    localPort: 8008,
+    envUrl: process.env.PY_HEATMAP_URL,
   },
   badges: {
     localPort: 8011,

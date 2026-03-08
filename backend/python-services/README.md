@@ -12,14 +12,17 @@
 | **02: Hex Analyzer** | 8002 | Territory analysis, expansion suggestions | ✅ Implemented |
 | **03: Engagement Engine** | 8003 | Engagement scores, churn prediction | ✅ Implemented |
 | **04: Leaderboard Predictor** | 8004 | Predict rank movement and points gaps | ✅ Implemented |
+| **05: Territory Analyzer** | 8005 | Expansion path and vulnerability analysis | ✅ Implemented |
 | **06: Route Optimizer** | 8006 | Route waypoints, yield estimate, safe zones | ✅ Implemented |
+| **07: Elevation Analyzer** | 8007 | Elevation gain/loss and terrain difficulty | ✅ Implemented |
+| **08: Heatmap Generator** | 8008 | User and area activity heatmap data | ✅ Implemented |
 | **11: Badge Generator** | 8011 | Achievement badges, QR codes (PIL) | ✅ Implemented |
 | **16: Challenge Recommender** | 8016 | Personalized challenge recommendations | ✅ Implemented |
 | **17: Name Generator** | 8017 | Creative run names | ✅ Implemented |
 | **18: Streak Calculator** | 8018 | Streak tracking, milestone predictions | ✅ Implemented |
 | **19: Credit Optimizer** | 8019 | Optimize credit earning routes | ✅ Implemented |
 
-**Status:** 10 of 20 services implemented and production-ready
+**Status:** 13 of 20 services implemented and production-ready
 
 ## 🚀 Quick Start
 

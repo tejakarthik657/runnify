@@ -16,7 +16,10 @@ SERVICES = [
     ('02-hex-analyzer', 8002),
     ('03-engagement-engine', 8003),
     ('04-leaderboard-predictor', 8004),
+    ('05-territory-analyzer', 8005),
     ('06-route-optimization', 8006),
+    ('07-elevation-analyzer', 8007),
+    ('08-heatmap-generator', 8008),
     ('11-badge-generator', 8011),
     ('16-challenge-recommender', 8016),
     ('17-run-name-generator', 8017),
@@ -124,7 +127,10 @@ def main():
         print("  • /python/hex/*         → Hex Analyzer (8002)")
         print("  • /python/engagement/*  → Engagement Engine (8003)")
         print("  • /python/leaderboard/* → Leaderboard Predictor (8004)")
+        print("  • /python/territory/*   → Territory Analyzer (8005)")
         print("  • /python/routes/*      → Route Optimizer (8006)")
+        print("  • /python/elevation/*   → Elevation Analyzer (8007)")
+        print("  • /python/heatmap/*     → Heatmap Generator (8008)")
         print("  • /python/badges/*      → Badge Generator (8011)")
         print("  • /python/challenges/*  → Challenge Recommender (8016)")
         print("  • /python/names/*       → Name Generator (8017)")

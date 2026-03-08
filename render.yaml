@@ -53,8 +53,14 @@ services:
         value: https://territory-run-py-engagement.onrender.com
       - key: PY_LEADERBOARD_URL
         value: https://territory-run-py-leaderboard.onrender.com
+      - key: PY_TERRITORY_URL
+        value: https://territory-run-py-territory.onrender.com
       - key: PY_ROUTES_URL
         value: https://territory-run-py-routes.onrender.com
+      - key: PY_ELEVATION_URL
+        value: https://territory-run-py-elevation.onrender.com
+      - key: PY_HEATMAP_URL
+        value: https://territory-run-py-heatmap.onrender.com
       - key: PY_BADGES_URL
         value: https://territory-run-py-badges.onrender.com
       - key: PY_CHALLENGES_URL
@@ -222,6 +228,21 @@ services:
         sync: false
 
   - type: web
+    name: territory-run-py-territory
+    runtime: python
+    plan: free
+    branch: main
+    rootDir: backend/python-services
+    buildCommand: pip install -r requirements.txt
+    startCommand: cd 05-territory-analyzer && uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+
+  - type: web
     name: territory-run-py-routes
     runtime: python
     plan: free
@@ -229,6 +250,36 @@ services:
     rootDir: backend/python-services
     buildCommand: pip install -r requirements.txt
     startCommand: cd 06-route-optimization && uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+
+  - type: web
+    name: territory-run-py-elevation
+    runtime: python
+    plan: free
+    branch: main
+    rootDir: backend/python-services
+    buildCommand: pip install -r requirements.txt
+    startCommand: cd 07-elevation-analyzer && uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+
+  - type: web
+    name: territory-run-py-heatmap
+    runtime: python
+    plan: free
+    branch: main
+    rootDir: backend/python-services
+    buildCommand: pip install -r requirements.txt
+    startCommand: cd 08-heatmap-generator && uvicorn main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
