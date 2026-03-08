@@ -24,7 +24,6 @@ import { toast } from 'react-hot-toast';
 import api from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import Badge from '../../components/ui/Badge';
-import MinimizableStepCounter from '../../components/ui/MinimizableStepCounter';
 import { useGps } from '../../hooks/useGps';
 import { useStepCounter } from '../../hooks/useStepCounter';
 
@@ -448,15 +447,16 @@ export default function RunPage() {
                     <div className="absolute top-[-20%] left-[-10%] w-64 h-64 bg-[#A8D5BA] opacity-10 rounded-full blur-3xl animate-pulse" />
                 </motion.div>
 
-                {/* Step Counter Display */}
+                {/* Live Step Counter Chip */}
                 {isRunning && (
-                    <MinimizableStepCounter
-                        steps={stats.steps}
-                        stepRate={stepRate}
-                        cadence={cadence}
-                        isDetecting={isDetecting}
-                        accuracy="High"
-                    />
+                    <div className="flex items-center justify-center gap-2">
+                        <div className="inline-flex items-center gap-2 rounded-full border border-[#A8D5BA]/50 bg-white/90 px-4 py-2 shadow-sm backdrop-blur">
+                            <Activity size={14} className={`${isDetecting ? 'text-emerald-600' : 'text-gray-400'}`} />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Steps</span>
+                            <span className="text-base font-black tabular-nums text-[#1a1a2e]">{stats.steps.toLocaleString()}</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">live</span>
+                        </div>
+                    </div>
                 )}
 
                 {/* KPI Grid */}
@@ -566,7 +566,7 @@ export default function RunPage() {
                 </div>
 
                 {/* GPS Status Footer */}
-                <div className="flex items-center justify-center gap-3 py-4">
+                <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 py-4">
                     <div className={`w-2 h-2 rounded-full ${position && position.accuracy < 20 ? 'bg-green-500' : 'bg-orange-500 animate-pulse'}`} />
                     <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
                         {position ? `GPS Accuracy: ${Math.round(position.accuracy)}m • Quality: ${trackQuality}` : 'Searching for Signal...'}

@@ -87,10 +87,17 @@ export function useStepCounter({
 
     // Hysteresis detector to avoid double-counting on one stride
     if (!wasAboveThresholdRef.current && signal >= STEP_DETECTION_CONFIG.THRESHOLD_RISE) {
-      if (
-        timeSinceLastStep >= STEP_DETECTION_CONFIG.MIN_STEP_INTERVAL_MS &&
-        timeSinceLastStep <= STEP_DETECTION_CONFIG.MAX_STEP_INTERVAL_MS
-      ) {
+      // Allow first detected step even after long idle time,
+      // then apply cadence window constraints for subsequent steps.
+      const isFirstStep = stepCountRef.current === 0;
+      const validInterval = isFirstStep
+        ? timeSinceLastStep >= STEP_DETECTION_CONFIG.MIN_STEP_INTERVAL_MS
+        : (
+            timeSinceLastStep >= STEP_DETECTION_CONFIG.MIN_STEP_INTERVAL_MS &&
+            timeSinceLastStep <= STEP_DETECTION_CONFIG.MAX_STEP_INTERVAL_MS
+          );
+
+      if (validInterval) {
         stepCountRef.current++;
         lastStepTimeRef.current = now;
 
