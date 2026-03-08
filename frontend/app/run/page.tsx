@@ -12,7 +12,9 @@ import {
     Activity,
     Navigation,
     Wind,
-    Radio
+    Radio,
+    ShieldAlert,
+    Wrench
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -43,6 +45,11 @@ export default function RunPage() {
     const [gpsError, setGpsError] = useState<string | null>(null);
     const [isAcquiringGps, setIsAcquiringGps] = useState(false);
     const [gpsAcquisitionTip, setGpsAcquisitionTip] = useState(0);
+    const [showPreflight, setShowPreflight] = useState(false);
+    const [showGpsHelper, setShowGpsHelper] = useState(false);
+    const [warmupCountdown, setWarmupCountdown] = useState(0);
+    const [anomalyCount, setAnomalyCount] = useState(0);
+    const [trackQuality, setTrackQuality] = useState<'high' | 'medium' | 'low'>('medium');
     const accelStepsRef = useRef(0);
     const gpsFallbackStepsRef = useRef(0);
     const lastGpsPointRef = useRef<{ lat: number; lng: number } | null>(null);
@@ -97,6 +104,11 @@ export default function RunPage() {
         if (!isRunning || !runId) return;
 
         const nowTs = Date.now();
+        const accuracy = point.accuracy || 10;
+        const quality: 'high' | 'medium' | 'low' = accuracy <= 15 ? 'high' : accuracy <= 35 ? 'medium' : 'low';
+        setTrackQuality(quality);
+        localStorage.setItem('tr_track_quality', quality);
+        localStorage.setItem('tr_last_gps_ts', String(nowTs));
         if (lastGpsPointRef.current && lastGpsTsRef.current) {
             const addedKm = getDistanceKm(lastGpsPointRef.current.lat, lastGpsPointRef.current.lng, point.lat, point.lng);
             const addedMeters = addedKm * 1000;
@@ -120,6 +132,8 @@ export default function RunPage() {
                         steps: mergedSteps,
                     };
                 });
+            } else {
+                setAnomalyCount(prev => prev + 1);
             }
         }
 
@@ -135,9 +149,16 @@ export default function RunPage() {
                     timestamp: Date.now()
                 }
             ]
+        }).then(() => {
+            const pending = Number(localStorage.getItem('pendingGpsQueue') || '0');
+            if (pending > 0) {
+                localStorage.setItem('pendingGpsQueue', String(Math.max(0, pending - 1)));
+            }
         }).catch(err => {
             const errorMsg = err.response?.data?.error || err.message;
             console.error('[GPS Upload Failed]', { message: errorMsg, status: err.response?.status });
+            const pending = Number(localStorage.getItem('pendingGpsQueue') || '0') + 1;
+            localStorage.setItem('pendingGpsQueue', String(pending));
         });
     }, [isRunning, runId, getDistanceKm, isDetecting]);
 
@@ -156,6 +177,40 @@ export default function RunPage() {
     }, []);
 
     useEffect(() => {
+        if (!isRunning) return;
+        localStorage.setItem('tr_run_session', JSON.stringify({
+            active: true,
+            startedAt: Date.now() - (stats.time * 1000),
+            distance: stats.distance,
+            steps: stats.steps,
+        }));
+    }, [isRunning, stats.time, stats.distance, stats.steps]);
+
+    useEffect(() => {
+        const checkPreflight = async () => {
+            try {
+                const geoUnsupported = !('geolocation' in navigator);
+                const motionNeeded = typeof window !== 'undefined' && 'DeviceMotionEvent' in window;
+                if (geoUnsupported) {
+                    setShowPreflight(true);
+                    return;
+                }
+                if ((navigator as any).permissions?.query) {
+                    const geo = await (navigator as any).permissions.query({ name: 'geolocation' });
+                    if (geo.state === 'denied') {
+                        setShowPreflight(true);
+                    }
+                }
+                if (motionNeeded && (DeviceMotionEvent as any)?.requestPermission) {
+                    // iOS users usually need explicit prompt, show helper card before first run
+                    setShowPreflight(true);
+                }
+            } catch {
+                // non-blocking
+            }
+        };
+        checkPreflight();
+
         const checkActiveRun = async () => {
             try {
                 const { data } = await api.get('/run/active');
@@ -177,6 +232,12 @@ export default function RunPage() {
                     gpsFallbackStepsRef.current = accelStepsRef.current;
                     startTimer();
                     startStepCounter();
+                    localStorage.setItem('tr_run_session', JSON.stringify({
+                        active: true,
+                        startedAt,
+                        distance: run.distanceKm || 0,
+                        steps: Math.max(0, Math.round((run.distanceKm || 0) * 1312)),
+                    }));
                 }
             } catch (error) { /* No active run */ }
         };
@@ -214,6 +275,15 @@ export default function RunPage() {
             }
 
             clearInterval(tipInterval);
+
+            // Warm-up phase for better first-point stability
+            setWarmupCountdown(10);
+            for (let i = 10; i > 0; i--) {
+                setWarmupCountdown(i);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            setWarmupCountdown(0);
+
             const { data } = await api.post('/run/start', {
                 startPos: {
                     lat: position.lat,
@@ -231,6 +301,11 @@ export default function RunPage() {
             startGps();
             startStepCounter();
             startTimer();
+            setAnomalyCount(0);
+            localStorage.setItem('tr_run_session', JSON.stringify({ active: true, startedAt: Date.now(), distance: 0, steps: 0 }));
+            if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+                navigator.vibrate([60, 40, 60]);
+            }
             toast.success('Campaign Initiated');
         } catch (error: any) {
             clearInterval(tipInterval);
@@ -279,7 +354,12 @@ export default function RunPage() {
             gpsFallbackStepsRef.current = 0;
             lastGpsPointRef.current = null;
             lastGpsTsRef.current = null;
-            toast.success(`Mission Accomplished • ${data?.summary?.hexesClaimed || 0} claims • ${data?.summary?.creditsEarned || 0} TRC`);
+            localStorage.setItem('tr_run_session', JSON.stringify({ active: false }));
+            if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+                navigator.vibrate([90, 40, 120]);
+            }
+            const flagText = anomalyCount > 0 ? ` • ${anomalyCount} anomaly flag${anomalyCount > 1 ? 's' : ''}` : '';
+            toast.success(`Mission Accomplished • ${data?.summary?.hexesClaimed || 0} claims • ${data?.summary?.creditsEarned || 0} TRC${flagText}`);
             
             // Navigate to map page after mission ends
             router.push('/map');
@@ -339,6 +419,17 @@ export default function RunPage() {
             </div>
 
             <div className="max-w-2xl mx-auto space-y-6 sm:space-y-8">
+                {showPreflight && (
+                    <div className="bg-[#FFF8F1] border border-[#FFD8A8] rounded-2xl p-4 flex items-start gap-3">
+                        <ShieldAlert size={18} className="text-[#B45309] mt-0.5" />
+                        <div className="min-w-0">
+                            <p className="text-xs font-black uppercase tracking-widest text-[#B45309]">Permissions Preflight</p>
+                            <p className="text-sm font-semibold text-[#7C2D12]">Enable precise location and motion permissions for Uber-like live tracking accuracy.</p>
+                            <button onClick={() => setShowPreflight(false)} className="mt-2 px-3 py-1.5 rounded-lg bg-white border border-[#F2C28E] text-[11px] font-black uppercase tracking-wider text-[#92400E]">I have enabled them</button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Dynamic Timer Display */}
                 <motion.div
                     layout
@@ -478,8 +569,11 @@ export default function RunPage() {
                 <div className="flex items-center justify-center gap-3 py-4">
                     <div className={`w-2 h-2 rounded-full ${position && position.accuracy < 20 ? 'bg-green-500' : 'bg-orange-500 animate-pulse'}`} />
                     <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                        {position ? `GPS Accuracy: ${Math.round(position.accuracy)}m` : 'Searching for Signal...'}
+                        {position ? `GPS Accuracy: ${Math.round(position.accuracy)}m • Quality: ${trackQuality}` : 'Searching for Signal...'}
                     </span>
+                    <button onClick={() => setShowGpsHelper(true)} className="px-2 py-1 rounded-lg bg-white border border-black/10 text-[9px] font-black uppercase tracking-wider text-[#1a1a2e] inline-flex items-center gap-1">
+                        <Wrench size={11} /> Fix GPS
+                    </button>
                 </div>
             </div>
 
@@ -575,6 +669,35 @@ export default function RunPage() {
                                 </motion.div>
                             </div>
                         </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {warmupCountdown > 0 && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[3100] bg-black/50 backdrop-blur-sm flex items-center justify-center">
+                        <div className="bg-white rounded-3xl border border-black/10 p-8 text-center">
+                            <p className="text-xs font-black uppercase tracking-widest text-gray-500">Warm-up</p>
+                            <p className="text-6xl font-black text-[#1a1a2e] tabular-nums mt-2">{warmupCountdown}</p>
+                            <p className="text-sm font-semibold text-gray-600 mt-2">Hold steady for cleaner first GPS trace</p>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {showGpsHelper && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[3200] bg-black/35 p-4" onClick={() => setShowGpsHelper(false)}>
+                        <div onClick={(e) => e.stopPropagation()} className="max-w-md mx-auto mt-[18vh] bg-white rounded-3xl border border-black/10 p-5 shadow-2xl">
+                            <h3 className="text-sm font-black text-[#1a1a2e] mb-3">One-Tap GPS Recovery</h3>
+                            <ol className="list-decimal pl-5 space-y-1 text-sm font-semibold text-gray-700">
+                                <li>Move to open sky for 20-30 seconds.</li>
+                                <li>Disable battery saver/location throttling.</li>
+                                <li>Keep the app screen active while running.</li>
+                                <li>Re-enter Run page if signal is stale for more than 20s.</li>
+                            </ol>
+                            <button onClick={() => setShowGpsHelper(false)} className="mt-4 w-full px-4 py-2 rounded-xl bg-[#1a1a2e] text-white text-xs font-black uppercase tracking-wider">Got it</button>
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>

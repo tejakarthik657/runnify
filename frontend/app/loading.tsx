@@ -88,6 +88,15 @@ export default function Loading() {
                 <Hexagon size={16} fill="#A8D5BA" className="text-[#A8D5BA]" />
                 <span className="text-[9px] font-black uppercase tracking-[0.6em] text-[#1A1A2E]">TR_CORE_OS</span>
             </div>
+
+            {/* 6. Context Skeleton Blocks */}
+            <div className="absolute left-4 right-4 top-6 z-10 max-w-5xl mx-auto hidden md:block">
+                <div className="grid grid-cols-4 gap-3 opacity-60">
+                    {[...Array(4)].map((_, i) => (
+                        <div key={i} className="h-16 rounded-2xl bg-white/70 border border-black/5 animate-pulse" />
+                    ))}
+                </div>
+            </div>
         </div>
     );
 }

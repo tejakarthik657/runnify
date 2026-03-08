@@ -56,6 +56,7 @@ export default function MapPage() {
     const [runPath, setRunPath] = useState<[number, number][]>([]);
     const [activeRunners, setActiveRunners] = useState<Record<string, any>>({});
     const [nearestRunner, setNearestRunner] = useState<{ name: string, dist: number } | null>(null);
+    const [traceQuality, setTraceQuality] = useState<'high' | 'medium' | 'low'>('medium');
     const [followUser, setFollowUser] = useState(true);
     const isRunningRef = useRef(false);
     const runIdRef = useRef<string | null>(null);
@@ -123,6 +124,9 @@ export default function MapPage() {
 
         // Production-grade accuracy filtering with adaptive threshold based on movement
         const accuracy = point.accuracy ?? 999;
+        const quality: 'high' | 'medium' | 'low' = accuracy <= 15 ? 'high' : accuracy <= 35 ? 'medium' : 'low';
+        setTraceQuality(quality);
+        localStorage.setItem('tr_track_quality', quality);
         if (!lastGpsPoint.current) {
             // First point - just record it with lenient threshold
             lastGpsPoint.current = { ...point, accuracy };
@@ -168,6 +172,7 @@ export default function MapPage() {
         // Point validated - update reference ONLY after all checks pass
         lastGpsPoint.current = { ...point, accuracy };
         lastGpsTs.current = nowTs;
+        localStorage.setItem('tr_last_gps_ts', String(nowTs));
         const addedDist = addedDistKm;
 
         // Broadcast to other connected users with enhanced data
@@ -309,6 +314,12 @@ export default function MapPage() {
                     gpsFallbackStepsRef.current = accelStepsRef.current;
                     // Enable follow mode for live tracking when resuming run
                     setFollowUser(true);
+                    localStorage.setItem('tr_run_session', JSON.stringify({
+                        active: true,
+                        startedAt,
+                        distance: run.distanceKm || 0,
+                        steps: Math.max(0, Math.round((run.distanceKm || 0) * 1312)),
+                    }));
                     startTimer();
                     startGps();
                     startStepCounter();
@@ -361,6 +372,12 @@ export default function MapPage() {
             startGps();
             startStepCounter();
             socket?.emit('run_start', { runId: data.run._id, lat: position.lat, lng: position.lng });
+            localStorage.setItem('tr_run_session', JSON.stringify({
+                active: true,
+                startedAt: Date.now(),
+                distance: 0,
+                steps: 0,
+            }));
         } catch (error: any) {
             const errorMessage = error.response?.data?.error || 'Could not initialize campaign. Check linkage.';
             toast.error(errorMessage);
@@ -411,6 +428,7 @@ export default function MapPage() {
             accelStepsRef.current = 0;
             gpsFallbackStepsRef.current = 0;
             lastGpsTs.current = null;
+            localStorage.setItem('tr_run_session', JSON.stringify({ active: false }));
         } catch (error: any) {
             // Retry logic with exponential backoff
             if (attemptNumber < MAX_RETRIES && (error.code === 'ABORT_ERR' || error.response?.status >= 500)) {
@@ -623,6 +641,16 @@ export default function MapPage() {
         return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     };
 
+    useEffect(() => {
+        if (!isRunningRef.current) return;
+        localStorage.setItem('tr_run_session', JSON.stringify({
+            active: true,
+            startedAt: Date.now() - (stats.time * 1000),
+            distance: stats.distance,
+            steps: stats.steps,
+        }));
+    }, [stats.time, stats.distance, stats.steps]);
+
     return (
         <div className="h-screen w-full flex flex-col overflow-hidden relative bg-[#F4F7F4]">
             {/* War Banner - Global Faction Status */}
@@ -638,7 +666,7 @@ export default function MapPage() {
                     <div className="flex bg-white rounded-2xl border border-black/5 shadow-lg px-4 py-2 items-center gap-3 pointer-events-auto">
                         <div className={`w-2 h-2 rounded-full ${position && position.accuracy !== null && position.accuracy < 20 ? 'bg-green-500' : 'bg-orange-500 animate-pulse'}`} />
                         <span className="text-[11px] font-black text-[#1a1a2e] tracking-tight">
-                            {position && position.accuracy !== null ? `Signal: ${Math.round(position.accuracy)}m` : 'Locating Satellites...'}
+                            {position && position.accuracy !== null ? `Signal: ${Math.round(position.accuracy)}m • ${traceQuality}` : 'Locating Satellites...'}
                         </span>
                         <span className="ml-2 text-[8px] opacity-30">V1.0.3</span>
                     </div>
@@ -735,6 +763,7 @@ export default function MapPage() {
                         isRunning={isRunning}
                         runPath={runPath}
                         userColor={user?.color || '#A8D5BA'}
+                        traceQuality={traceQuality}
                         position={position}
                         accuracy={position?.accuracy || 10}
                         activeRunners={activeRunners}

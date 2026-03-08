@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Globe, MapPin, ChevronRight, Loader2, ArrowLeft, TrendingUp, Medal, Zap, Search } from 'lucide-react';
 import Link from 'next/link';
@@ -14,6 +14,8 @@ export default function LeaderboardPage() {
     const [scope, setScope] = useState<'global' | 'city'>('global');
     const [period, setPeriod] = useState<'alltime' | '24hour'>('alltime');
     const [query, setQuery] = useState('');
+    const [sortBy, setSortBy] = useState<'rank' | 'credits' | 'distance' | 'hexes'>('rank');
+    const [previewEntry, setPreviewEntry] = useState<any | null>(null);
 
     const { entries, meRank, isLoading } = useRealtimeLeaderboard(scope, userCity, period);
     const currentData = entries;
@@ -26,6 +28,30 @@ export default function LeaderboardPage() {
             return username.includes(normalizedQuery) || city.includes(normalizedQuery) || rank.includes(normalizedQuery);
         })
         : currentData;
+
+    useEffect(() => {
+        try {
+            const saved = JSON.parse(localStorage.getItem('leaderboard_filters') || '{}');
+            if (saved.scope) setScope(saved.scope);
+            if (saved.period) setPeriod(saved.period);
+            if (saved.query) setQuery(saved.query);
+            if (saved.sortBy) setSortBy(saved.sortBy);
+        } catch {
+            // ignore invalid storage
+        }
+    }, []);
+
+    useEffect(() => {
+        localStorage.setItem('leaderboard_filters', JSON.stringify({ scope, period, query, sortBy }));
+    }, [scope, period, query, sortBy]);
+
+    const sortedData = useMemo(() => {
+        const list = [...filteredData];
+        if (sortBy === 'rank') return list.sort((a, b) => (a.rank || 9999) - (b.rank || 9999));
+        if (sortBy === 'credits') return list.sort((a, b) => (b.credits || 0) - (a.credits || 0));
+        if (sortBy === 'distance') return list.sort((a, b) => (b.totalKm || 0) - (a.totalKm || 0));
+        return list.sort((a, b) => (b.hexesOwned || 0) - (a.hexesOwned || 0));
+    }, [filteredData, sortBy]);
 
     return (
         <div className="min-h-screen pb-20">
@@ -135,7 +161,8 @@ export default function LeaderboardPage() {
                 {/* Leaderboard Table Container */}
                 <div className="bg-white rounded-[40px] border border-black/5 shadow-sm overflow-hidden min-h-[500px]">
                     <div className="p-4 md:px-8 md:pt-8 md:pb-2 border-b border-black/5 bg-[#FAFCFA]">
-                        <div className="relative max-w-md">
+                        <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
+                        <div className="relative max-w-md w-full">
                             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                             <input
                                 value={query}
@@ -143,6 +170,23 @@ export default function LeaderboardPage() {
                                 placeholder="Search by username, city, or rank"
                                 className="w-full rounded-xl border border-black/10 bg-white pl-9 pr-3 py-2 text-sm font-semibold text-[#1a1a2e] outline-none focus:ring-2 focus:ring-[#A8D5BA]/40"
                             />
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {([
+                                { key: 'rank', label: 'Rank' },
+                                { key: 'credits', label: 'TRC' },
+                                { key: 'distance', label: 'KM' },
+                                { key: 'hexes', label: 'Hex' },
+                            ] as const).map((s) => (
+                                <button
+                                    key={s.key}
+                                    onClick={() => setSortBy(s.key)}
+                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider border ${sortBy === s.key ? 'bg-[#A8D5BA] text-white border-[#A8D5BA]' : 'bg-white text-[#1a1a2e] border-black/10'}`}
+                                >
+                                    {s.label}
+                                </button>
+                            ))}
+                        </div>
                         </div>
                         {normalizedQuery && (
                             <p className="mt-2 text-[11px] font-bold text-gray-500">
@@ -212,10 +256,10 @@ export default function LeaderboardPage() {
                                 </motion.div>
                             </motion.div>
                         </div>
-                    ) : filteredData && filteredData.length > 0 ? (
+                    ) : sortedData && sortedData.length > 0 ? (
                         <div className="p-4 md:p-8">
                             <div className="space-y-3">
-                                {filteredData.map((entry: any, index: number) => {
+                                {sortedData.map((entry: any, index: number) => {
                                     const rank = entry.rank || index + 1;
                                     const isMe = entry.userId === user?.id;
                                     return (
@@ -228,6 +272,7 @@ export default function LeaderboardPage() {
                                                 group flex items-center justify-between p-5 rounded-3xl transition-all border
                                                 ${isMe ? 'bg-[#F0F7F4] border-[#A8D5BA]/30 shadow-sm' : 'bg-gray-50/50 border-transparent hover:bg-white hover:border-black/5 hover:shadow-md'}
                                             `}
+                                            onClick={() => setPreviewEntry(entry)}
                                         >
                                             <div className="flex items-center gap-6">
                                                 <div className="w-12 text-center">
@@ -299,10 +344,29 @@ export default function LeaderboardPage() {
                                     ? 'Try another username, city, or rank search.'
                                     : 'No intel recovered in this sector yet. Be the first to claim your spot on the grid!'}
                             </p>
+                            <Link href="/run" className="mt-5 inline-flex items-center px-4 py-2 rounded-xl bg-[#1a1a2e] text-white text-xs font-black uppercase tracking-wider">Start Your First Run</Link>
                         </div>
                     )}
                 </div>
             </div>
+
+            <AnimatePresence>
+                {previewEntry && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[1200] bg-black/35 p-4" onClick={() => setPreviewEntry(null)}>
+                        <motion.div initial={{ scale: 0.96, y: 16 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.96, y: 16 }} onClick={(e) => e.stopPropagation()} className="max-w-md mx-auto mt-[16vh] bg-white rounded-3xl border border-black/10 p-5 shadow-2xl">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Player Snapshot</p>
+                            <h3 className="text-xl font-black text-[#1a1a2e] mt-1">{previewEntry.username}</h3>
+                            <div className="mt-4 grid grid-cols-2 gap-3 text-sm font-semibold text-gray-700">
+                                <div className="rounded-xl bg-[#F8FAFB] p-3">Rank: <span className="font-black text-[#1a1a2e]">#{previewEntry.rank || '-'}</span></div>
+                                <div className="rounded-xl bg-[#F8FAFB] p-3">TRC: <span className="font-black text-[#1a1a2e]">{(previewEntry.credits || 0).toLocaleString()}</span></div>
+                                <div className="rounded-xl bg-[#F8FAFB] p-3">Distance: <span className="font-black text-[#1a1a2e]">{Math.round(previewEntry.totalKm || 0)} km</span></div>
+                                <div className="rounded-xl bg-[#F8FAFB] p-3">Hexes: <span className="font-black text-[#1a1a2e]">{previewEntry.hexesOwned || 0}</span></div>
+                            </div>
+                            <button onClick={() => setPreviewEntry(null)} className="mt-4 w-full px-4 py-2 rounded-xl bg-[#1a1a2e] text-white text-xs font-black uppercase tracking-wider">Close</button>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

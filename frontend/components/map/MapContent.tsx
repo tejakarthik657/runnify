@@ -11,6 +11,7 @@ interface MapContentProps {
     isRunning: boolean;
     runPath: [number, number][];
     userColor: string;
+    traceQuality?: 'high' | 'medium' | 'low';
     position: { lat: number | null; lng: number | null } | null;
     accuracy?: number;
     activeRunners: Record<string, any>;
@@ -23,6 +24,7 @@ export default function MapContent({
     isRunning,
     runPath,
     userColor,
+    traceQuality = 'medium',
     position,
     accuracy = 10,
     activeRunners,
@@ -56,7 +58,7 @@ export default function MapContent({
             {runPath.length > 0 && (
                 <Polyline
                     positions={runPath}
-                    color={userColor}
+                    color={traceQuality === 'high' ? userColor : traceQuality === 'medium' ? '#F4B35E' : '#E57373'}
                     weight={6}
                     opacity={isRunning ? 0.9 : 0.6}
                     lineJoin="round"

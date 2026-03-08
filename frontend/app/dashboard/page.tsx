@@ -203,6 +203,21 @@ export default function DashboardPage() {
                 />
             </div>
 
+            <div className="rounded-3xl border border-[#A8D5BA]/25 bg-gradient-to-r from-white to-[#F3FAF5] p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Faction Impact</p>
+                    <h3 className="text-lg font-black text-[#1a1a2e] mt-1">
+                        {currentUser?.faction
+                            ? `You are boosting ${currentUser.faction.toUpperCase()} control with every claimed hex.`
+                            : 'Choose a faction to unlock war impact multipliers.'}
+                    </h3>
+                    <p className="text-sm font-semibold text-gray-600 mt-1">Faction-aligned runs improve strategic territory pressure in live wars.</p>
+                </div>
+                <Link href="/faction" className="shrink-0 px-4 py-2 rounded-xl bg-[#1a1a2e] text-white text-xs font-black uppercase tracking-wider text-center">
+                    {currentUser?.faction ? 'Manage Faction' : 'Join Faction'}
+                </Link>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Left Column: Action & Activity */}
                 <div className="lg:col-span-2 space-y-8">

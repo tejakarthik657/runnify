@@ -7,6 +7,7 @@ import BottomNav from './layout/BottomNav';
 import Sidebar from './layout/Sidebar';
 import { motion, AnimatePresence } from 'framer-motion';
 import ChatPopup from './chat/ChatPopup';
+import GlobalUXLayer from './ux/GlobalUXLayer';
 
 // Section 5.1: Navigation Exclusion Logic
 const HIDE_NAV_ROUTES = ['/login', '/landing', '/register', '/'];
@@ -58,6 +59,7 @@ export default function NavigationWrapper({ children }: { children: React.ReactN
             )}
 
             <ChatPopup />
+            {!shouldHideNav && <GlobalUXLayer />}
         </div>
     );
 }
