@@ -11,7 +11,6 @@ import HeatmapGenerator from '@/components/python-features/HeatmapGenerator';
 
 export default function AnalyticsLabPage() {
   const [userId, setUserId] = useState<string>('');
-  const [showFeatures, setShowFeatures] = useState(false);
 
   // In real app, get from auth context
   useEffect(() => {
@@ -30,19 +29,18 @@ export default function AnalyticsLabPage() {
             Analytics Lab
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Advanced run intelligence, engagement tracking, and territory insights powered by
-            production microservices. <strong>Built for live users.</strong>
+            Advanced run intelligence, engagement tracking, and territory insights for your daily training.
+            <strong>Built for live users.</strong>
           </p>
           
           {/* Service Status */}
           <div className="flex flex-wrap justify-center gap-2 pt-4">
-            <ServiceStatusBadge port={8001} name="Stats" />
-            <ServiceStatusBadge port={8002} name="Hex" />
-            <ServiceStatusBadge port={8003} name="Engagement" />
-            <ServiceStatusBadge port={8011} name="Badges" />
-            <ServiceStatusBadge port={8017} name="Names" />
-            <ServiceStatusBadge port={8018} name="Streak" />
-            <ServiceStatusBadge port={8019} name="Credits" />
+            <ServiceStatusBadge name="Run Insights" />
+            <ServiceStatusBadge name="Territory IQ" />
+            <ServiceStatusBadge name="Engagement" />
+            <ServiceStatusBadge name="Milestones" />
+            <ServiceStatusBadge name="Streaks" />
+            <ServiceStatusBadge name="Route Value" />
           </div>
         </div>
 
@@ -51,7 +49,7 @@ export default function AnalyticsLabPage() {
           <>
             <div className="text-center mb-4">
               <h2 className="text-2xl font-black text-[#1a1a2e] uppercase">Analytics Core Services</h2>
-              <p className="text-sm text-gray-600">Original services (ports 8001-8019)</p>
+              <p className="text-sm text-gray-600">Your live performance, consistency, and territory intelligence</p>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
@@ -124,97 +122,65 @@ export default function AnalyticsLabPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-8">
           <InfoCard 
             icon="🚀"
-            title="7 Services Live"
-            description="Production-ready analytics services"
+            title="Live Analytics"
+            description="Insights update from your runs and activity"
           />
           <InfoCard 
             icon="💰"
-            title="100% Free"
-            description="No paid APIs or GPU needed"
+            title="Smarter Credits"
+            description="See where your routes earn more"
           />
           <InfoCard 
             icon="⚡"
-            title="300MB Total"
-            description="Lightweight & efficient"
+            title="Fast Feedback"
+            description="Pace, effort, and progress at a glance"
           />
           <InfoCard 
-            icon="🔌"
-            title="REST APIs"
-            description="FastAPI with Redis caching"
+            icon="🎯"
+            title="Goal Tracking"
+            description="Milestones, streaks, and consistency trends"
           />
         </div>
 
-        {/* Integration Code */}
-        <div className="bg-[#1a1a2e] rounded-xl p-6 text-white">
-          <h3 className="text-lg font-black uppercase mb-4 text-[#A8D5BA]">Quick Integration</h3>
-          <pre className="text-sm overflow-x-auto">
-            <code>{`import { getRunStatistics, getEngagementScore } from '@/services/pythonServices';
-
-// Get run statistics
-const stats = await getRunStatistics('user123', '30');
-console.log(stats.data.total_runs);
-
-// Get engagement score  
-const engagement = await getEngagementScore('user123');
-console.log(engagement.data.score); // 0-100
-
-// Frontend components
-<RunStatsCard userId="user123" />
-<EngagementScoreWidget userId="user123" />
-<StreakDisplay userId="user123" />`}</code>
-          </pre>
-        </div>
-
-        {/* Available Services */}
+        {/* What You Get */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="text-lg font-black uppercase mb-4">Available Analytics Services</h3>
+          <h3 className="text-lg font-black uppercase mb-4">What You Get</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <ServiceCard 
-              name="Run Statistics"
-              port={8001}
-              description="Calculate pace, PRs, weekly summaries, calories"
+              name="Run Intelligence"
+              description="Track pace trends, best efforts, and weekly progress"
             />
             <ServiceCard 
-              name="Hex Territory Analyzer"
-              port={8002}
-              description="Territory clusters, expansion suggestions"
+              name="Territory Strategy"
+              description="See hotspots, expansion opportunities, and weak zones"
             />
             <ServiceCard 
-              name="Engagement Engine"
-              port={8003}
-              description="0-100 score, churn prediction, patterns"
+              name="Engagement Score"
+              description="Understand consistency, momentum, and drop-off risk"
             />
             <ServiceCard 
-              name="Badge Generator"
-              port={8011}
-              description="Achievement badges, QR codes (PIL)"
+              name="Achievement System"
+              description="Earn badges and milestone unlocks as you improve"
             />
             <ServiceCard 
-              name="Run Name Generator"
-              port={8017}
-              description="Creative names for runs (epic, funny, motivational)"
+              name="Motivation Layer"
+              description="Smart run names and streak nudges to keep you moving"
             />
             <ServiceCard 
-              name="Streak Calculator"
-              port={8018}
-              description="Track streaks, predict milestones"
-            />
-            <ServiceCard 
-              name="Credit Optimizer"
-              port={8019}
-              description="Optimize routes for max credits"
+              name="Credit Optimization"
+              description="Find better route choices to maximize rewards"
             />
           </div>
         </div>
 
-        {/* Setup Instructions */}
+        {/* Tips */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
-          <h3 className="text-lg font-black uppercase mb-4 text-blue-900">🚀 Setup Instructions</h3>
+          <h3 className="text-lg font-black uppercase mb-4 text-blue-900">How To Use Analytics Lab</h3>
           <ol className="space-y-2 text-sm text-blue-900">
-            <li><strong>1.</strong> Install dependencies: <code className="bg-blue-100 px-2 py-1 rounded">pip install -r backend/python-services/requirements.txt</code></li>
-            <li><strong>2.</strong> Set environment variables: <code className="bg-blue-100 px-2 py-1 rounded">DATABASE_URL</code> and <code className="bg-blue-100 px-2 py-1 rounded">REDIS_URL</code></li>
-            <li><strong>3.</strong> Start services: <code className="bg-blue-100 px-2 py-1 rounded">python backend/python-services/start_services.py</code></li>
-            <li><strong>4.</strong> Access via API gateway: <code className="bg-blue-100 px-2 py-1 rounded">http://localhost:4000/python/stats/...</code></li>
+            <li><strong>1.</strong> Start a run and complete at least one session.</li>
+            <li><strong>2.</strong> Revisit this page to view updated pace, streak, and engagement metrics.</li>
+            <li><strong>3.</strong> Use territory and heatmap cards to pick your next high-impact route.</li>
+            <li><strong>4.</strong> Check progress weekly to improve consistency and unlock milestones.</li>
           </ol>
         </div>
       </div>
@@ -223,33 +189,11 @@ console.log(engagement.data.score); // 0-100
 }
 
 // Helper components
-function ServiceStatusBadge({ port, name }: { port: number; name: string }) {
-  const [status, setStatus] = useState<'checking' | 'online' | 'offline'>('checking');
-
-  useEffect(() => {
-    const checkHealth = async () => {
-      try {
-        const response = await fetch(`http://localhost:${port}/health`);
-        setStatus(response.ok ? 'online' : 'offline');
-      } catch {
-        setStatus('offline');
-      }
-    };
-    checkHealth();
-  }, [port]);
-
+function ServiceStatusBadge({ name }: { name: string }) {
   return (
-    <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
-      status === 'online' ? 'bg-emerald-50 border-emerald-500 text-emerald-700' :
-      status === 'offline' ? 'bg-red-50 border-red-300 text-red-600' :
-      'bg-gray-50 border-gray-300 text-gray-500'
-    }`}>
-      <span className={`w-2 h-2 rounded-full ${
-        status === 'online' ? 'bg-emerald-500' :
-        status === 'offline' ? 'bg-red-500' :
-        'bg-gray-400'
-      }`} />
-      {name} :{port}
+    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-emerald-50 border-emerald-500 text-emerald-700">
+      <span className="w-2 h-2 rounded-full bg-emerald-500" />
+      {name}
     </div>
   );
 }
@@ -264,15 +208,14 @@ function InfoCard({ icon, title, description }: { icon: string; title: string; d
   );
 }
 
-function ServiceCard({ name, port, description }: { name: string; port: number; description: string }) {
+function ServiceCard({ name, description }: { name: string; description: string }) {
   return (
     <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
       <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-[#A8D5BA] flex items-center justify-center text-white font-black text-sm">
-        {port.toString().slice(-2)}
+        ⬡
       </div>
       <div className="flex-1 min-w-0">
         <div className="font-black text-sm text-[#1a1a2e]">{name}</div>
-        <div className="text-xs text-gray-500 font-medium">:{port}</div>
         <div className="text-xs text-gray-600 mt-1">{description}</div>
       </div>
     </div>
