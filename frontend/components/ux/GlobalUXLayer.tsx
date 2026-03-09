@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Accessibility, Command, History, Wifi, WifiOff } from 'lucide-react';
 
@@ -13,20 +13,10 @@ const QUICK_LINKS = [
   { href: '/profile', label: 'Profile' },
 ];
 
-type RunSession = {
-  active: boolean;
-  startedAt?: number;
-  distance?: number;
-  steps?: number;
-};
-
 export default function GlobalUXLayer() {
   const [isOnline, setIsOnline] = useState(true);
   const [wasOffline, setWasOffline] = useState(false);
   const [queueCount, setQueueCount] = useState(0);
-  const [runSession, setRunSession] = useState<RunSession>({ active: false });
-  const [lastGpsTs, setLastGpsTs] = useState<number | null>(null);
-  const [trackQuality, setTrackQuality] = useState<'high' | 'medium' | 'low'>('medium');
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [a11yOpen, setA11yOpen] = useState(false);
   const [changelogOpen, setChangelogOpen] = useState(false);
@@ -37,11 +27,6 @@ export default function GlobalUXLayer() {
     const sync = () => {
       try {
         setQueueCount(Number(localStorage.getItem('pendingGpsQueue') || '0'));
-        setRunSession(JSON.parse(localStorage.getItem('tr_run_session') || '{"active":false}'));
-        const ts = Number(localStorage.getItem('tr_last_gps_ts') || '0');
-        setLastGpsTs(ts > 0 ? ts : null);
-        const q = (localStorage.getItem('tr_track_quality') || 'medium') as 'high' | 'medium' | 'low';
-        setTrackQuality(q);
       } catch {
         // ignore malformed local data
       }
@@ -98,13 +83,6 @@ export default function GlobalUXLayer() {
     localStorage.setItem('ux_high_contrast', String(highContrast));
   }, [highContrast]);
 
-  const freshness = useMemo(() => {
-    if (!lastGpsTs) return 'No GPS';
-    const sec = Math.max(0, Math.floor((Date.now() - lastGpsTs) / 1000));
-    if (sec < 5) return 'Live now';
-    return `${sec}s ago`;
-  }, [lastGpsTs]);
-
   return (
     <>
       <style>{`
@@ -130,20 +108,6 @@ export default function GlobalUXLayer() {
           </div>
         )}
       </div>
-
-      {runSession.active && (
-        <div className="fixed left-3 right-3 bottom-[84px] lg:bottom-4 z-[1100] bg-white/95 backdrop-blur border border-black/10 rounded-2xl px-4 py-3 shadow-lg">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">Active Run</div>
-              <div className="text-xs font-extrabold text-[#1a1a2e] truncate">
-                GPS: {freshness} • Quality: {trackQuality}
-              </div>
-            </div>
-            <Link href="/map" className="px-3 py-2 rounded-xl bg-[#1a1a2e] text-white text-[10px] font-black uppercase tracking-wider">Open Live Map</Link>
-          </div>
-        </div>
-      )}
 
       <div className="fixed left-3 bottom-[84px] lg:bottom-4 z-[1100] flex gap-2">
         <button onClick={() => setPaletteOpen(true)} className="w-10 h-10 rounded-xl bg-white border border-black/10 shadow flex items-center justify-center text-[#1a1a2e]" title="Command Palette">
