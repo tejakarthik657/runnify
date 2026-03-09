@@ -18,13 +18,15 @@ export default function StreakDisplay({ userId }: StreakDisplayProps) {
       try {
         setLoading(true);
         const streakResponse = await calculateStreak(userId);
-        const streakData = streakResponse.data;
+        const streakPayload = streakResponse as any;
+        const streakData = streakPayload.data ?? streakPayload;
         setStreak(streakData);
 
         // Fetch milestone if streak is active
         if (streakData.current_streak > 0) {
           const milestoneResponse = await predictNextMilestone(streakData.current_streak);
-          setMilestone(milestoneResponse.data);
+          const milestonePayload = milestoneResponse as any;
+          setMilestone(milestonePayload.data ?? milestonePayload);
         }
       } catch (err) {
         console.error('Streak error:', err);

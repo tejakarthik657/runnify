@@ -19,7 +19,8 @@ export default function RunStatsCard({ userId, timePeriod = '30' }: RunStatsCard
       try {
         setLoading(true);
         const response = await getRunStatistics(userId, timePeriod);
-        setStats(response.data);
+        const payload = response as any;
+        setStats(payload.data ?? payload);
         setError(null);
       } catch (err: any) {
         setError(err.message || 'Failed to load statistics');

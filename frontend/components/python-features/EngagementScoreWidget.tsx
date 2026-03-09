@@ -17,7 +17,8 @@ export default function EngagementScoreWidget({ userId }: EngagementScoreWidgetP
       try {
         setLoading(true);
         const response = await getEngagementScore(userId);
-        setEngagement(response.data);
+        const payload = response as any;
+        setEngagement(payload.data ?? payload);
       } catch (err) {
         console.error('Engagement score error:', err);
       } finally {
