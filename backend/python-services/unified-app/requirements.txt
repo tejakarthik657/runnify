@@ -1,38 +1,16 @@
-# Lightweight Python Dependencies - No GPU Required
-# All free tier compatible
+# Production-ready Python dependencies with pre-built wheels
+# Compatible with Python 3.11+
 
-# Web Framework
-fastapi==0.109.0
-uvicorn[standard]==0.27.0
-pydantic==2.5.3
-python-multipart==0.0.6
+# Web Framework (core essentials)
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+pydantic==2.9.2
+python-multipart==0.0.12
 
 # Database & Caching
 psycopg2-binary==2.9.9
-redis==5.0.1
-
-# Data Processing (lightweight)
-numpy==1.24.3
-pandas==2.0.3
-
-# Geospatial (no heavy deps)
-h3==3.7.6
-geopy==2.4.1
-
-# Image Processing (Pillow only, no CV2)
-Pillow==10.2.0
-qrcode[pil]==7.4.2
-
-# Basic ML (scikit-learn only, no torch/tensorflow)
-scikit-learn==1.4.0
-
-# Visualization (matplotlib only)
-matplotlib==3.8.2
+redis==5.2.0
 
 # Utilities
-python-dotenv==1.0.0
-httpx==0.26.0  # For API calls
-python-dateutil==2.8.2
-
-# NetworkX for graph algorithms (route optimization)
-networkx==3.2.1
+python-dotenv==1.0.1
+httpx==0.27.2
