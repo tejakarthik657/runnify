@@ -23,6 +23,8 @@ const express = require('express');
 
 const router = express.Router();
 
+const HEALTH_TIMEOUT_MS = Number(process.env.PYTHON_HEALTH_TIMEOUT_MS || 2000);
+
 // Service port mapping
 const PYTHON_SERVICES = {
   'stats': 8001,       // Run Statistics
@@ -40,14 +42,45 @@ const PYTHON_SERVICES = {
   'credits': 8019,     // Credit Optimizer
 };
 
+function getServiceProxy(target) {
+  const proxy = httpProxy.createProxyServer({
+    target,
+    changeOrigin: true,
+    proxyTimeout: 10000,
+    timeout: 10000,
+  });
+
+  proxy.on('error', (err, req, res) => {
+    console.error(`[Python Proxy] Error proxying to ${target}: ${err.message}`);
+    if (!res.headersSent) {
+      res.status(503).json({
+        error: 'Python service unavailable',
+        details: err.message,
+      });
+    }
+  });
+
+  return proxy;
+}
+
+const proxyByService = Object.fromEntries(
+  Object.entries(PYTHON_SERVICES).map(([service, port]) => [
+    service,
+    getServiceProxy(`http://localhost:${port}`),
+  ]),
+);
+
 // Health check endpoint
 router.get('/health', async (req, res) => {
   const health = { healthy: [], unhealthy: [] };
   
   for (const [service, port] of Object.entries(PYTHON_SERVICES)) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), HEALTH_TIMEOUT_MS);
+
     try {
       const response = await fetch(`http://localhost:${port}/health`, { 
-        timeout: 2000 
+        signal: controller.signal,
       }).catch(() => null);
       
       if (response?.ok) {
@@ -57,6 +90,8 @@ router.get('/health', async (req, res) => {
       }
     } catch (err) {
       health.unhealthy.push({ service, port, status: 'error', error: err.message });
+    } finally {
+      clearTimeout(timer);
     }
   }
   
@@ -78,35 +113,18 @@ router.use((req, res, next) => {
   
   const service = parts[0];
   const port = PYTHON_SERVICES[service];
+  const proxy = proxyByService[service];
   
-  if (!port) {
+  if (!port || !proxy) {
     return res.status(404).json({ 
       error: `Unknown Python service: ${service}`,
       available: Object.keys(PYTHON_SERVICES),
     });
   }
   
-  const target = `http://localhost:${port}`;
-  
-  // Create a proxy instance for this specific request
-  const proxy = httpProxy.createProxyServer({
-    target,
-    changeOrigin: true,
-    pathRewrite: {
-      // Remove /service prefix before forwarding
-      [`^/${service}`]: '',
-    },
-    onError: (err, req, res) => {
-      console.error(`[Python Proxy] Error proxying to ${target}: ${err.message}`);
-      res.status(503).json({
-        error: `Python service unavailable: ${service}`,
-        service,
-        port,
-        details: err.message,
-      });
-    },
-  });
-  
+  // Strip service prefix (e.g. /stats/stats/run-analysis -> /stats/run-analysis)
+  req.url = `/${parts.slice(1).join('/')}`;
+
   proxy.web(req, res);
 });
 
