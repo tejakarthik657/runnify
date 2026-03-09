@@ -30,6 +30,8 @@ import MinimizableStepCounter from '../../components/ui/MinimizableStepCounter';
 import MapContent from '../../components/map/MapContent';
 import MapSearch from '../../components/map/MapSearch';
 import WarBanner from '../../components/WarBanner';
+import FloatingLeaderboard from '../../components/map/FloatingLeaderboard';
+import StepCounterDebug from '../../components/debug/StepCounterDebug';
 import L from 'leaflet';
 
 import { latLngToCell, gridDisk } from 'h3-js';
@@ -453,17 +455,31 @@ export default function MapPage() {
             if (data.userId === user?.id) return;
             if (!data.lat || !data.lng) return;
 
-            setActiveRunners(prev => ({
-                ...prev,
-                [data.userId]: {
-                    userId: data.userId,
-                    username: data.username,
-                    lat: data.lat,
-                    lng: data.lng,
-                    userColor: data.userColor || '#FFD6A5',
-                    lastSeen: Date.now(),
+            setActiveRunners(prev => {
+                const existing = prev[data.userId];
+                const newPath = existing?.path || [];
+                
+                // Append new point to path (limit to last 100 points to avoid memory issues)
+                if (newPath.length === 0 || 
+                    getDistance(newPath[newPath.length - 1][0], newPath[newPath.length - 1][1], data.lat, data.lng) > 0.005) {
+                    newPath.push([data.lat, data.lng]);
+                    if (newPath.length > 100) newPath.shift();
                 }
-            }));
+
+                return {
+                    ...prev,
+                    [data.userId]: {
+                        userId: data.userId,
+                        username: data.username,
+                        lat: data.lat,
+                        lng: data.lng,
+                        userColor: data.userColor || '#FFD6A5',
+                        faction: data.faction,
+                        path: newPath,
+                        lastSeen: Date.now(),
+                    }
+                };
+            });
         });
 
         // Also listen on global_live_runner for cross-zone runners
@@ -471,17 +487,31 @@ export default function MapPage() {
             if (data.userId === user?.id) return;
             if (!data.lat || !data.lng) return;
 
-            setActiveRunners(prev => ({
-                ...prev,
-                [data.userId]: {
-                    userId: data.userId,
-                    username: data.username,
-                    lat: data.lat,
-                    lng: data.lng,
-                    userColor: data.userColor || '#FFD6A5',
-                    lastSeen: Date.now(),
+            setActiveRunners(prev => {
+                const existing = prev[data.userId];
+                const newPath = existing?.path || [];
+                
+                // Append new point to path (limit to last 100 points)
+                if (newPath.length === 0 || 
+                    getDistance(newPath[newPath.length - 1][0], newPath[newPath.length - 1][1], data.lat, data.lng) > 0.005) {
+                    newPath.push([data.lat, data.lng]);
+                    if (newPath.length > 100) newPath.shift();
                 }
-            }));
+
+                return {
+                    ...prev,
+                    [data.userId]: {
+                        userId: data.userId,
+                        username: data.username,
+                        lat: data.lat,
+                        lng: data.lng,
+                        userColor: data.userColor || '#FFD6A5',
+                        faction: data.faction,
+                        path: newPath,
+                        lastSeen: Date.now(),
+                    }
+                };
+            });
 
             // Calculate distance to this runner if we are running
             if (isRunningRef.current && position?.lat !== null && position?.lng !== null) {
@@ -653,6 +683,16 @@ export default function MapPage() {
 
     return (
         <div className="h-screen w-full flex flex-col overflow-hidden relative bg-[#F4F7F4]">
+            {/* Step Counter Debug Panel */}
+            {isRunning && (
+                <StepCounterDebug 
+                    steps={stats.steps}
+                    stepRate={stepRate}
+                    cadence={cadence}
+                    isDetecting={isDetecting}
+                />
+            )}
+
             {/* War Banner - Global Faction Status */}
             <WarBanner isHidden={isRunning} />
 
@@ -749,6 +789,9 @@ export default function MapPage() {
                     />
                 )}
             </AnimatePresence>
+
+            {/* Floating Leaderboard */}
+            <FloatingLeaderboard />
 
             {/* Map Body */}
             <div className="flex-1 relative z-0">

@@ -26,6 +26,7 @@ import { useAuthStore } from '../../store/authStore';
 import Badge from '../../components/ui/Badge';
 import { useGps } from '../../hooks/useGps';
 import { useStepCounter } from '../../hooks/useStepCounter';
+import StepCounterDebug from '../../components/debug/StepCounterDebug';
 
 const fetcher = (url: string) => api.get(url).then(res => res.data);
 
@@ -449,7 +450,7 @@ export default function RunPage() {
 
                 {/* Live Step Counter Chip */}
                 {isRunning && (
-                    <div className="flex items-center justify-center gap-2">
+                    <div className="flex items-center justify-center gap-2 mb-4">
                         <div className="inline-flex items-center gap-2 rounded-full border border-[#A8D5BA]/50 bg-white/90 px-4 py-2 shadow-sm backdrop-blur">
                             <Activity size={14} className={`${isDetecting ? 'text-emerald-600' : 'text-gray-400'}`} />
                             <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Steps</span>
@@ -566,12 +567,12 @@ export default function RunPage() {
                 </div>
 
                 {/* GPS Status Footer */}
-                <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 py-4">
+                <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 py-4 pb-safe">
                     <div className={`w-2 h-2 rounded-full ${position && position.accuracy < 20 ? 'bg-green-500' : 'bg-orange-500 animate-pulse'}`} />
                     <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                        {position ? `GPS Accuracy: ${Math.round(position.accuracy)}m • Quality: ${trackQuality}` : 'Searching for Signal...'}
+                        {position ? `GPS: ${Math.round(position.accuracy)}m • ${trackQuality}` : 'Searching...'}
                     </span>
-                    <button onClick={() => setShowGpsHelper(true)} className="px-2 py-1 rounded-lg bg-white border border-black/10 text-[9px] font-black uppercase tracking-wider text-[#1a1a2e] inline-flex items-center gap-1">
+                    <button onClick={() => setShowGpsHelper(true)} className="px-2 py-1 rounded-lg bg-white border border-black/10 text-[9px] font-black uppercase tracking-wider text-[#1a1a2e] inline-flex items-center gap-1 active:scale-95 transition-transform">
                         <Wrench size={11} /> Fix GPS
                     </button>
                 </div>

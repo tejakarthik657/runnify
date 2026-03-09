@@ -67,6 +67,23 @@ export default function MapContent({
                 />
             )}
 
+            {/* Real-time traces for all active runners */}
+            {Object.values(activeRunners).map((runner: any) => {
+                if (!runner.path || runner.path.length < 2) return null;
+                return (
+                    <Polyline
+                        key={`trace-${runner.userId}`}
+                        positions={runner.path}
+                        color={runner.userColor || '#FFD6A5'}
+                        weight={4}
+                        opacity={0.7}
+                        lineJoin="round"
+                        lineCap="round"
+                        dashArray="8, 4"
+                    />
+                );
+            })}
+
             {position && position.lat !== null && position.lng !== null && (
                 <>
                     <UserLocationMarker 
