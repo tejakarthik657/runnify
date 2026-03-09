@@ -1,10 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Activity, TrendingUp, Award, Flame } from 'lucide-react';
+import { Activity, TrendingUp, Award, Flame, Map, Mountain, MapPin } from 'lucide-react';
 import RunStatsCard from '@/components/python-features/RunStatsCard';
 import EngagementScoreWidget from '@/components/python-features/EngagementScoreWidget';
 import StreakDisplay from '@/components/python-features/StreakDisplay';
+import TerritoryAnalyzer from '@/components/python-features/TerritoryAnalyzer';
+import ElevationAnalyzer from '@/components/python-features/ElevationAnalyzer';
+import HeatmapGenerator from '@/components/python-features/HeatmapGenerator';
 
 export default function PythonFeaturesDemo() {
   const [userId, setUserId] = useState<string>('');
@@ -43,37 +46,78 @@ export default function PythonFeaturesDemo() {
           </div>
         </div>
 
-        {/* Features Grid */}
+        {/* Features Grid - Row 1: Legacy Python Services */}
         {userId && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            {/* Column 1: Run Statistics */}
-            <div className="space-y-6">
-              <div className="flex items-center gap-2">
-                <TrendingUp size={24} className="text-[#1a1a2e]" />
-                <h2 className="text-xl font-black uppercase">Analytics</h2>
+          <>
+            <div className="text-center mb-4">
+              <h2 className="text-2xl font-black text-[#1a1a2e] uppercase">Legacy Python Services</h2>
+              <p className="text-sm text-gray-600">Original services (ports 8001-8019)</p>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              
+              {/* Column 1: Run Statistics */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-2">
+                  <TrendingUp size={24} className="text-[#1a1a2e]" />
+                  <h2 className="text-xl font-black uppercase">Analytics</h2>
+                </div>
+                <RunStatsCard userId={userId} timePeriod="30" />
               </div>
-              <RunStatsCard userId={userId} timePeriod="30" />
+
+              {/* Column 2: Engagement */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-2">
+                  <Activity size={24} className="text-[#1a1a2e]" />
+                  <h2 className="text-xl font-black uppercase">Engagement</h2>
+                </div>
+                <EngagementScoreWidget userId={userId} />
+              </div>
+
+              {/* Column 3: Streak */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-2">
+                  <Flame size={24} className="text-orange-600" />
+                  <h2 className="text-xl font-black uppercase">Streak</h2>
+                </div>
+                <StreakDisplay userId={userId} />
+              </div>
             </div>
 
-            {/* Column 2: Engagement */}
-            <div className="space-y-6">
-              <div className="flex items-center gap-2">
-                <Activity size={24} className="text-[#1a1a2e]" />
-                <h2 className="text-xl font-black uppercase">Engagement</h2>
-              </div>
-              <EngagementScoreWidget userId={userId} />
+            {/* Features Grid - Row 2: NEW Node.js Analytics */}
+            <div className="text-center mt-12 mb-4">
+              <h2 className="text-2xl font-black text-[#1a1a2e] uppercase">✨ NEW: Node.js Analytics</h2>
+              <p className="text-sm text-gray-600">Territory, Elevation & Heatmap directly in backend (no Python instances!)</p>
             </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              
+              {/* Column 1: Territory Analysis */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-2">
+                  <Map size={24} className="text-[#1a1a2e]" />
+                  <h2 className="text-xl font-black uppercase">Territory</h2>
+                </div>
+                <TerritoryAnalyzer userId={userId} />
+              </div>
 
-            {/* Column 3: Streak */}
-            <div className="space-y-6">
-              <div className="flex items-center gap-2">
-                <Flame size={24} className="text-orange-600" />
-                <h2 className="text-xl font-black uppercase">Streak</h2>
+              {/* Column 2: Elevation */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-2">
+                  <Mountain size={24} className="text-[#1a1a2e]" />
+                  <h2 className="text-xl font-black uppercase">Elevation</h2>
+                </div>
+                <ElevationAnalyzer userId={userId} days={30} />
               </div>
-              <StreakDisplay userId={userId} />
+
+              {/* Column 3: Heatmap */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-2">
+                  <MapPin size={24} className="text-orange-600" />
+                  <h2 className="text-xl font-black uppercase">Heatmap</h2>
+                </div>
+                <HeatmapGenerator userId={userId} days={30} />
+              </div>
             </div>
-          </div>
+          </>
         )}
 
         {/* Info Cards */}

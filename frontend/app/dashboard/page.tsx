@@ -27,6 +27,7 @@ import RunButton from '../../components/ui/RunButton';
 import Badge from '../../components/ui/Badge';
 import ActivityStrip from '../../components/ui/ActivityStrip';
 import MomentsTray from '../../components/dashboard/MomentsTray';
+import ElevationAnalyzer from '../../components/python-features/ElevationAnalyzer';
 
 const fetcher = (url: string) => {
     const controller = new AbortController();
@@ -355,6 +356,11 @@ export default function DashboardPage() {
 
                 {/* Right Column: Quick Links & Alerts */}
                 <div className="space-y-8">
+                    {/* Elevation Stats Widget */}
+                    {currentUser?._id && (
+                        <ElevationAnalyzer userId={currentUser._id} days={30} />
+                    )}
+
                     {/* Quick Channels */}
                     <div className="bg-white rounded-[32px] border border-black/5 p-6 md:p-8 shadow-sm">
                         <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-6">Quick Channels</h3>
