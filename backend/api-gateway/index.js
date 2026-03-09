@@ -23,6 +23,9 @@ const chatRoutes = require('../chat-service/routes');
 const botRoutes = require('../rag-bot-service/routes');
 const blockchainRoutes = require('../blockchain-service/routes');
 const reportsRoutes = require('../reports-service/routes');
+const territoryAnalysisRoutes = require('../territory-service/routes');
+const elevationRoutes = require('../elevation-service/routes');
+const heatmapRoutes = require('../heatmap-service/routes');
 
 const { initSocketHandlers } = require('../run-service/socket.handlers');
 const { initChatHandlers } = require('../chat-service/socket');
@@ -89,70 +92,12 @@ app.use('/chat', chatRoutes);
 app.use('/bot', botRoutes);
 app.use('/blockchain', blockchainRoutes);
 app.use('/reports', reportsRoutes);
+app.use('/territory-analysis', territoryAnalysisRoutes);
+app.use('/elevation', elevationRoutes);
+app.use('/heatmap', heatmapRoutes);
 
 // ── OAuth routes (Google + Apple) ────────────────────────────
 setupOAuthRoutes(app);
-
-// ── Python Microservices Proxy ────────────────────────────────
-// Proxy requests to Python FastAPI services
-const axios = require('axios');
-
-// Python unified service base URL
-// Uses single deployment with all services mounted at /{service} prefix
-const PYTHON_BASE_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:8000';
-
-// Valid service names (for validation)
-const VALID_SERVICES = [
-  'stats', 'hex', 'engagement', 'leaderboard', 
-  'territory', 'routes', 'elevation', 'heatmap',
-  'badges', 'challenges', 'names', 'streak', 'credits'
-];
-
-// Generic proxy handler for Python services
-// Routes /python/:service/*path to PYTHON_BASE_URL/:service/*path
-app.use('/python/:service/*path', async (req, res) => {
-  const { service } = req.params;
-  const path = Array.isArray(req.params.path) ? req.params.path.join('/') : req.params.path;
-  
-  if (!VALID_SERVICES.includes(service)) {
-    return res.status(404).json({ 
-      error: `Python service '${service}' not found`,
-      available_services: VALID_SERVICES 
-    });
-  }
-  
-  // Forward request to unified Python service
-  const url = `${PYTHON_BASE_URL.replace(/\/$/, '')}/${service}/${path}`;
-  
-  try {
-    const response = await axios({
-      method: req.method,
-      url: url,
-      data: req.body,
-      params: req.query,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      timeout: 30000, // 30 second timeout
-    });
-    
-    res.status(response.status).json(response.data);
-  } catch (error) {
-    console.error(`[Python Proxy Error] Service: ${service}, Path: ${path}`, error.message);
-    
-    if (error.code === 'ECONNREFUSED') {
-      return res.status(503).json({
-        error: `Python unified service is not running`,
-        message: 'Please start the unified Python service at port 8000',
-        base_url: PYTHON_BASE_URL
-      });
-    }
-    
-    res.status(error.response?.status || 500).json({
-      error: error.response?.data || error.message
-    });
-  }
-});
 
 // ── Socket.IO handlers ────────────────────────────────────────
 initSocketHandlers(io);   // main namespace: GPS tracking
