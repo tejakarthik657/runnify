@@ -10,6 +10,7 @@ import ElevationAnalyzer from '@/components/python-features/ElevationAnalyzer';
 import HeatmapGenerator from '@/components/python-features/HeatmapGenerator';
 
 export default function AnalyticsLabPage() {
+  // Production deployment force update - March 9 2026
   const [userId, setUserId] = useState<string>('');
 
   // In real app, get from auth context
