@@ -5,13 +5,20 @@ import axios from 'axios';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
+export interface ApiResponse<T> {
+  success?: boolean;
+  data: T;
+  error?: string;
+  message?: string;
+}
+
 // Generic Python service caller
 async function callPythonService<T>(
   service: string,
   endpoint: string,
   method: 'GET' | 'POST' = 'POST',
   data?: any
-): Promise<T> {
+): Promise<ApiResponse<T>> {
   const url = `${API_BASE_URL}/python/${service}/${endpoint}`;
   
   try {
@@ -37,7 +44,7 @@ async function callNodeApi<T>(
   path: string,
   method: 'GET' | 'POST' = 'POST',
   data?: any
-): Promise<T> {
+): Promise<ApiResponse<T>> {
   const url = `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
 
   try {
