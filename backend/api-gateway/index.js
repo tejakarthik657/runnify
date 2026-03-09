@@ -26,6 +26,7 @@ const reportsRoutes = require('../reports-service/routes');
 const territoryAnalysisRoutes = require('../territory-service/routes');
 const elevationRoutes = require('../elevation-service/routes');
 const heatmapRoutes = require('../heatmap-service/routes');
+const pythonProxyRoutes = require('./python-proxy');
 
 const { initSocketHandlers } = require('../run-service/socket.handlers');
 const { initChatHandlers } = require('../chat-service/socket');
@@ -95,6 +96,7 @@ app.use('/reports', reportsRoutes);
 app.use('/territory-analysis', territoryAnalysisRoutes);
 app.use('/elevation', elevationRoutes);
 app.use('/heatmap', heatmapRoutes);
+app.use('/python', pythonProxyRoutes);
 
 // ── OAuth routes (Google + Apple) ────────────────────────────
 setupOAuthRoutes(app);

@@ -5,6 +5,8 @@
   "main": "api-gateway/index.js",
   "scripts": {
     "start": "node api-gateway/index.js",
+    "start:prod": "node api-gateway/start-all.js",
+    "start:prod:no-python": "node api-gateway/start-all.js --skip-python",
     "dev": "nodemon api-gateway/index.js",
     "test": "jest --runInBand --forceExit",
     "test:unit": "jest tests/algorithms.test.js",
@@ -34,6 +36,7 @@
     "groq-sdk": "^0.3.3",
     "h3-js": "^4.4.0",
     "helmet": "^8.1.0",
+    "http-proxy": "^1.18.1",
     "joi": "^18.0.2",
     "jsonwebtoken": "^9.0.3",
     "lodash": "^4.17.23",
