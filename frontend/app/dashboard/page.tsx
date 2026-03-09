@@ -365,7 +365,7 @@ export default function DashboardPage() {
                     <div className="bg-white rounded-[32px] border border-black/5 p-6 md:p-8 shadow-sm">
                         <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-6">Quick Channels</h3>
                         <div className="grid grid-cols-1 gap-3">
-                            <QuickChannelLink href="/python-demo" label="Python Features" sub="Stats, engagement, heatmap" icon={<Activity size={18} />} color="sage" />
+                            <QuickChannelLink href="/python-demo" label="Analytics Lab" sub="Stats, engagement, heatmap" icon={<Activity size={18} />} color="sage" />
                             <QuickChannelLink href="/leaderboard" label="Global Ranks" sub="Who's winning today?" icon={<Trophy size={18} />} color="blue" />
                             <QuickChannelLink href="/community" label="Comms Channel" sub="Chat with your rivals" icon={<Users size={18} />} color="sage" />
                             <QuickChannelLink href="/credits" label="Economy" sub="TRC & Blockchain" icon={<CreditCard size={18} />} color="lavender" />

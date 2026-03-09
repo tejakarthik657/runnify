@@ -9,7 +9,7 @@ import TerritoryAnalyzer from '@/components/python-features/TerritoryAnalyzer';
 import ElevationAnalyzer from '@/components/python-features/ElevationAnalyzer';
 import HeatmapGenerator from '@/components/python-features/HeatmapGenerator';
 
-export default function PythonFeaturesDemo() {
+export default function AnalyticsLabPage() {
   const [userId, setUserId] = useState<string>('');
   const [showFeatures, setShowFeatures] = useState(false);
 
@@ -27,11 +27,11 @@ export default function PythonFeaturesDemo() {
         {/* Header */}
         <div className="text-center space-y-4">
           <h1 className="text-4xl md:text-5xl font-black text-[#1a1a2e]">
-            🐍 Python-Powered Features
+            Analytics Lab
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Advanced analytics, engagement tracking, and intelligent insights powered by 
-            lightweight Python microservices. <strong>All free, no GPU required.</strong>
+            Advanced run intelligence, engagement tracking, and territory insights powered by
+            production microservices. <strong>Built for live users.</strong>
           </p>
           
           {/* Service Status */}
@@ -46,11 +46,11 @@ export default function PythonFeaturesDemo() {
           </div>
         </div>
 
-        {/* Features Grid - Row 1: Legacy Python Services */}
+        {/* Features Grid - Row 1: Analytics Core Services */}
         {userId && (
           <>
             <div className="text-center mb-4">
-              <h2 className="text-2xl font-black text-[#1a1a2e] uppercase">Legacy Python Services</h2>
+              <h2 className="text-2xl font-black text-[#1a1a2e] uppercase">Analytics Core Services</h2>
               <p className="text-sm text-gray-600">Original services (ports 8001-8019)</p>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -125,7 +125,7 @@ export default function PythonFeaturesDemo() {
           <InfoCard 
             icon="🚀"
             title="7 Services Live"
-            description="Production-ready Python microservices"
+            description="Production-ready analytics services"
           />
           <InfoCard 
             icon="💰"
@@ -167,7 +167,7 @@ console.log(engagement.data.score); // 0-100
 
         {/* Available Services */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="text-lg font-black uppercase mb-4">Available Python Services</h3>
+          <h3 className="text-lg font-black uppercase mb-4">Available Analytics Services</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <ServiceCard 
               name="Run Statistics"
