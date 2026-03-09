@@ -32,6 +32,32 @@ async function callPythonService<T>(
   }
 }
 
+// Direct Node API caller (used for services now implemented in backend Node routes)
+async function callNodeApi<T>(
+  path: string,
+  method: 'GET' | 'POST' = 'POST',
+  data?: any
+): Promise<T> {
+  const url = `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
+
+  try {
+    const response = await axios({
+      method,
+      url,
+      data: method === 'POST' ? data : undefined,
+      params: method === 'GET' ? data : undefined,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    return response.data;
+  } catch (error: any) {
+    console.error(`Node API error (${path}):`, error.response?.data || error.message);
+    throw error;
+  }
+}
+
 // ============================================================
 // SERVICE 01: RUN STATISTICS
 // ============================================================
@@ -86,7 +112,7 @@ export interface TerritoryAnalysis {
 }
 
 export const analyzeTerritoryService = async (userId: string) => {
-  return callPythonService<TerritoryAnalysis>('hex', 'hex/analyze-territory', 'POST', {
+  return callNodeApi<TerritoryAnalysis>('/territory-analysis/analyze', 'POST', {
     user_id: userId,
   });
 };
@@ -96,16 +122,71 @@ export const getExpansionSuggestions = async (
   currentLocation: { lat: number; lng: number },
   maxSuggestions: number = 5
 ) => {
-  return callPythonService('hex', 'hex/expansion-suggestions', 'POST', {
+  return callNodeApi('/territory-analysis/expansion-path', 'POST', {
     user_id: userId,
-    current_location: currentLocation,
-    max_suggestions: maxSuggestions,
+    // Backend expects start_hex; caller may pass hex in currentLocation.hex in future.
+    // For now this keeps API shape backward-compatible with the existing frontend call site.
+    start_hex: (currentLocation as any)?.hex_id || (currentLocation as any)?.hex || undefined,
+    max_distance: maxSuggestions,
   });
 };
 
 export const detectHexClusters = async (userId: string) => {
-  return callPythonService('hex', 'hex/cluster-detection', 'POST', {
+  return callNodeApi('/territory-analysis/vulnerability', 'POST', {
     user_id: userId,
+    threshold: 0.4,
+  });
+};
+
+// ============================================================
+// SERVICE 07: ELEVATION ANALYZER (Node route)
+// ============================================================
+
+export const analyzeRunElevation = async (runId: string, userId?: string) => {
+  return callNodeApi('/elevation/analyze-run', 'POST', {
+    run_id: runId,
+    user_id: userId,
+  });
+};
+
+export const getElevationUserStats = async (userId: string, days: number = 30) => {
+  return callNodeApi('/elevation/user-stats', 'POST', {
+    user_id: userId,
+    days,
+  });
+};
+
+export const analyzeElevationTrace = async (gpsTrace: Array<{ lat: number; lng: number; elevation?: number }>) => {
+  return callNodeApi('/elevation/trace-analysis', 'POST', {
+    gps_trace: gpsTrace,
+  });
+};
+
+// ============================================================
+// SERVICE 08: HEATMAP GENERATOR (Node route)
+// ============================================================
+
+export const getUserActivityHeatmap = async (userId: string, days: number = 30) => {
+  return callNodeApi('/heatmap/user-activity', 'POST', {
+    user_id: userId,
+    days,
+  });
+};
+
+export const getAreaActivityHeatmap = async (
+  bounds: { north: number; south: number; east: number; west: number },
+  days: number = 7
+) => {
+  return callNodeApi('/heatmap/area-activity', 'POST', {
+    bounds,
+    days,
+  });
+};
+
+export const getHeatmapIntensityMatrix = async (userId: string, gridSize: number = 20) => {
+  return callNodeApi('/heatmap/intensity-matrix', 'POST', {
+    user_id: userId,
+    grid_size: gridSize,
   });
 };
 
