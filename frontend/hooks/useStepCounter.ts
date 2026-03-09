@@ -22,11 +22,11 @@ type Options = {
 
 // Tuned constants for real-device walking/running detection
 const STEP_DETECTION_CONFIG = {
-  THRESHOLD_RISE: 0.8,       // More sensitive rising edge (delta from smoothed baseline)
-  THRESHOLD_FALL: 0.5,       // More sensitive hysteresis reset threshold
-  MIN_STEP_INTERVAL_MS: 200, // Allows faster cadence (300 bpm theoretical max)
-  MAX_STEP_INTERVAL_MS: 1500, // Allows slower walks (40 bpm min)
-  BUFFER_SIZE: 8,            // Smaller rolling window for faster response
+  THRESHOLD_RISE: 1.15,      // Higher threshold reduces noise-triggered false steps
+  THRESHOLD_FALL: 0.7,       // Stronger hysteresis before next step can trigger
+  MIN_STEP_INTERVAL_MS: 280, // Filters unrealistically fast double counts
+  MAX_STEP_INTERVAL_MS: 1800, // Keeps slow walking cadence valid
+  BUFFER_SIZE: 10,           // Slightly smoother baseline to reduce jitter
 };
 
 export function useStepCounter({ 

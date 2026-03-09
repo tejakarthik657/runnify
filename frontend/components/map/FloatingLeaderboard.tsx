@@ -8,7 +8,11 @@ import api from '../../services/api';
 
 const fetcher = (url: string) => api.get(url).then(res => res.data);
 
-export default function FloatingLeaderboard() {
+interface FloatingLeaderboardProps {
+  embedded?: boolean;
+}
+
+export default function FloatingLeaderboard({ embedded = false }: FloatingLeaderboardProps) {
   const [isMinimized, setIsMinimized] = useState(false);
   const { data: leaderboard } = useSWR('/leaderboard/daily?limit=10', fetcher, {
     refreshInterval: 10000, // Refresh every 10 seconds
@@ -18,9 +22,9 @@ export default function FloatingLeaderboard() {
 
   return (
     <motion.div
-      initial={{ x: 300, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      className="fixed right-4 top-24 z-[999] w-80 max-w-[calc(100vw-2rem)] pointer-events-auto"
+      initial={embedded ? { y: 8, opacity: 0 } : { x: 300, opacity: 0 }}
+      animate={embedded ? { y: 0, opacity: 1 } : { x: 0, opacity: 1 }}
+      className={embedded ? 'w-full pointer-events-auto' : 'fixed right-4 top-24 z-[999] w-80 max-w-[calc(100vw-2rem)] pointer-events-auto'}
     >
       <div className="bg-white/95 backdrop-blur-md rounded-2xl border border-black/5 shadow-2xl overflow-hidden">
         {/* Header */}

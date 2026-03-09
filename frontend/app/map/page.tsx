@@ -6,16 +6,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Play,
     Square,
-    Navigation,
     ChevronLeft,
     Loader2,
     Zap,
     Crosshair,
     Radio,
     Search,
-    Map as MapIcon,
-    Layers,
-    History
+    Trophy,
+    Footprints,
+    Shield,
+    X
 } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback } from 'react';
@@ -25,17 +25,12 @@ import { useSocket } from '../../hooks/useSocket';
 import { useAuthStore } from '../../store/authStore';
 import api from '../../services/api';
 import { toast } from 'react-hot-toast';
-import Badge from '../../components/ui/Badge';
-import MinimizableStepCounter from '../../components/ui/MinimizableStepCounter';
 import MapContent from '../../components/map/MapContent';
 import MapSearch from '../../components/map/MapSearch';
-import WarBanner from '../../components/WarBanner';
 import FloatingLeaderboard from '../../components/map/FloatingLeaderboard';
-import StepCounterDebug from '../../components/debug/StepCounterDebug';
 import L from 'leaflet';
 
 import { latLngToCell, gridDisk } from 'h3-js';
-import { UserIcon } from '../../lib/mapIcons';
 
 
 
@@ -59,6 +54,7 @@ export default function MapPage() {
     const [activeRunners, setActiveRunners] = useState<Record<string, any>>({});
     const [nearestRunner, setNearestRunner] = useState<{ name: string, dist: number } | null>(null);
     const [traceQuality, setTraceQuality] = useState<'high' | 'medium' | 'low'>('medium');
+    const [activePanel, setActivePanel] = useState<'leaderboard' | 'steps' | 'faction' | null>(null);
     const [followUser, setFollowUser] = useState(true);
     const isRunningRef = useRef(false);
     const runIdRef = useRef<string | null>(null);
@@ -80,8 +76,32 @@ export default function MapPage() {
         return { center: [20, 0], zoom: 3 };
     });
 
-    const { user, accessToken, updateUser } = useAuthStore();
+    const { user, updateUser } = useAuthStore();
     const socket = useSocket('main');
+    const [factionStats, setFactionStats] = useState({ red: 0, blue: 0, green: 0, total: 1 });
+
+    useEffect(() => {
+        const fetchFactionStats = async () => {
+            try {
+                const response = await api.get('/leaderboard/factions');
+                const cities = response.data?.cities || [];
+                const totals = cities.reduce((acc: any, city: any) => {
+                    acc.red += city.redCount || 0;
+                    acc.blue += city.blueCount || 0;
+                    acc.green += city.greenCount || 0;
+                    return acc;
+                }, { red: 0, blue: 0, green: 0 });
+                const total = Math.max(1, totals.red + totals.blue + totals.green);
+                setFactionStats({ ...totals, total });
+            } catch {
+                // Keep last known values if request fails.
+            }
+        };
+
+        fetchFactionStats();
+        const interval = setInterval(fetchFactionStats, 30000);
+        return () => clearInterval(interval);
+    }, []);
 
     const startTimer = useCallback(() => {
         if (statsInterval.current) return;
@@ -234,6 +254,13 @@ export default function MapPage() {
                     newSteps = Math.max(newSteps, gpsFallbackStepsRef.current);
                 }
             }
+
+            // Guardrail: cap noisy accelerometer spikes using distance-derived expectation.
+            const expectedFromDistance = Math.max(0, Math.round((newDist * 1000) / STEP_LENGTH_METERS));
+            if (expectedFromDistance > 0) {
+                const maxAllowed = Math.round(expectedFromDistance * 1.45);
+                newSteps = Math.min(newSteps, maxAllowed);
+            }
             
             const newCredits = Math.floor(newDist * 12) + (newHexCount * 2);
 
@@ -268,7 +295,7 @@ export default function MapPage() {
     });
 
     // Initialize step counter with accelerometer
-    const { steps: accelSteps, stepRate, cadence, isDetecting, start: startStepCounter, stop: stopStepCounter, reset: resetStepCounter } = useStepCounter({
+    const { stepRate, cadence, isDetecting, start: startStepCounter, stop: stopStepCounter, reset: resetStepCounter } = useStepCounter({
         enabled: true,
         useAccelerometer: true,
         onUpdate: (state) => {
@@ -681,104 +708,110 @@ export default function MapPage() {
         }));
     }, [stats.time, stats.distance, stats.steps]);
 
+    const signalLabel = position && position.accuracy !== null
+        ? `GPS: ${Math.round(position.accuracy)}m • ${traceQuality}`
+        : 'GPS: No GPS • Quality: medium';
+
     return (
         <div className="h-screen w-full flex flex-col overflow-hidden relative bg-[#F4F7F4]">
-            {/* Step Counter Debug Panel */}
-            {isRunning && (
-                <StepCounterDebug 
-                    steps={stats.steps}
-                    stepRate={stepRate}
-                    cadence={cadence}
-                    isDetecting={isDetecting}
-                />
-            )}
-
-            {/* War Banner - Global Faction Status */}
-            <WarBanner isHidden={isRunning} />
-
             {/* Top UI Overlays */}
-            <div className="absolute top-4 left-4 right-4 z-[1000] flex flex-col gap-3 pointer-events-none">
-                <div className="flex items-center justify-between w-full">
-                    <Link href="/dashboard" className="p-3 bg-white rounded-2xl border border-black/5 shadow-lg active:scale-95 transition-all pointer-events-auto text-[#1a1a2e] hover:text-[#2E7D52]">
-                        <ChevronLeft size={24} />
-                    </Link>
-
-                    <div className="flex bg-white rounded-2xl border border-black/5 shadow-lg px-4 py-2 items-center gap-3 pointer-events-auto">
-                        <div className={`w-2 h-2 rounded-full ${position && position.accuracy !== null && position.accuracy < 20 ? 'bg-green-500' : 'bg-orange-500 animate-pulse'}`} />
-                        <span className="text-[11px] font-black text-[#1a1a2e] tracking-tight">
-                            {position && position.accuracy !== null ? `Signal: ${Math.round(position.accuracy)}m • ${traceQuality}` : 'Locating Satellites...'}
-                        </span>
-                        <span className="ml-2 text-[8px] opacity-30">V1.0.3</span>
-                    </div>
-                </div>
-
-                <div className="flex gap-2 w-full max-w-lg mx-auto pointer-events-auto">
-                    {/* Primary Search Bar Trigger (High Prominence) */}
-                    <button
-                        onClick={() => setSearchOpen(true)}
-                        className="flex-1 bg-white/90 backdrop-blur-md rounded-2xl border border-black/5 shadow-lg p-4 flex items-center gap-4 hover:bg-white transition-all active:scale-[0.98]"
-                    >
-                        <div className="w-10 h-10 rounded-xl bg-[#F0F7F4] flex items-center justify-center text-[#2E7D52]">
-                            <Search size={20} />
-                        </div>
-                        <div className="text-left">
-                            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Grid Search</div>
-                            <div className="text-sm font-extrabold text-[#1a1a2e]">Find runners or codes...</div>
-                        </div>
-                    </button>
-
-                    <AnimatePresence>
-                        {isRunning && (
-                            <motion.div
-                                initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
-                                className="bg-white/90 backdrop-blur-md rounded-2xl border border-[#F4B8C1]/30 shadow-lg p-4 pointer-events-auto border-l-4 border-l-[#E89BA5]"
-                            >
-                                <div className="text-[10px] font-black text-[#E89BA5] uppercase tracking-widest">Live Sortie</div>
-                                <div className="text-sm font-extrabold text-[#1a1a2e] flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-[#E89BA5] animate-pulse" />
-                                    Active
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
-
-                <div className="lg:hidden flex gap-2 overflow-x-auto no-scrollbar pointer-events-auto px-0.5">
-                    {[
-                        { href: '/dashboard', label: 'Dashboard' },
-                        { href: '/run', label: 'Run' },
-                        { href: '/leaderboard', label: 'Leaderboard' },
-                        { href: '/faction', label: 'Faction' },
-                        { href: '/profile', label: 'Profile' },
-                    ].map((item) => (
-                        <Link
-                            key={item.href}
-                            href={item.href}
-                            className="shrink-0 rounded-xl bg-white/90 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-[#1a1a2e] border border-black/5"
-                        >
-                            {item.label}
-                        </Link>
-                    ))}
-                </div>
+            <div className="absolute top-4 left-4 z-[1000] pointer-events-none">
+                <Link href="/dashboard" className="p-3 bg-white/90 backdrop-blur-md rounded-2xl border border-black/5 shadow-lg active:scale-95 transition-all pointer-events-auto text-[#1a1a2e] hover:text-[#2E7D52] inline-flex">
+                    <ChevronLeft size={24} />
+                </Link>
             </div>
 
-            {/* Float Menu (Right) */}
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 z-[1000] flex flex-col gap-3 pointer-events-none">
+            {/* Left Feature Rail */}
+            <div className="absolute left-4 top-24 z-[1000] flex flex-col gap-3 pointer-events-none">
                 <MapControlButton
-                    icon={<Search size={22} />}
+                    icon={<Search size={18} />}
                     onClick={() => setSearchOpen(true)}
+                    title="Search"
+                    transparent
                 />
                 <MapControlButton
-                    icon={<Layers size={22} />}
-                    onClick={() => toast('Layer switching will be enabled soon')}
-                    title="Layers"
+                    icon={<Trophy size={18} />}
+                    title="Leaderboard"
+                    transparent
+                    active={activePanel === 'leaderboard'}
+                    onClick={() => setActivePanel(activePanel === 'leaderboard' ? null : 'leaderboard')}
                 />
                 <MapControlButton
-                    icon={<History size={22} />}
-                    onClick={() => toast('Run history timeline is coming soon')}
-                    title="History"
+                    icon={<Footprints size={18} />}
+                    title="Step Counter"
+                    transparent
+                    active={activePanel === 'steps'}
+                    onClick={() => setActivePanel(activePanel === 'steps' ? null : 'steps')}
+                />
+                <MapControlButton
+                    icon={<Shield size={18} />}
+                    title="Faction War"
+                    transparent
+                    active={activePanel === 'faction'}
+                    onClick={() => setActivePanel(activePanel === 'faction' ? null : 'faction')}
                 />
             </div>
+
+            <AnimatePresence>
+                {activePanel && (
+                    <motion.div
+                        initial={{ x: -20, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        exit={{ x: -20, opacity: 0 }}
+                        className="absolute left-20 top-24 z-[1000] w-[min(360px,calc(100vw-6.5rem))] pointer-events-auto"
+                    >
+                        <div className="bg-white/80 backdrop-blur-xl border border-white/60 shadow-2xl rounded-3xl overflow-hidden">
+                            <div className="px-4 py-3 border-b border-black/5 flex items-center justify-between">
+                                <div className="text-xs font-black uppercase tracking-widest text-[#1a1a2e]">
+                                    {activePanel === 'leaderboard' && 'Live Leaderboard'}
+                                    {activePanel === 'steps' && 'Step Counter'}
+                                    {activePanel === 'faction' && 'Faction War'}
+                                </div>
+                                <button
+                                    onClick={() => setActivePanel(null)}
+                                    title="Close panel"
+                                    className="w-8 h-8 rounded-xl bg-white border border-black/10 flex items-center justify-center text-gray-500 hover:text-[#1a1a2e]"
+                                >
+                                    <X size={16} />
+                                </button>
+                            </div>
+
+                            <div className="p-3">
+                                {activePanel === 'leaderboard' && <FloatingLeaderboard embedded />}
+
+                                {activePanel === 'steps' && (
+                                    <div className="rounded-2xl border border-black/10 bg-[#F8FAF8] p-4 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <div className="text-[10px] font-black uppercase tracking-widest text-[#2E7D52]">Live Steps</div>
+                                            <div className={`w-2 h-2 rounded-full ${isDetecting ? 'bg-[#2E7D52] animate-pulse' : 'bg-gray-300'}`} />
+                                        </div>
+                                        <div className="text-4xl font-black tabular-nums text-[#2E7D52]">{stats.steps.toLocaleString()}</div>
+                                        <div className="grid grid-cols-2 gap-2 text-xs">
+                                            <div className="rounded-xl bg-white p-3 border border-black/5">
+                                                <div className="text-gray-500 font-bold uppercase text-[9px]">Cadence</div>
+                                                <div className="text-lg font-black text-[#1a1a2e]">{cadence}</div>
+                                            </div>
+                                            <div className="rounded-xl bg-white p-3 border border-black/5">
+                                                <div className="text-gray-500 font-bold uppercase text-[9px]">Rate</div>
+                                                <div className="text-lg font-black text-[#1a1a2e]">{stepRate}</div>
+                                            </div>
+                                        </div>
+                                        <div className="text-[10px] font-bold text-gray-500">{signalLabel}</div>
+                                    </div>
+                                )}
+
+                                {activePanel === 'faction' && (
+                                    <div className="rounded-2xl border border-black/10 bg-[#F8FAF8] p-4 space-y-3">
+                                        <FactionRow label="Red Legion" value={factionStats.red} total={factionStats.total} color="bg-red-500" />
+                                        <FactionRow label="Blue Syndicate" value={factionStats.blue} total={factionStats.total} color="bg-blue-500" />
+                                        <FactionRow label="Green Nomads" value={factionStats.green} total={factionStats.total} color="bg-green-500" />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <AnimatePresence>
                 {searchOpen && (
@@ -789,9 +822,6 @@ export default function MapPage() {
                     />
                 )}
             </AnimatePresence>
-
-            {/* Floating Leaderboard */}
-            <FloatingLeaderboard />
 
             {/* Map Body */}
             <div className="flex-1 relative z-0">
@@ -824,7 +854,7 @@ export default function MapPage() {
                             setFollowUser(true);
                             handleLocateUser(position.lat!, position.lng!);
                         }}
-                        className="absolute bottom-32 right-4 z-[1000] w-12 h-12 bg-[#2E7D52] text-white rounded-2xl shadow-xl flex items-center justify-center active:scale-95 transition-all"
+                        className="absolute bottom-24 right-4 z-[1000] w-12 h-12 bg-[#2E7D52] text-white rounded-2xl shadow-xl flex items-center justify-center active:scale-95 transition-all"
                     >
                         <Crosshair size={24} />
                     </motion.button>
@@ -850,21 +880,10 @@ export default function MapPage() {
             </div>
 
             {/* Bottom Controls */}
-            <div className="absolute bottom-8 left-4 right-4 z-[1000] flex flex-col items-center gap-6 pointer-events-none">
+            <div className="absolute bottom-8 left-4 right-4 z-[1000] flex flex-col items-center gap-4 pointer-events-none">
                 <AnimatePresence>
                     {isRunning && (
                         <>
-                            {/* Step Counter Display */}
-                            {isRunning && (
-                                <MinimizableStepCounter
-                                    steps={stats.steps}
-                                    stepRate={stepRate}
-                                    cadence={cadence}
-                                    isDetecting={isDetecting}
-                                    accuracy="High"
-                                />
-                            )}
-
                             {/* Run Stats Bar */}
                             <motion.div
                                 initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }}
@@ -947,14 +966,34 @@ function StatItem({ label, value, color, icon }: any) {
     );
 }
 
-function MapControlButton({ icon, ...props }: any) {
+function MapControlButton({ icon, transparent, active, title, ...rest }: any) {
     return (
         <button
             type="button"
-            {...props}
-            className="w-12 h-12 bg-white rounded-2xl border border-black/5 shadow-lg flex items-center justify-center text-[#1a1a2e] hover:text-[#2E7D52] active:scale-95 transition-all pointer-events-auto"
+            {...rest}
+            title={title}
+            className={`w-12 h-12 rounded-2xl border shadow-lg flex items-center justify-center active:scale-95 transition-all pointer-events-auto ${
+                transparent
+                    ? `backdrop-blur-md border-white/60 ${active ? 'bg-[#2E7D52] text-white' : 'bg-white/35 text-[#1a1a2e] hover:bg-white/55'}`
+                    : 'bg-white border-black/5 text-[#1a1a2e] hover:text-[#2E7D52]'
+            }`}
         >
             {icon}
         </button>
+    );
+}
+
+function FactionRow({ label, value, total, color }: { label: string; value: number; total: number; color: string }) {
+    const pct = Math.max(0, Math.min(100, Math.round((value / Math.max(1, total)) * 100)));
+    return (
+        <div className="space-y-1">
+            <div className="flex items-center justify-between text-[11px] font-bold text-[#1a1a2e]">
+                <span>{label}</span>
+                <span>{pct}%</span>
+            </div>
+            <div className="h-2 rounded-full bg-black/10 overflow-hidden">
+                <div className={`h-full ${color}`} style={{ width: `${pct}%` }} />
+            </div>
+        </div>
     );
 }
