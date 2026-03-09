@@ -111,11 +111,16 @@ export const getWeeklySummary = async (userId: string) => {
 // ============================================================
 
 export interface TerritoryAnalysis {
-  total_hexes: number;
-  fragmentation_score: number;
-  cluster_count: number;
-  largest_cluster: number;
-  clusters: string[][];
+  total_territories: number;
+  vulnerable_territories: number;
+  vulnerability_score: number;
+  expansion_rate: number;
+  recommendations?: string[];
+  total_hexes?: number;
+  fragmentation_score?: number;
+  cluster_count?: number;
+  largest_cluster?: number;
+  clusters?: string[][];
 }
 
 export const analyzeTerritoryService = async (userId: string) => {
@@ -138,6 +143,9 @@ export const getExpansionSuggestions = async (
   });
 };
 
+// Alias for backward compatibility
+export const getExpansionPath = getExpansionSuggestions;
+
 export const detectHexClusters = async (userId: string) => {
   return callNodeApi('/territory-analysis/vulnerability', 'POST', {
     user_id: userId,
@@ -148,6 +156,16 @@ export const detectHexClusters = async (userId: string) => {
 // ============================================================
 // SERVICE 07: ELEVATION ANALYZER (Node route)
 // ============================================================
+
+export interface ElevationStats {
+  runs_analyzed: number;
+  total_elevation_gain: number;
+  total_elevation_loss: number;
+  average_grade: number;
+  max_grade: number;
+  terrain_classification: 'flat' | 'rolling' | 'hilly' | 'mountainous' | 'extreme';
+  badges_earned?: string[];
+}
 
 export const analyzeRunElevation = async (runId: string, userId?: string) => {
   return callNodeApi('/elevation/analyze-run', 'POST', {
@@ -172,6 +190,21 @@ export const analyzeElevationTrace = async (gpsTrace: Array<{ lat: number; lng: 
 // ============================================================
 // SERVICE 08: HEATMAP GENERATOR (Node route)
 // ============================================================
+
+export interface HeatmapPoint {
+  lat: number;
+  lng: number;
+  intensity: number;
+  count?: number;
+}
+
+export interface HeatmapData {
+  points: HeatmapPoint[];
+  total_points: number;
+  unique_locations: number;
+  max_intensity: number;
+  grid_cell_size?: number;
+}
 
 export const getUserActivityHeatmap = async (userId: string, days: number = 30) => {
   return callNodeApi('/heatmap/user-activity', 'POST', {
