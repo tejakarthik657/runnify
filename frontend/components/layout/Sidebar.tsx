@@ -26,6 +26,7 @@ const NAV_ITEMS = [
     { label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
     { label: 'Map', icon: Map, href: '/map' },
     { label: 'Start Run', icon: Play, href: '/run' },
+    { label: 'Python Demo', icon: Palette, href: '/python-demo' },
     { label: 'Leaderboard', icon: Trophy, href: '/leaderboard' },
     { label: 'Credits', icon: CreditCard, href: '/credits' },
     { label: 'Community', icon: Users, href: '/community' },
