@@ -8,7 +8,6 @@ const QUICK_LINKS = [
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/map', label: 'Map' },
   { href: '/run', label: 'Run' },
-  { href: '/python-demo', label: 'Analytics Lab' },
   { href: '/leaderboard', label: 'Leaderboard' },
   { href: '/faction', label: 'Faction' },
   { href: '/profile', label: 'Profile' },

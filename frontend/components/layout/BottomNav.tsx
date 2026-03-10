@@ -9,15 +9,13 @@ import {
     Trophy,
     MessageSquare,
     Play,
-    LogOut,
-    Activity
+    LogOut
 } from 'lucide-react';
 
 const NAV_ITEMS = [
     { label: 'Home', icon: LayoutDashboard, href: '/dashboard' },
     { label: 'Map', icon: Map, href: '/map' },
     { label: 'Run', icon: Play, href: '/run', isAction: true },
-    { label: 'Analytics', icon: Activity, href: '/python-demo' },
     { label: 'Ranks', icon: Trophy, href: '/leaderboard' },
     { label: 'Chat', icon: MessageSquare, href: '/community' },
     { label: 'Exit', icon: LogOut, href: '/logout', isLogout: true },
