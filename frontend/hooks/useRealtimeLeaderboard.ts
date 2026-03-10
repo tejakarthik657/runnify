@@ -51,10 +51,14 @@ export const useRealtimeLeaderboard = (scope: 'global' | 'city', city: string, p
 
         const handleLeaderboardUpdate = (data: { userId: string; updates: any }) => {
             entriesRef.current.set(data.userId, { ...entriesRef.current.get(data.userId), ...data.updates });
-            setEntries(Array.from(entriesRef.current.values()).sort((a, b) => a.rank - b.rank));
+            setEntries(Array.from(entriesRef.current.values()).sort((a, b) => (a.rank || 999999) - (b.rank || 999999)));
         };
 
         const handleLeaderboardRefresh = (data: any) => {
+            if (!data?.scope || !Array.isArray(data.entries)) return;
+            if (data.scope !== scope) return;
+            if (scope === 'city' && data.city !== city) return;
+
             entriesRef.current.clear();
             setEntries(data.entries || []);
             data.entries?.forEach((entry: any) => {

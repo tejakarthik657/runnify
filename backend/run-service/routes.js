@@ -2,10 +2,70 @@ const express = require('express');
 const { authenticateJWT } = require('../middleware/auth');
 const { gpsRateLimit } = require('../middleware/rateLimit');
 const { Run, User } = require('../core/schema');
-const { RunService } = require('../core/services');
+const { RunService, LeaderboardService } = require('../core/services');
 const { broadcastTerritoryChanges, getIO } = require('./socket.handlers');
 
 const router = express.Router();
+
+async function emitPostRunRealtime(io, userId, result) {
+	if (!io || !userId) return;
+
+	const user = await User.findById(userId)
+		.select('credits username city faction hexesOwned globalRank cityRank stats color')
+		.lean();
+	if (!user) return;
+
+	io.to(`user:${userId}`).emit('user_stats_update', {
+		userId,
+		credits: user.credits,
+		hexesOwned: user.hexesOwned,
+		globalRank: user.globalRank,
+		cityRank: user.cityRank,
+		stats: user.stats,
+		distanceKm: result.summary?.distanceKm,
+		hexesClaimed: result.summary?.hexesClaimed,
+		lastRunTime: new Date(),
+	});
+
+	io.emit('leaderboard_update', {
+		userId,
+		updates: {
+			rank: user.globalRank,
+			credits: user.credits,
+			hexesOwned: user.hexesOwned,
+			totalKm: user.stats?.totalKm || 0,
+			username: user.username,
+			city: user.city,
+			lastRunTime: new Date(),
+		}
+	});
+
+	io.to(`user:${userId}`).emit('rank_update', {
+		userId,
+		rank: user.globalRank,
+		cityRank: user.cityRank,
+	});
+
+	try {
+		const globalEntries = await LeaderboardService.get('global');
+		io.emit('leaderboard_refresh', { scope: 'global', entries: globalEntries });
+		if (user.city) {
+			const cityEntries = await LeaderboardService.get('city', user.city);
+			io.emit('leaderboard_refresh', { scope: 'city', city: user.city, entries: cityEntries });
+		}
+	} catch (err) {
+		console.warn('[Realtime] leaderboard_refresh emit failed:', err.message);
+	}
+
+	if (user.faction) {
+		io.emit('faction_updated', {
+			faction: user.faction,
+			hexesClaimed: result.summary?.hexesClaimed || 0,
+			city: user.city,
+			username: user.username,
+		});
+	}
+}
 
 router.post('/start', authenticateJWT, async (req, res, next) => {
 	try {
@@ -83,45 +143,7 @@ router.post('/:runId/end', authenticateJWT, async (req, res, next) => {
 
 		// ── Emit real-time leaderboard and stats updates ─────────────
 		const io = getIO();
-		if (io && req.userId) {
-			const user = await User.findById(req.userId).select('credits username city faction').lean();
-			if (user) {
-				// Emit stats update for this user
-				io.to(`user:${req.userId}`).emit('user_stats_update', {
-					userId: req.userId,
-					credits: user.credits,
-					distanceKm: result.summary?.distanceKm,
-					hexesClaimed: result.summary?.hexesClaimed
-				});
-
-				// Emit global leaderboard update
-				io.emit('leaderboard_update', {
-					userId: req.userId,
-					updates: {
-						credits: user.credits,
-						username: user.username,
-						lastRunTime: new Date()
-					}
-				});
-
-				// Emit rank update
-				const usersAbove = await User.countDocuments({ credits: { $gt: user.credits }, isBanned: false });
-				io.to(`user:${req.userId}`).emit('rank_update', {
-					userId: req.userId,
-					rank: usersAbove + 1
-				});
-
-				// Emit faction update if user is in a faction
-				if (user.faction) {
-					io.emit('faction_updated', {
-						faction: user.faction,
-						hexesClaimed: result.summary?.hexesClaimed || 0,
-						city: user.city,
-						username: user.username,
-					});
-				}
-			}
-		}
+		await emitPostRunRealtime(io, req.userId, result);
 
 		res.json(result);
 	} catch (error) {
@@ -152,45 +174,7 @@ router.post('/end', authenticateJWT, async (req, res, next) => {
 
 		// ── Emit real-time leaderboard and stats updates ─────────────
 		const io = getIO();
-		if (io && req.userId) {
-			const user = await User.findById(req.userId).select('credits username city faction').lean();
-			if (user) {
-				// Emit stats update for this user
-				io.to(`user:${req.userId}`).emit('user_stats_update', {
-					userId: req.userId,
-					credits: user.credits,
-					distanceKm: result.summary?.distanceKm,
-					hexesClaimed: result.summary?.hexesClaimed
-				});
-
-				// Emit global leaderboard update
-				io.emit('leaderboard_update', {
-					userId: req.userId,
-					updates: {
-						credits: user.credits,
-						username: user.username,
-						lastRunTime: new Date()
-					}
-				});
-
-				// Emit rank update
-				const usersAbove = await User.countDocuments({ credits: { $gt: user.credits }, isBanned: false });
-				io.to(`user:${req.userId}`).emit('rank_update', {
-					userId: req.userId,
-					rank: usersAbove + 1
-				});
-
-				// Emit faction update if user is in a faction
-				if (user.faction) {
-					io.emit('faction_updated', {
-						faction: user.faction,
-						hexesClaimed: result.summary?.hexesClaimed || 0,
-						city: user.city,
-						username: user.username,
-					});
-				}
-			}
-		}
+		await emitPostRunRealtime(io, req.userId, result);
 
 		res.json(result);
 	} catch (error) {

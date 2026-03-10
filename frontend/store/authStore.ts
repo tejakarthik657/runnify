@@ -11,6 +11,13 @@ interface User {
   credits?: number;
   hexesOwned?: number;
   rank?: string;
+  stats?: {
+    totalKm?: number;
+    totalRuns?: number;
+    totalHexesClaimed?: number;
+    totalHexesInvaded?: number;
+    currentStreak?: number;
+  };
   faction?: 'red' | 'blue' | 'green' | null;
   factionJoinedAt?: Date | null;
 }

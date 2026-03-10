@@ -239,7 +239,7 @@ export default function CreditsPage() {
                                                         Zone Claim
                                                     </div>
                                                     <div className="text-[10px] text-gray-300 font-black uppercase tracking-widest">
-                                                        {new Date(run.endTime).toLocaleDateString()} • {run._id.slice(-6).toUpperCase()}
+                                                        {new Date(run.endedAt || run.updatedAt || run.createdAt).toLocaleDateString()} • {run._id.slice(-6).toUpperCase()}
                                                     </div>
                                                 </div>
                                             </div>

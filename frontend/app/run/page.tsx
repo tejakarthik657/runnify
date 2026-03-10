@@ -21,6 +21,7 @@ import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { useCallback } from 'react';
 import { toast } from 'react-hot-toast';
+import { mutate } from 'swr';
 import api from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import Badge from '../../components/ui/Badge';
@@ -339,10 +340,33 @@ export default function RunPage() {
 
             if (data?.user) {
                 updateUser({
+                    city: data.user.city,
                     credits: data.user.credits,
                     hexesOwned: data.user.hexesOwned,
+                    rank: data.user.globalRank ? String(data.user.globalRank) : undefined,
+                    stats: data.user.stats,
                 });
             }
+
+            const userCity = user?.city || data?.user?.city;
+            const refreshKeys = [
+                '/auth/me',
+                '/leaderboard/me',
+                '/leaderboard/global',
+                '/leaderboard/24hour',
+                '/run/history/me',
+                '/leaderboard/enhanced-stats',
+                '/leaderboard/top-commanders',
+                '/leaderboard/city-activity',
+                '/leaderboard/recent-wins',
+            ];
+
+            if (userCity) {
+                refreshKeys.push(`/leaderboard/city/${userCity}`);
+                refreshKeys.push(`/leaderboard/24hour/city/${userCity}`);
+            }
+
+            await Promise.all(refreshKeys.map((key) => mutate(key)));
 
             setIsRunning(false);
             setRunId(null);

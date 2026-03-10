@@ -998,7 +998,7 @@ const LeaderboardService = {
     // Get top runners from last 24 hours
     const runs = await Run.find({
       endedAt: { $gte: twentyFourHoursAgo },
-      status: 'completed'
+      isActive: false,
     }).select('userId creditsEarned hexesTotal');
 
     // Aggregate credits and hexes per user in last 24h
@@ -1084,7 +1084,7 @@ const LeaderboardService = {
     const runs = await Run.find({
       city,
       endedAt: { $gte: twentyFourHoursAgo },
-      status: 'completed'
+      isActive: false,
     }).select('userId creditsEarned hexesTotal');
 
     // Aggregate credits and hexes per user in last 24h
@@ -1166,7 +1166,7 @@ const LeaderboardService = {
       {
         $match: {
           endedAt: { $gte: oneHourAgo },
-          status: 'completed',
+          isActive: false,
           city: { $exists: true, $ne: null }
         }
       },
@@ -1220,7 +1220,7 @@ const LeaderboardService = {
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
     const impressiveRuns = await Run.find({
       endedAt: { $gte: oneHourAgo },
-      status: 'completed',
+      isActive: false,
       $or: [
         { hexesTotal: { $gte: 30 } },
         { creditsEarned: { $gte: 500 } },
@@ -1284,19 +1284,19 @@ const LeaderboardService = {
           { $match: { isBanned: false } },
           { $group: { _id: null, total: { $sum: '$credits' } } }
         ]),
-        Run.countDocuments({ startedAt: { $gte: oneDayAgo }, status: 'completed' }),
+        Run.countDocuments({ startedAt: { $gte: oneDayAgo }, isActive: false }),
         Run.aggregate([
-          { $match: { endedAt: { $gte: today }, status: 'completed' } },
+          { $match: { endedAt: { $gte: today }, isActive: false } },
           { $limit: 10000 },
           { $group: { _id: null, total: { $sum: '$distanceKm' } } }
         ]),
         Run.aggregate([
-          { $match: { endedAt: { $gte: oneWeekAgo }, status: 'completed' } },
+          { $match: { endedAt: { $gte: oneWeekAgo }, isActive: false } },
           { $limit: 50000 },
           { $group: { _id: null, total: { $sum: '$distanceKm' } } }
         ]),
         Run.aggregate([
-          { $match: { endedAt: { $gte: today }, status: 'completed' } },
+          { $match: { endedAt: { $gte: today }, isActive: false } },
           { $limit: 10000 },
           { $group: { _id: null, total: { $sum: { $size: { $ifNull: ['$hexesInvaded', []] } } } } }
         ]),
@@ -1597,10 +1597,12 @@ const BlockchainService = {
       {
         $set: {
           date: dateStr,
+          city: userAfter.city,
           totalUsers: users.length,
           activeUsers: today.length,
           totalRunsCompleted: today.length,
           totalKmRun: Math.round(totalKm * 10) / 10,
+          stats: userAfter.stats,
           totalHexesClaimed: await Territory.countDocuments(),
           topUserId: crypto.createHash('sha256').update(topUser._id.toString()).digest('hex'),
           topUserCredits: topUser.credits,
