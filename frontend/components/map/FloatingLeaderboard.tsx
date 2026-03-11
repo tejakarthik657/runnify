@@ -14,11 +14,11 @@ interface FloatingLeaderboardProps {
 
 export default function FloatingLeaderboard({ embedded = false }: FloatingLeaderboardProps) {
   const [isMinimized, setIsMinimized] = useState(false);
-  const { data: leaderboard } = useSWR('/leaderboard/daily?limit=10', fetcher, {
+  const { data: leaderboard } = useSWR('/leaderboard/24hour', fetcher, {
     refreshInterval: 10000, // Refresh every 10 seconds
   });
 
-  const leaders = leaderboard?.leaderboard || [];
+  const leaders = leaderboard?.entries || [];
 
   return (
     <motion.div
@@ -137,7 +137,7 @@ function LeaderboardRow({ rank, username, faction, hexesOwned, credits, color }:
           </div>
           <div className="flex items-center gap-1">
             <Zap size={10} className="text-[#A594D3]" />
-            <span className="text-[10px] font-bold text-gray-600">{credits}</span>
+            <span className="text-[10px] font-bold text-gray-600">{(credits || 0).toLocaleString()}</span>
           </div>
         </div>
       </div>
