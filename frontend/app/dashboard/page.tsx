@@ -242,26 +242,38 @@ export default function DashboardPage() {
 
                         <div className="space-y-3">
                             {runHistory?.runs?.length > 0 ? (
-                                runHistory.runs.slice(0, 4).map((run: any) => (
+                                runHistory.runs.slice(0, 4).map((run: any) => {
+                                    const distanceKm = Number(run.distanceKm ?? run.distance ?? 0);
+                                    const sortieDate = run.startedAt || run.startTime || run.createdAt || run.endedAt || run.updatedAt;
+                                    const creditsEarned = Number(run.creditsEarned ?? 0);
+                                    const hexesSecured = Number(
+                                        run.hexesTotal ??
+                                        (Array.isArray(run.hexesClaimed) ? run.hexesClaimed.length : run.hexesClaimed) ??
+                                        0
+                                    );
+
+                                    return (
                                     <div key={run._id} className="group flex items-center justify-between p-4 bg-[#F8FAFB] rounded-2xl hover:bg-[#F0F7F4] transition-all border border-transparent hover:border-[#A8D5BA]/20">
                                         <div className="flex items-center gap-4">
                                             <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-[#1a1a2e] group-hover:text-[#2E7D52] shadow-sm">
                                                 <Navigation2 size={16} />
                                             </div>
                                             <div>
-                                                <div className="text-sm font-extrabold text-[#1a1a2e]">{(run.distance / 1000).toFixed(2)} KM Sortie</div>
-                                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{new Date(run.startTime).toLocaleDateString()}</div>
+                                                <div className="text-sm font-extrabold text-[#1a1a2e]">{distanceKm.toFixed(2)} KM Sortie</div>
+                                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                                    {sortieDate ? new Date(sortieDate).toLocaleDateString() : 'Unknown Date'}
+                                                </div>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-6">
                                             <div className="text-right">
-                                                <div className="text-sm font-black text-[#2E7D52]">+{run.creditsEarned} TRC</div>
-                                                <div className="text-[10px] font-extrabold text-gray-400">{run.hexesClaimed} HEX SECURED</div>
+                                                <div className="text-sm font-black text-[#2E7D52]">+{creditsEarned} TRC</div>
+                                                <div className="text-[10px] font-extrabold text-gray-400">{hexesSecured} HEX SECURED</div>
                                             </div>
                                             <ChevronRight size={16} className="text-gray-300 group-hover:text-[#2E7D52]" />
                                         </div>
                                     </div>
-                                ))
+                                )})
                             ) : (
                                 <motion.div 
                                     initial={{ opacity: 0, y: 20 }}

@@ -168,7 +168,7 @@ function TopCommandersPodium({ commanders }: { commanders: any[] }) {
     const heights = ['h-64', 'h-56', 'h-48'];
 
     return (
-        <div className="flex items-end justify-center gap-4 sm:gap-8 py-8 flex-wrap">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 items-end justify-center gap-4 sm:gap-6 py-8">
             {commanders.map((c, i) => (
                 <motion.div
                     key={c.userId}
@@ -176,7 +176,7 @@ function TopCommandersPodium({ commanders }: { commanders: any[] }) {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.6, delay: i * 0.15 }}
-                    className={`bg-white border-2 border-black/5 rounded-[32px] p-6 shadow-xl hover:shadow-2xl hover:-translate-y-2 transition-all group ${heights[i]} w-48 flex flex-col justify-between`}
+                    className={`bg-white border-2 border-black/5 rounded-[32px] p-6 shadow-xl hover:shadow-2xl hover:-translate-y-2 transition-all group ${heights[i]} w-full max-w-[22rem] mx-auto flex flex-col justify-between`}
                     style={{ borderColor: i === 0 ? C.sage : 'rgba(0,0,0,0.05)' }}
                 >
                     <div>

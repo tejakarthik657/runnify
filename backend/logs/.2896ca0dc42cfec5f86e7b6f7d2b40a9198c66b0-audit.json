@@ -14,6 +14,21 @@
             "date": 1772635036675,
             "name": "C:\\Projects\\runni5\\backend\\logs\\error-2026-03-04.log",
             "hash": "22632aba77e07bf31eaff20e1e15370003e2f341ccd010fc26d584a689040c42"
+        },
+        {
+            "date": 1772780941911,
+            "name": "C:\\Projects\\runni5\\backend\\logs\\error-2026-03-06.log",
+            "hash": "ee0fe6dcf547babc269bfc42433fee78af2d6089ade457a1a2b1f309c5f5c4c7"
+        },
+        {
+            "date": 1772979671157,
+            "name": "C:\\Projects\\runni5\\backend\\logs\\error-2026-03-08.log",
+            "hash": "96417bc6cd4891005710945170cacfefc508a6dc0cc00c5b1de50b2d49de2b51"
+        },
+        {
+            "date": 1773199632227,
+            "name": "C:\\Projects\\runni5\\backend\\logs\\error-2026-03-11.log",
+            "hash": "66e7ff83044d17546c7fe5d6c67f8366586ec0231db5f3f84b7d08cf1dadc0e2"
         }
     ],
     "hashType": "sha256"

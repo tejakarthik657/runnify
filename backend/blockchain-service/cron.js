@@ -1,5 +1,5 @@
 const cron = require('node-cron');
-const { writeDailyProof } = require('./anchor.sync');
+const { runDailyAnchor } = require('./anchor.sync');
 const DailyProof = require('./proof.model');
 const logger = require('../utils/logger');
 
@@ -8,7 +8,7 @@ function registerBlockchainCrons() {
     const dateStr = new Date().toISOString().split('T')[0];
     logger.info(`🕐 Midnight blockchain proof job started for ${dateStr}`);
     try {
-      await writeDailyProof(dateStr);
+      await runDailyAnchor(dateStr);
     } catch (error) {
       logger.error(`❌ Midnight blockchain proof job failed: ${error.message}`);
     }
@@ -29,7 +29,7 @@ function registerBlockchainCrons() {
 
       for (const proof of failed) {
         logger.warn(`🔁 Retrying blockchain proof for ${proof.date}`);
-        await writeDailyProof(proof.date).catch((error) => {
+        await runDailyAnchor(proof.date).catch((error) => {
           logger.error(`❌ Retry failed for ${proof.date}: ${error.message}`);
         });
       }
@@ -46,7 +46,7 @@ function registerBlockchainCrons() {
 async function triggerManually() {
   const dateStr = new Date().toISOString().split('T')[0];
   logger.info(`🔧 Manual blockchain proof trigger for ${dateStr}`);
-  return writeDailyProof(dateStr);
+  return runDailyAnchor(dateStr);
 }
 
 module.exports = {

@@ -92,20 +92,17 @@ router.get('/path-traces', optionalAuth, async (req, res, next) => {
 			return res.status(400).json({ error: 'Invalid bounding box coordinates' });
 		}
 
-		// Get runs from last 24 hours that overlap with bounding box
+		// Get recent completed runs; we filter by bbox at GPS point level below
 		const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 		
 		const runs = await Run.find({
 			isActive: false,
 			endedAt: { $gte: twentyFourHoursAgo },
-			'boundingBox.minLat': { $lte: maxLat },
-			'boundingBox.maxLat': { $gte: minLat },
-			'boundingBox.minLng': { $lte: maxLng },
-			'boundingBox.maxLng': { $gte: minLng },
 		})
 		.select('userId username userColor endedAt distanceKm hexesTotal creditsEarned')
+		.sort({ endedAt: -1 })
 		.lean()
-		.limit(100); // Limit to prevent excessive data
+		.limit(120); // Limit to prevent excessive data
 
 		if (!runs || runs.length === 0) {
 			return res.json({ traces: [] });

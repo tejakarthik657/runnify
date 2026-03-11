@@ -14,6 +14,21 @@
             "date": 1772635036671,
             "name": "C:\\Projects\\runni5\\backend\\logs\\territory-run-2026-03-04.log",
             "hash": "c8500eedf588336ff54d98399e933788df2ab166e258d3130d9f2b52632f8630"
+        },
+        {
+            "date": 1772780941906,
+            "name": "C:\\Projects\\runni5\\backend\\logs\\territory-run-2026-03-06.log",
+            "hash": "0425bbf2673a2611b695df493eea0091e1a3c1916927b34a259d71a43b513b3e"
+        },
+        {
+            "date": 1772979671153,
+            "name": "C:\\Projects\\runni5\\backend\\logs\\territory-run-2026-03-08.log",
+            "hash": "755a7956ec85c8e7dd95e5327ca13bbaa437b258dadfd0c1f67d0b1159fdc8fd"
+        },
+        {
+            "date": 1773199632222,
+            "name": "C:\\Projects\\runni5\\backend\\logs\\territory-run-2026-03-11.log",
+            "hash": "b256d1d65279547cb3f8592cc458618d05959a2071a37441e4140a5d6b6315ed"
         }
     ],
     "hashType": "sha256"

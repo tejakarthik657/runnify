@@ -320,7 +320,7 @@ export default function LeaderboardPage() {
                                                 </div>
                                                 <div className="text-right">
                                                     <div className="text-base font-black text-[#1a1a2e] group-hover:text-[#2E7D52] transition-colors tabular-nums">
-                                                        {entry.credits.toLocaleString()}
+                                                        {(entry.credits || 0).toLocaleString()}
                                                     </div>
                                                     <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Yield</div>
                                                 </div>

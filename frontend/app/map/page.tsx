@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback } from 'react';
+import { mutate } from 'swr';
 import { useGps } from '../../hooks/useGps';
 import { useStepCounter } from '../../hooks/useStepCounter';
 import { useSocket } from '../../hooks/useSocket';
@@ -435,10 +436,34 @@ export default function MapPage() {
 
             if (data?.user) {
                 updateUser({
+                    city: data.user.city,
                     credits: data.user.credits,
                     hexesOwned: data.user.hexesOwned,
+                    rank: data.user.globalRank ? String(data.user.globalRank) : undefined,
+                    stats: data.user.stats,
                 });
             }
+
+            const userCity = user?.city || data?.user?.city;
+            const refreshKeys = [
+                '/auth/me',
+                '/leaderboard/me',
+                '/leaderboard/global',
+                '/leaderboard/24hour',
+                '/run/history/me',
+                '/leaderboard/enhanced-stats',
+                '/leaderboard/top-commanders',
+                '/leaderboard/city-activity',
+                '/leaderboard/recent-wins',
+            ];
+
+            if (userCity) {
+                refreshKeys.push(`/leaderboard/city/${userCity}`);
+                refreshKeys.push(`/leaderboard/24hour/city/${userCity}`);
+            }
+
+            await Promise.all(refreshKeys.map((key) => mutate(key)));
+            await mutate((key) => typeof key === 'string' && key.startsWith('/map/path-traces'));
 
             setIsRunning(false);
             isRunningRef.current = false;
@@ -458,6 +483,7 @@ export default function MapPage() {
             gpsFallbackStepsRef.current = 0;
             lastGpsTs.current = null;
             localStorage.setItem('tr_run_session', JSON.stringify({ active: false }));
+            setIsEnding(false);
         } catch (error: any) {
             // Retry logic with exponential backoff
             if (attemptNumber < MAX_RETRIES && (error.code === 'ABORT_ERR' || error.response?.status >= 500)) {

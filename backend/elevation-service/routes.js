@@ -112,15 +112,23 @@ router.post('/analyze-run', async (req, res) => {
 router.post('/user-stats', async (req, res) => {
   try {
     const { user_id, days = 30 } = req.body;
+    if (!user_id) {
+      return res.status(400).json({ success: false, error: 'user_id required' });
+    }
     
     const cacheKey = `elevation:stats:${user_id}:${days}`;
-    const cached = await getFromCache(cacheKey);
-    if (cached) return res.json(cached);
+    try {
+      const cached = await getFromCache(cacheKey);
+      if (cached) return res.json(cached);
+    } catch (cacheErr) {
+      // Cache failures should not fail the request.
+    }
     
     const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
     const runs = await Run.find({
-      user: user_id,
-      createdAt: { $gte: cutoffDate }
+      userId: user_id,
+      endedAt: { $gte: cutoffDate },
+      isActive: false,
     }).lean();
     
     let totalGain = 0, totalLoss = 0;
@@ -144,21 +152,30 @@ router.post('/user-stats', async (req, res) => {
     else if (totalGain >= 500) badges.push('Elevation Explorer');
     else badges.push('Flat Runner');
     
+    const dominantTerrain = Object.entries(terrainCounts)
+      .sort((a, b) => Number(b[1]) - Number(a[1]))[0]?.[0] || 'flat';
+
     const result = {
       success: true,
       data: {
         user_id,
-        period_days: days,
+        period_days: Number(days),
+        runs_analyzed: runs.length,
         total_runs: runs.length,
-        total_elevation_gain_m: totalGain,
-        total_elevation_loss_m: totalLoss,
-        avg_gain_per_run: runs.length > 0 ? Math.round(totalGain / runs.length) : 0,
+        total_elevation_gain: totalGain,
+        total_elevation_loss: totalLoss,
+        average_grade: runs.length > 0 ? Number(((totalGain + totalLoss) / Math.max(1, runs.length * 100)).toFixed(1)) : 0,
+        terrain_classification: dominantTerrain,
         terrain_distribution: terrainCounts,
-        badges
+        badges_earned: badges,
       }
     };
     
-    await setCache(cacheKey, result, 3600);
+    try {
+      await setCache(cacheKey, result, 3600);
+    } catch (cacheErr) {
+      // Ignore cache write failures.
+    }
     res.json(result);
     
   } catch (error) {

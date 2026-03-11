@@ -44,7 +44,7 @@ async function runDailyAnchor(dateStr) {
 
   const stats = await Run.aggregate([
     { $match: {
-        status:  'ended',
+        isActive: false,
         endedAt: { $gte: start, $lte: end },
         'antiCheat.verdict': { $ne: 'disqualified' },
     }},
@@ -107,16 +107,14 @@ async function verifyUserProof(userId, date, creditsEarned, hexesClaimed) {
   const proof = await DailyProof.findOne({ date });
   if (!proof) return { valid: false, reason: 'No proof found for this date' };
 
-  // Rebuild the leaf for this user
-  const leaf = sha256(`${userId}:${date}:${creditsEarned}:${hexesClaimed}`);
-
   // Rebuild entire tree from DB and check leaf is in it
   const start = new Date(`${date}T00:00:00.000Z`);
   const end   = new Date(`${date}T23:59:59.999Z`);
 
   const stats = await Run.aggregate([
     { $match: {
-        status: 'ended', endedAt: { $gte: start, $lte: end },
+        isActive: false,
+        endedAt: { $gte: start, $lte: end },
         'antiCheat.verdict': { $ne: 'disqualified' },
     }},
     { $group: {
@@ -125,6 +123,13 @@ async function verifyUserProof(userId, date, creditsEarned, hexesClaimed) {
         hexesClaimed:  { $sum: { $size: { $ifNull: ['$hexesClaimed', []] } } },
     }},
   ]);
+
+  const userStats = stats.find((s) => String(s._id) === String(userId));
+  const effectiveCredits = Number.isFinite(Number(creditsEarned)) ? Number(creditsEarned) : Number(userStats?.creditsEarned || 0);
+  const effectiveHexes = Number.isFinite(Number(hexesClaimed)) ? Number(hexesClaimed) : Number(userStats?.hexesClaimed || 0);
+
+  // Rebuild the leaf for this user
+  const leaf = sha256(`${userId}:${date}:${effectiveCredits}:${effectiveHexes}`);
 
   const leaves       = stats.map(s => sha256(`${s._id}:${date}:${s.creditsEarned}:${s.hexesClaimed}`));
   const rebuiltRoot  = buildMerkleRoot(leaves);
@@ -135,6 +140,8 @@ async function verifyUserProof(userId, date, creditsEarned, hexesClaimed) {
     valid:       leafInTree && rootMatches,
     leafInTree,
     rootMatches,
+    creditsChecked: effectiveCredits,
+    hexesChecked: effectiveHexes,
     merkleRoot:  proof.merkleRoot,
     txHash:      proof.txHash,
     explorerUrl: proof.explorerUrl,
