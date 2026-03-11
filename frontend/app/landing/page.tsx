@@ -330,10 +330,10 @@ function RecentWinsFeed({ wins }: { wins: any[] }) {
 // --- MAIN PAGE ---
 
 export default function LandingPage() {
-    // Configure fetcher with 5-second timeout for landing page performance
+    // Configure fetcher with 2.5-second timeout for landing page performance
     const fetcherWithTimeout = (url: string) => {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        const timeoutId = setTimeout(() => controller.abort(), 2500);
         
         return api.get(url, { signal: controller.signal })
             .then(res => {
@@ -343,7 +343,8 @@ export default function LandingPage() {
             .catch(err => {
                 clearTimeout(timeoutId);
                 // Return fallback data on timeout instead of throwing
-                if (err.code === 'ECONNABORTED' || err.signal?.aborted) {
+                // axios wraps AbortController cancellations as CanceledError
+                if (err.code === 'ECONNABORTED' || err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
                     console.warn(`Request timeout for ${url}, using fallback data`);
                     return getFallbackData(url);
                 }
@@ -357,26 +358,31 @@ export default function LandingPage() {
         focusThrottleInterval: 300000,
         errorRetryCount: 2,
         errorRetryInterval: 3000,
+        fallbackData: getFallbackData('/leaderboard/enhanced-stats'),
     });
     const { data: commandersData } = useSWR('/leaderboard/top-commanders?limit=3', fetcherWithTimeout, { 
         refreshInterval: 300000, // 5 min
         dedupingInterval: 120000,
         errorRetryCount: 1,
+        fallbackData: getFallbackData('/leaderboard/top-commanders'),
     });
     const { data: cityActivityData } = useSWR('/leaderboard/city-activity', fetcherWithTimeout, { 
         refreshInterval: 300000, // 5 min
         dedupingInterval: 120000,
         errorRetryCount: 1,
+        fallbackData: getFallbackData('/leaderboard/city-activity'),
     });
     const { data: recentWinsData } = useSWR('/leaderboard/recent-wins?limit=9', fetcherWithTimeout, { 
         refreshInterval: 60000, // 1 min
         dedupingInterval: 30000,
         errorRetryCount: 1,
+        fallbackData: getFallbackData('/leaderboard/recent-wins'),
     });
     const { data: invasionData } = useSWR('/map/invasions?limit=5', fetcherWithTimeout, { 
         refreshInterval: 15000,
         dedupingInterval: 5000,
         errorRetryCount: 1,
+        fallbackData: getFallbackData('/map/invasions'),
     });
 
     const [feedIndex, setFeedIndex] = useState(0);
