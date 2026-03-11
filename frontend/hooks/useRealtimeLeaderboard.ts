@@ -31,6 +31,7 @@ export const useRealtimeLeaderboard = (scope: 'global' | 'city', city: string, p
     // Initialize with SWR data
     useEffect(() => {
         if (data?.entries) {
+            entriesRef.current.clear();
             setEntries(data.entries);
             data.entries.forEach((entry: any) => {
                 entriesRef.current.set(entry.userId, entry);
@@ -79,7 +80,7 @@ export const useRealtimeLeaderboard = (scope: 'global' | 'city', city: string, p
             socket.off('leaderboard_refresh', handleLeaderboardRefresh);
             socket.off('rank_update', handleRankUpdate);
         };
-    }, [socket]);
+    }, [socket, scope, city]);
 
     return {
         entries,
