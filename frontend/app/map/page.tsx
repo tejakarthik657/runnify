@@ -440,7 +440,7 @@ export default function MapPage() {
                     credits: data.user.credits,
                     hexesOwned: data.user.hexesOwned,
                     rank: data.user.globalRank ? String(data.user.globalRank) : undefined,
-                    stats: data.user.stats,
+                    ...(data.user.stats ? { stats: data.user.stats } : {}),
                 });
             }
 

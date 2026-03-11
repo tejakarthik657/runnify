@@ -788,6 +788,7 @@ const RunService = {
         hexesOwned: userAfter.hexesOwned,
         globalRank: userAfter.globalRank,
         cityRank: userAfter.cityRank,
+        stats: userAfter.stats,
       },
       summary: {
         hexesClaimed: hexesClaimed.length,
