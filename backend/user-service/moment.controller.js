@@ -4,6 +4,7 @@
 // ============================================================
 const { RunMoment, User, Run } = require('../config/models');
 const { uploadToSupabaseStorage } = require('./storage.upload');
+const mongoose = require('mongoose');
 
 /**
  * POST /user/me/moments
@@ -22,6 +23,10 @@ async function createMoment(req, res, next) {
         console.log('[Moment] File details:', file ? { mimetype: file.mimetype, size: file.size } : 'No file');
 
         if (!file) return res.status(400).json({ error: 'Image file required' });
+
+        if (typeof caption === 'string' && caption.length > 100) {
+            return res.status(400).json({ error: 'Caption cannot exceed 100 characters' });
+        }
 
         // ── Rate Limit: One moment per 24 hours ──────────────────
         const lastMoment = await RunMoment.findOne({ userId })
@@ -45,12 +50,16 @@ async function createMoment(req, res, next) {
         // ── Optional: Fetch run stats if runId provided ──────────
         let stats = undefined;
         if (runId) {
-            const run = await Run.findById(runId).select('distanceKm hexCount').lean();
-            if (run) {
-                stats = {
-                    distanceKm: run.distanceKm,
-                    hexCount: run.hexCount,
-                };
+            if (mongoose.Types.ObjectId.isValid(runId)) {
+                const run = await Run.findById(runId).select('distanceKm hexCount').lean();
+                if (run) {
+                    stats = {
+                        distanceKm: run.distanceKm,
+                        hexCount: run.hexCount,
+                    };
+                }
+            } else {
+                console.warn('[Moment] Ignoring invalid runId:', runId);
             }
         }
 
@@ -63,10 +72,9 @@ async function createMoment(req, res, next) {
         try {
             imageUrl = await uploadToSupabaseStorage(file.buffer, file.mimetype, 'moments');
         } catch (uploadError) {
-            return res.status(500).json({ 
-                error: 'Failed to upload image to storage',
-                details: uploadError.message 
-            });
+            // Fallback keeps feature working if storage service is temporarily unavailable.
+            imageUrl = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+            console.warn('[Moment] Supabase upload failed, using data URL fallback:', uploadError.message);
         }
 
         const moment = await RunMoment.create({
@@ -78,7 +86,7 @@ async function createMoment(req, res, next) {
             city: user.city,
             imageUrl,
             caption,
-            runId,
+            runId: mongoose.Types.ObjectId.isValid(runId) ? runId : undefined,
             stats,
             createdAt: now,
             expiresAt,
