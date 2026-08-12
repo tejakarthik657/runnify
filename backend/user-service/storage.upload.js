@@ -78,6 +78,10 @@ async function uploadToSupabaseStorage(fileBuffer, mimeType, folder = 'moments')
                 console.error('CRITICAL: Supabase RLS is blocking this request even with the provided key.');
                 console.error('Please ensure the bucket "territory-run-storage" exists and is set to PUBLIC.');
             }
+        } else if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+            console.error('[Supabase Upload] CRITICAL: Supabase project is unreachable (paused or deleted).');
+            console.error('[Supabase Upload] URL attempted:', SUPABASE_URL);
+            throw new Error('Image storage service is currently unavailable. The Supabase project may be paused. Please check your Supabase dashboard.');
         } else if (error.request) {
             console.error('[Supabase Upload] Network Error (No response):', error.message);
         } else {

@@ -73,18 +73,26 @@ async function ensureRoom(roomId, members = []) {
     name = 'Direct Message';
   } else if (roomId.startsWith('city:')) {
     type = 'city';
-    city = roomId.split(':')[1];
+    // Trim whitespace to avoid duplicate key errors from "Hyderabad " vs "Hyderabad"
+    city = roomId.split(':')[1]?.trim();
     name = city;
   }
 
-  await ChatRoom.updateOne(
-    { roomId },
-    {
-      $setOnInsert: { roomId, members, name, city },
-      $set: { type }
-    },
-    { upsert: true }
-  );
+  try {
+    await ChatRoom.updateOne(
+      { roomId },
+      {
+        $setOnInsert: { roomId, members, name, city, type },
+      },
+      { upsert: true }
+    );
+  } catch (err) {
+    // E11000 = duplicate key — room already exists, safe to ignore
+    if (err.code === 11000) {
+      return;
+    }
+    throw err;
+  }
 }
 
 // ─────────────────────────────────────────────────────────────

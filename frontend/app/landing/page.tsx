@@ -171,7 +171,7 @@ function TopCommandersPodium({ commanders }: { commanders: any[] }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 items-end justify-center gap-4 sm:gap-6 py-8">
             {commanders.map((c, i) => (
                 <motion.div
-                    key={c.userId}
+                    key={c.userId || c.username || i}
                     initial={{ opacity: 0, y: 40 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
@@ -286,10 +286,10 @@ function RecentWinsFeed({ wins }: { wins: any[] }) {
 
     return (
         <div className="space-y-3 min-h-[240px]">
-            <AnimatePresence mode="wait">
+            <AnimatePresence mode="popLayout">
                 {wins.slice(currentIndex, currentIndex + 3).map((win, i) => (
                     <motion.div
-                        key={`${win.username}-${win.timestamp}`}
+                        key={win.id || `${win.username}-${win.timestamp || i}`}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}

@@ -44,13 +44,24 @@ const { LeaderboardService } = require('../core/services');
 const app = express();
 const server = http.createServer(app);
 
+// ── Dynamic CORS Allowed Origins ──────────────────────────────
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://runnify-ktk.vercel.app',
+  process.env.FRONTEND_URL
+].filter(Boolean).map(url => url.replace(/\/$/, '')); // Remove trailing slashes
+
 // ── Socket.IO (main namespace — GPS) + /chat namespace ────────
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-    methods: ['GET', 'POST'],
+    origin: allowedOrigins,
+    methods: ['GET', 'POST', 'OPTIONS'],
     credentials: true,
+    allowedHeaders: ['Authorization', 'Content-Type']
   },
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  transports: ['websocket', 'polling']
 });
 
 // ── Register notification push IO instance ────────────────────
@@ -59,8 +70,23 @@ registerIO(io);
 // ── Global Middleware ─────────────────────────────────────────
 app.use(helmet());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (e.g., mobile apps, curl) or matching origins
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    // Check if the origin starts with any of the allowed origins
+    if (allowedOrigins.some(o => origin.startsWith(o))) {
+      return callback(null, true);
+    }
+    
+    console.warn(`[CORS Blocked] Origin not allowed: ${origin}`);
+    return callback(new Error('Not allowed by CORS'), false);
+  },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
 }));
 app.use(express.json({ limit: '15mb' })); // Increased for potential JSON payloads
 app.use(express.urlencoded({ extended: true, limit: '15mb' })); // needed for Apple Sign-In form posts
