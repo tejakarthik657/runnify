@@ -5,6 +5,8 @@
 // ============================================================
 const express = require('express');
 const { query, isReady, getActiveModel } = require('./bot.service');
+const { authenticateJWT } = require('../middleware/auth');
+const { aiRateLimit } = require('../middleware/rateLimit');
 
 const router = express.Router();
 
@@ -28,7 +30,7 @@ router.get('/health', (req, res) => {
  * Query the RAG bot with a question
  * Returns answer + source information
  */
-router.post('/ask', async (req, res, next) => {
+router.post('/ask', authenticateJWT, aiRateLimit, async (req, res, next) => {
   try {
     const { question } = req.body;
 

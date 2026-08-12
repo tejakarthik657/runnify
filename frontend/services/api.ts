@@ -72,6 +72,9 @@ api.interceptors.response.use(
             } catch (refreshError) {
                 processQueue(refreshError, null);
                 useAuthStore.getState().logout();
+                if (typeof window !== 'undefined') {
+                    window.location.replace(`/login?callback=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+                }
                 return Promise.reject(refreshError);
             } finally {
                 isRefreshing = false;

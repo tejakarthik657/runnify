@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Polygon, Tooltip, useMapEvent } from 'react-leaflet';
 import useSWR from 'swr';
 import api from '../../services/api';
-import { cellToBoundary } from 'h3-js';
+import { cellToBoundary, cellToLatLng } from 'h3-js';
 
 // Design Tokens from Documentation
 const COLORS = {
@@ -31,6 +31,7 @@ interface TerritoryLayerProps {
 export default function TerritoryLayer({ currentHexId, onCurrentTerritoryChange }: TerritoryLayerProps) {
     const [bounds, setBounds] = useState<any>(null);
     const [zoom, setZoom] = useState(16);
+    const [cachedTerritories, setCachedTerritories] = useState<any[]>([]);
     
     // Determine if we should show faction view or individual territories
     const showFactionView = zoom < 14;
@@ -75,12 +76,38 @@ export default function TerritoryLayer({ currentHexId, onCurrentTerritoryChange 
         setZoom(map.getZoom());
     }, [map]);
 
+    // Cache merging & viewport bounds trimming to optimize memory
+    useEffect(() => {
+        if (!territories?.features) return;
+        setCachedTerritories((prev) => {
+            const prevMap = new Map(prev.map(t => [t.hexId, t]));
+            territories.features.forEach((t: any) => {
+                prevMap.set(t.hexId, t);
+            });
+            if (bounds) {
+                const margin = 0.05; // 5% bounds margin for offscreen caching
+                return Array.from(prevMap.values()).filter((t: any) => {
+                    try {
+                        const [lat, lng] = cellToLatLng(t.hexId);
+                        return lat >= bounds.minLat - margin && 
+                               lat <= bounds.maxLat + margin &&
+                               lng >= bounds.minLng - margin &&
+                               lng <= bounds.maxLng + margin;
+                    } catch {
+                        return true;
+                    }
+                });
+            }
+            return Array.from(prevMap.values());
+        });
+    }, [territories, bounds]);
+
     // Notify parent when current territory changes
     useEffect(() => {
-        if (!currentHexId || !territories?.features) return;
-        const current = territories.features.find((t: any) => t.hexId === currentHexId);
+        if (!currentHexId) return;
+        const current = cachedTerritories.find((t: any) => t.hexId === currentHexId);
         onCurrentTerritoryChange?.(current || null);
-    }, [currentHexId, territories?.features, onCurrentTerritoryChange]);
+    }, [currentHexId, cachedTerritories, onCurrentTerritoryChange]);
 
     // Render faction view (zoomed out)
     if (showFactionView && factionData?.hexes) {
@@ -174,11 +201,11 @@ export default function TerritoryLayer({ currentHexId, onCurrentTerritoryChange 
     }
 
     // Render individual territories (zoomed in)
-    if (!territories?.features) return null;
+    if (cachedTerritories.length === 0) return null;
 
     return (
         <>
-            {territories.features.map((territory: any) => {
+            {cachedTerritories.map((territory: any) => {
                 const boundary = cellToBoundary(territory.hexId);
                 const positions: [number, number][] = boundary.map(coord => [coord[0], coord[1]]);
 

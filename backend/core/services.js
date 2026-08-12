@@ -239,14 +239,22 @@ const H3Service = {
 const CreditEngine = {
 
   /** Check if current time is peak hour */
-  isPeakHour() {
-    const hour = new Date().getHours();
+  isPeakHour(timezone = 'UTC') {
+    let hour;
+    try {
+      const options = { hour: '2-digit', hour12: false, timeZone: timezone };
+      const formatter = new Intl.DateTimeFormat('en-US', options);
+      const formatted = formatter.format(new Date());
+      hour = Number(formatted);
+    } catch {
+      hour = new Date().getUTCHours();
+    }
     return PEAK_HOURS.some(([start, end]) => hour >= start && hour < end);
   },
 
   /** Calculate credits for a completed run */
-  calculate({ hexesClaimed, hexesInvaded, hexesRetouched }) {
-    const multiplier = CreditEngine.isPeakHour() ? PEAK_MULTIPLIER : 1.0;
+  calculate({ hexesClaimed, hexesInvaded, hexesRetouched }, timezone = 'UTC') {
+    const multiplier = CreditEngine.isPeakHour(timezone) ? PEAK_MULTIPLIER : 1.0;
     const fromClaims = hexesClaimed.length * CREDITS_PER_CLAIM;
     const fromInvasions = hexesInvaded.length * CREDITS_PER_INVASION;
     const fromRetouch = hexesRetouched.length * CREDITS_PER_RETOUCH;
@@ -440,8 +448,6 @@ const RunService = {
             recordedAt: new Date(p.ts || p.timestamp),
           };
         });
-        // Clear buffer so we don't double-process if endRun is retried
-        await redis.del(redisKey);
       }
     } catch (_) { /* non-critical if redis fails */ }
 
@@ -468,6 +474,95 @@ const RunService = {
       requestIp,
       clientMeta
     );
+
+    if (acResult.verdict === 'disqualified') {
+      const userAfter = await User.findByIdAndUpdate(
+        userId,
+        {
+          $inc: { 'antiCheat.strikeCount': 1 },
+          $set: { 'antiCheat.lastFlaggedRun': new Date() }
+        },
+        { new: true }
+      );
+
+      try {
+        await GpsPoint.insertMany(
+          points.map((pt, idx) => ({
+            runId,
+            userId,
+            seq: idx + 1,
+            location: pt.location,
+            accuracy: pt.accuracy,
+            altitude: pt.altitude,
+            hexId: pt.hexId,
+            recordedAt: pt.recordedAt,
+            isValid: true
+          })),
+          { ordered: false }
+        );
+      } catch (err) { /* ignore duplicate key or insertion warnings */ }
+
+      const updatedRun = await Run.findByIdAndUpdate(
+        runId,
+        {
+          $set: {
+            endedAt: new Date(),
+            isActive: false,
+            durationSeconds: Math.floor((Date.now() - run.startedAt.getTime()) / 1000),
+            distanceKm,
+            stepsCount: Math.round(distanceKm * 1312),
+            hexesClaimed: [],
+            hexesInvaded: [],
+            hexesRetouched: [],
+            hexesTotal: 0,
+            creditsEarned: 0,
+            isProcessed: true,
+            processedAt: new Date(),
+            antiCheat: {
+              verdict: acResult.verdict,
+              creditMultiplier: 0,
+              totalWeight: acResult.score.totalWeight,
+              flagCount: acResult.score.flags.length,
+              checkedAt: new Date(),
+            },
+          }
+        },
+        { new: true }
+      );
+
+      // Clear Redis buffer
+      try {
+        await redis.del(redisKey);
+      } catch (_) {}
+
+      return {
+        run: updatedRun,
+        territoryChanges: [],
+        antiCheat: {
+          verdict: acResult.verdict,
+          creditMultiplier: 0,
+        },
+        user: {
+          id: userAfter._id,
+          credits: userAfter.credits,
+          hexesOwned: userAfter.hexesOwned,
+          globalRank: userAfter.globalRank,
+          cityRank: userAfter.cityRank,
+          stats: userAfter.stats,
+        },
+        summary: {
+          hexesClaimed: 0,
+          hexesInvaded: 0,
+          hexesRetouched: 0,
+          creditsEarned: 0,
+          distanceKm,
+          durationSeconds: Math.floor((Date.now() - run.startedAt.getTime()) / 1000),
+          stepsCount: Math.round(distanceKm * 1312),
+          enclosureHexes: 0,
+          enclosureBonus: 0,
+        }
+      };
+    }
 
     // Only process hexes that passed anti-cheat filters (e.g. dwell time)
     const validHexSet = new Set(acResult.validHexes);
@@ -503,8 +598,11 @@ const RunService = {
       }
     }
 
+    // Upsert territory ownership
+    const user = await User.findById(userId).select('username color hashcode faction timezone');
+
     // Calculate credits (multiplied by AC verdict)
-    const rawCredits = CreditEngine.calculate({ hexesClaimed, hexesInvaded, hexesRetouched });
+    const rawCredits = CreditEngine.calculate({ hexesClaimed, hexesInvaded, hexesRetouched }, user.timezone || 'UTC');
     const enclosureBonus = enclosedHexes.length * ENCLOSURE_BONUS_PER_HEX;
     const finalCreditsTotal = Math.floor((rawCredits.total + enclosureBonus) * acResult.creditMultiplier);
 
@@ -514,9 +612,6 @@ const RunService = {
     if (durationSeconds > MAX_RUN_DURATION_H * 3600) {
       await Run.findByIdAndUpdate(runId, { $set: { isFlagged: true, flagReason: 'exceeded_max_duration' } });
     }
-
-    // Upsert territory ownership
-    const user = await User.findById(userId).select('username color hashcode faction');
     
     // Faction color mapping
     const FACTION_COLORS = {
@@ -597,31 +692,46 @@ const RunService = {
       });
     }
 
-    if (bulkTerritoryOps.length > 0) {
-      await Territory.bulkWrite(bulkTerritoryOps);
-    }
+    const mongoose = require('mongoose');
+    let session = null;
+    let useTransaction = false;
 
-    // Update faction stats in Redis (Global Territory Wars)
-    if (user.faction) {
-      try {
-        const factionKey = `faction:hexcount:${user.faction}`;
-        await redis.incrBy(factionKey, hexesClaimed.length + hexesInvaded.length);
-
-        if (run.city) {
-          const cityKey = `faction:city:${run.city}:${user.faction}`;
-          await redis.incrBy(cityKey, hexesClaimed.length + hexesInvaded.length);
-        }
-      } catch (err) {
-        console.warn('[Faction Stats] Redis update failed:', err.message);
-        // Continue - faction stats are non-critical for mission completion
+    try {
+      const isReplicaSet = mongoose.connection.client.topology?.description?.type?.includes('ReplicaSet') || 
+                           mongoose.connection.client.topology?.description?.type === 'ReplicaSetNoPrimary';
+      if (isReplicaSet) {
+        session = await mongoose.startSession();
+        session.startTransaction();
+        useTransaction = true;
       }
-      
-      // Note: Socket.io broadcast moved to routes.js where io instance is available
+    } catch (_) {
+      session = null;
     }
 
-    // Create invasion records & notifications
-    if (invasionEvents.length > 0) {
-      try {
+    try {
+      const opts = useTransaction ? { session } : {};
+
+      if (bulkTerritoryOps.length > 0) {
+        await Territory.bulkWrite(bulkTerritoryOps, opts);
+      }
+
+      // Update faction stats in Redis (Global Territory Wars)
+      if (user.faction) {
+        try {
+          const factionKey = `faction:hexcount:${user.faction}`;
+          await redis.incrBy(factionKey, hexesClaimed.length + hexesInvaded.length);
+
+          if (run.city) {
+            const cityKey = `faction:city:${run.city}:${user.faction}`;
+            await redis.incrBy(cityKey, hexesClaimed.length + hexesInvaded.length);
+          }
+        } catch (err) {
+          console.warn('[Faction Stats] Redis update failed:', err.message);
+        }
+      }
+
+      // Create invasion records & notifications
+      if (invasionEvents.length > 0) {
         const invasionsByVictim = {};
         for (const { hexId, victim } of invasionEvents) {
           const vid = victim.ownerId.toString();
@@ -635,7 +745,7 @@ const RunService = {
           const creditsGained = hexCount * CREDITS_PER_INVASION;
 
           // Create invasion event
-          const invasion = await Invasion.create({
+          const invasion = await Invasion.create([{
             runId, invaderId: userId, invaderUsername: user.username,
             invaderColor: user.color,
             victimId: data.victim.ownerId, victimUsername: data.victim.ownerUsername,
@@ -643,165 +753,181 @@ const RunService = {
             hexIds: data.hexIds, hexCount, hexCity: run.city,
             creditsGained, creditsLost, occurredAt: new Date(),
             schemaVersion: SCHEMA_VERSION,
-          });
+          }], opts);
 
           // Deduct credits from victim
           await User.findByIdAndUpdate(victimId, {
             $inc: { credits: -creditsLost, hexesOwned: -hexCount, 'stats.totalHexesLost': hexCount, 'stats.totalCreditsLost': creditsLost },
-          });
+          }, opts);
 
           // Credit ledger entry for victim loss
-          await CreditLedger.create({
+          await CreditLedger.create([{
             userId: victimId, amount: -creditsLost,
             balanceAfter: 0, type: 'invaded_loss',
-            refId: invasion._id, hexIds: data.hexIds, hexCount,
+            refId: invasion[0]._id, hexIds: data.hexIds, hexCount,
             note: `${hexCount} hexes invaded by ${user.username}`,
             occurredAt: new Date(), schemaVersion: SCHEMA_VERSION,
-          });
+          }], opts);
 
-          // Notify victim
-          await NotificationService.createInvasionAlert({
-            victimId, invaderUsername: user.username,
-            hexCount, creditsLost, city: run.city,
-            invasionId: invasion._id,
-          });
+          // Notify victim (non-blocking notification service call)
+          try {
+            await NotificationService.createInvasionAlert({
+              victimId, invaderUsername: user.username,
+              hexCount, creditsLost, city: run.city,
+              invasionId: invasion[0]._id,
+            });
+          } catch (notifErr) {
+            console.warn('[Invasion Notification] Alert creation failed:', notifErr.message);
+          }
 
           // Update rivalry
           await RunService._updateRivalry(userId, victimId);
         }
-      } catch (err) {
-        console.warn('[Invasion] creation failed:', err.message);
-        // Continue - invasions are non-critical for mission completion
       }
-    }
 
-    // Deduct credits from newly-invaded hex owners already handled above
-    // Add credits to runner
-    // Add credits to runner + Update Strikes
-    const userUpdate = {
-      $inc: {
-        credits: finalCreditsTotal,
-        hexesOwned: hexesClaimed.length,
-        'stats.totalCreditsEarned': finalCreditsTotal,
-        'stats.totalHexesClaimed': hexesClaimed.length,
-        'stats.totalHexesInvaded': hexesInvaded.length,
-        'stats.totalKm': distanceKm,
-        'stats.totalRuns': 1,
-      },
-      $set: { lastActiveAt: new Date(), lastRunAt: new Date() },
-    };
+      // Add credits to runner + Update Strikes
+      const userUpdate = {
+        $inc: {
+          credits: finalCreditsTotal,
+          hexesOwned: hexesClaimed.length,
+          'stats.totalCreditsEarned': finalCreditsTotal,
+          'stats.totalHexesClaimed': hexesClaimed.length,
+          'stats.totalHexesInvaded': hexesInvaded.length,
+          'stats.totalKm': distanceKm,
+          'stats.totalRuns': 1,
+        },
+        $set: { lastActiveAt: new Date(), lastRunAt: new Date() },
+      };
 
-    if (acResult.verdict === 'disqualified' || acResult.verdict === 'warned') {
-      userUpdate.$inc['antiCheat.strikeCount'] = 1;
-      userUpdate.$set['antiCheat.lastFlaggedRun'] = new Date();
-    }
+      if (acResult.verdict === 'disqualified' || acResult.verdict === 'warned') {
+        userUpdate.$inc['antiCheat.strikeCount'] = 1;
+        userUpdate.$set['antiCheat.lastFlaggedRun'] = new Date();
+      }
 
-    const userAfter = await User.findByIdAndUpdate(userId, userUpdate, { new: true });
+      const userAfter = await User.findByIdAndUpdate(userId, userUpdate, { new: true, ...opts });
 
-    // Credit ledger for runner (non-critical)
-    try {
-      await CreditLedger.create({
-        userId, username: user.username, amount: finalCreditsTotal,
-        balanceAfter: userAfter.credits,
-        type: 'run_claim',
-        hexIds: [...hexesClaimed, ...hexesInvaded],
-        hexCount: hexesClaimed.length + hexesInvaded.length,
-        multiplier: rawCredits.multiplier,
-        note: `Run: ${hexesClaimed.length} claims, ${hexesInvaded.length} invasions (AC: ${acResult.verdict})`,
-        occurredAt: new Date(), schemaVersion: SCHEMA_VERSION,
-      });
-    } catch (err) {
-      console.warn('[CreditLedger] failed to create entry:', err.message);
-    }
+      // Credit ledger for runner (non-critical)
+      try {
+        await CreditLedger.create([{
+          userId, username: user.username, amount: finalCreditsTotal,
+          balanceAfter: userAfter.credits,
+          type: 'run_claim',
+          hexIds: [...hexesClaimed, ...hexesInvaded],
+          hexCount: hexesClaimed.length + hexesInvaded.length,
+          multiplier: rawCredits.multiplier,
+          note: `Run: ${hexesClaimed.length} claims, ${hexesInvaded.length} invasions (AC: ${acResult.verdict})`,
+          occurredAt: new Date(), schemaVersion: SCHEMA_VERSION,
+        }], opts);
+      } catch (err) {
+        console.warn('[CreditLedger] failed to create entry:', err.message);
+      }
 
-    // Finalise run document
-    const boundingBox = RunService._calcBoundingBox(points);
-    
-    // Calculate steps: prioritize accelerometer-detected, fallback to GPS distance
-    // Frontend sends accelSteps if available; backend calculates as 1312 steps per km
-    const accelSteps = clientMeta?.accelSteps || 0;
-    const stepsFromDistance = Math.round(distanceKm * 1312);
-    const stepsCount = accelSteps > 0 ? accelSteps : stepsFromDistance;
+      // Finalise run document
+      const boundingBox = RunService._calcBoundingBox(points);
+      
+      const accelSteps = clientMeta?.accelSteps || 0;
+      const stepsFromDistance = Math.round(distanceKm * 1312);
+      const stepsCount = accelSteps > 0 ? accelSteps : stepsFromDistance;
 
-    const updatedRun = await Run.findByIdAndUpdate(runId, {
-      $set: {
-        endedAt: new Date(), isActive: false,
-        durationSeconds, distanceKm, stepsCount,
-        hexesClaimed, hexesInvaded, hexesRetouched,
-        hexesTotal: touchedHexIds.length,
-        creditsEarned: finalCreditsTotal,
-        creditsFromClaims: rawCredits.fromClaims,
-        creditsFromInvasions: rawCredits.fromInvasions,
-        peakMultiplierUsed: rawCredits.multiplier,
-        endLocation: { type: 'Point', coordinates: [lng, lat] },
-        boundingBox, isProcessed: true, processedAt: new Date(),
+      const updatedRun = await Run.findByIdAndUpdate(runId, {
+        $set: {
+          endedAt: new Date(), isActive: false,
+          durationSeconds, distanceKm, stepsCount,
+          hexesClaimed, hexesInvaded, hexesRetouched,
+          hexesTotal: touchedHexIds.length,
+          creditsEarned: finalCreditsTotal,
+          creditsFromClaims: rawCredits.fromClaims,
+          creditsFromInvasions: rawCredits.fromInvasions,
+          peakMultiplierUsed: rawCredits.multiplier,
+          endLocation: { type: 'Point', coordinates: [lng, lat] },
+          boundingBox, isProcessed: true, processedAt: new Date(),
+          antiCheat: {
+            verdict: acResult.verdict,
+            creditMultiplier: acResult.creditMultiplier,
+            totalWeight: acResult.score.totalWeight,
+            flagCount: acResult.score.flags.length,
+            checkedAt: new Date()
+          },
+          validHexes: acResult.validHexes,
+          failedHexes: acResult.failedHexes
+        }
+      }, { new: true, ...opts });
+
+      if (useTransaction) {
+        await session.commitTransaction();
+      }
+
+      // Safely clear Redis buffer *only after* database write success!
+      try {
+        await redis.del(redisKey);
+      } catch (_) {}
+
+      // Streak, achievements, leaderboard (non-critical outside transaction)
+      try {
+        await UserService.updateStreak(userId);
+      } catch (err) {
+        console.warn('[Streak] update failed:', err.message);
+      }
+      
+      try {
+        await AchievementService.checkAll(userId, userAfter);
+      } catch (err) {
+        console.warn('[Achievements] check failed:', err.message);
+      }
+      
+      try {
+        await UserService.checkPrestige(userId);
+      } catch (err) {
+        console.warn('[Prestige] check failed:', err.message);
+      }
+
+      try {
+        await LeaderboardService.buildGlobal();
+        if (run.city) {
+          await LeaderboardService.buildCity(run.city);
+        }
+      } catch (err) {
+        console.warn('[Leaderboard] refresh after run failed:', err.message);
+      }
+
+      return {
+        run: updatedRun,
+        territoryChanges,
         antiCheat: {
           verdict: acResult.verdict,
           creditMultiplier: acResult.creditMultiplier,
-          totalWeight: acResult.score.totalWeight,
-          flagCount: acResult.score.flags.length,
-          checkedAt: new Date()
         },
-        validHexes: acResult.validHexes,
-        failedHexes: acResult.failedHexes
-      }
-    }, { new: true });
+        user: {
+          id: userAfter._id,
+          credits: userAfter.credits,
+          hexesOwned: userAfter.hexesOwned,
+          globalRank: userAfter.globalRank,
+          cityRank: userAfter.cityRank,
+          stats: userAfter.stats,
+        },
+        summary: {
+          hexesClaimed: hexesClaimed.length,
+          hexesInvaded: hexesInvaded.length,
+          hexesRetouched: hexesRetouched.length,
+          creditsEarned: finalCreditsTotal,
+          distanceKm,
+          durationSeconds,
+          stepsCount,
+          enclosureHexes: enclosedHexes.length,
+          enclosureBonus,
+        }
+      };
 
-    // Streak, achievements, leaderboard
-    try {
-      await UserService.updateStreak(userId);
     } catch (err) {
-      console.warn('[Streak] update failed:', err.message);
-    }
-    
-    try {
-      await AchievementService.checkAll(userId, userAfter);
-    } catch (err) {
-      console.warn('[Achievements] check failed:', err.message);
-    }
-    
-    try {
-      await UserService.checkPrestige(userId);
-    } catch (err) {
-      console.warn('[Prestige] check failed:', err.message);
-    }
-
-    try {
-      await LeaderboardService.buildGlobal();
-      if (run.city) {
-        await LeaderboardService.buildCity(run.city);
+      if (useTransaction) {
+        await session.abortTransaction();
       }
-    } catch (err) {
-      console.warn('[Leaderboard] refresh after run failed:', err.message);
-    }
-
-    return {
-      run: updatedRun,
-      territoryChanges,
-      antiCheat: {
-        verdict: acResult.verdict,
-        creditMultiplier: acResult.creditMultiplier,
-      },
-      user: {
-        id: userAfter._id,
-        credits: userAfter.credits,
-        hexesOwned: userAfter.hexesOwned,
-        globalRank: userAfter.globalRank,
-        cityRank: userAfter.cityRank,
-        stats: userAfter.stats,
-      },
-      summary: {
-        hexesClaimed: hexesClaimed.length,
-        hexesInvaded: hexesInvaded.length,
-        hexesRetouched: hexesRetouched.length,
-        creditsEarned: finalCreditsTotal,
-        distanceKm,
-        durationSeconds,
-        stepsCount,
-        enclosureHexes: enclosedHexes.length,
-        enclosureBonus,
+      throw err;
+    } finally {
+      if (session) {
+        await session.endSession();
       }
-    };
+    }
   },
 
   _detectEnclosedHexes(points) {
@@ -1598,12 +1724,10 @@ const BlockchainService = {
       {
         $set: {
           date: dateStr,
-          city: userAfter.city,
           totalUsers: users.length,
           activeUsers: today.length,
           totalRunsCompleted: today.length,
           totalKmRun: Math.round(totalKm * 10) / 10,
-          stats: userAfter.stats,
           totalHexesClaimed: await Territory.countDocuments(),
           topUserId: crypto.createHash('sha256').update(topUser._id.toString()).digest('hex'),
           topUserCredits: topUser.credits,

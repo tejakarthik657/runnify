@@ -6,16 +6,24 @@ const PEAK_HOUR_MULTIPLIER = 1.5;
 const DECAY_RATE_PER_DAY = 0.98;
 const CREDIT_TRANSFER_ON_LOSS = 5;
 
-function isPeakHour(timestamp = Date.now()) {
-	const hour = new Date(timestamp).getUTCHours();
-	return (hour >= 6 && hour < 9) || (hour >= 17 && hour < 20);
+function isPeakHour(timestamp = Date.now(), timezone = 'UTC') {
+	let localHour;
+	try {
+		const options = { hour: '2-digit', hour12: false, timeZone: timezone };
+		const formatter = new Intl.DateTimeFormat('en-US', options);
+		const formatted = formatter.format(new Date(timestamp));
+		localHour = Number(formatted);
+	} catch {
+		localHour = new Date(timestamp).getUTCHours();
+	}
+	return (localHour >= 6 && localHour < 9) || (localHour >= 17 && localHour < 20);
 }
 
-function calculateRunCredits(hexesClaimed = [], hexesInvaded = [], timestamp = Date.now()) {
+function calculateRunCredits(hexesClaimed = [], hexesInvaded = [], timestamp = Date.now(), timezone = 'UTC') {
 	const claimedBase = hexesClaimed.length * CREDITS_PER_CLAIMED_HEX;
 	const invasionBonus = hexesInvaded.length * CREDITS_PER_INVADED_HEX;
 	const subtotal = claimedBase + invasionBonus;
-	const peakMultiplier = isPeakHour(timestamp) ? PEAK_HOUR_MULTIPLIER : 1.0;
+	const peakMultiplier = isPeakHour(timestamp, timezone) ? PEAK_HOUR_MULTIPLIER : 1.0;
 	const total = Math.floor(subtotal * peakMultiplier);
 
 	return {

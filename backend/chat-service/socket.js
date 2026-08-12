@@ -49,7 +49,12 @@ async function checkChatRateLimit(userId) {
 function sanitizeContent(content) {
   if (typeof content !== 'string') return '';
   return content
-    .replace(/<[^>]*>/g, '')       // strip HTML tags
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;')
     .replace(/\s+/g, ' ')          // collapse whitespace
     .trim()
     .slice(0, MAX_MESSAGE_LENGTH);

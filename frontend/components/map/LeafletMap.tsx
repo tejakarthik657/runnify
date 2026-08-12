@@ -50,10 +50,15 @@ function MapEventsHandler({ onManualMove }: { onManualMove?: () => void }) {
     return null;
 }
 
-function MapInstanceHandler({ onReady }: { onReady?: (map: L.Map) => void }) {
+function MapInstanceHandler({ onReady }: { onReady?: (map: L.Map | null) => void }) {
     const map = useMap();
     useEffect(() => {
-        if (onReady) onReady(map);
+        if (onReady) {
+            onReady(map);
+            return () => {
+                onReady(null);
+            };
+        }
     }, [map, onReady]);
     return null;
 }

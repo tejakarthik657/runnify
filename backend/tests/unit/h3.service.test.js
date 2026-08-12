@@ -38,7 +38,7 @@ describe('H3 Service', () => {
 	test('processGpsBatch returns unique hex IDs', () => {
 		const points = [
 			{ lat: 37.7749, lng: -122.4194, accuracy: 5 },
-			{ lat: 37.7749, lng: -122.4194, accuracy: 5 },
+			{ lat: 37.77495, lng: -122.4194, accuracy: 5 },
 			{ lat: 37.775, lng: -122.4194, accuracy: 5 },
 		];
 

@@ -9,13 +9,17 @@ const router = express.Router();
 // Configure multer for image uploads (memory storage for direct R2 upload)
 const upload = multer({
 	storage: multer.memoryStorage(),
-	limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
+	limits: { fileSize: 2 * 1024 * 1024 }, // 2MB max for profile pics / moments
 	fileFilter: (req, file, cb) => {
+		const path = require('path');
+		const ext = path.extname(file.originalname).toLowerCase();
+		const allowedExts = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
 		const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-		if (allowedMimes.includes(file.mimetype)) {
+
+		if (allowedMimes.includes(file.mimetype) && allowedExts.includes(ext)) {
 			cb(null, true);
 		} else {
-			cb(new Error(`Invalid file type: ${file.mimetype}`), false);
+			cb(new Error(`Invalid file type or extension. Only JPEG, PNG, WEBP, and GIF are allowed.`), false);
 		}
 	}
 });
