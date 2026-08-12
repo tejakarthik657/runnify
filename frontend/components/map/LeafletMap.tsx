@@ -18,7 +18,7 @@ interface LeafletMapProps {
     center: [number, number];
     zoom: number;
     children?: React.ReactNode;
-    onMapReady?: (map: L.Map) => void;
+    onMapReady?: (map: L.Map | null) => void;
     followUser?: boolean;
     onManualMove?: () => void;
 }
