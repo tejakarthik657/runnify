@@ -176,8 +176,8 @@ function TopCommandersPodium({ commanders }: { commanders: any[] }) {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.6, delay: i * 0.15 }}
-                    className={`bg-white border-2 border-black/5 rounded-[32px] p-6 shadow-xl hover:shadow-2xl hover:-translate-y-2 transition-all group ${heights[i]} w-full max-w-[22rem] mx-auto flex flex-col justify-between`}
-                    style={{ borderColor: i === 0 ? C.sage : 'rgba(0,0,0,0.05)' }}
+                    className={`bg-white/85 backdrop-blur-md border border-white/60 rounded-[32px] p-6 shadow-premium hover:shadow-pastel-glow hover:-translate-y-2 transition-all group ${heights[i]} w-full max-w-[22rem] mx-auto flex flex-col justify-between`}
+                    style={{ borderColor: i === 0 ? '#A8D5BA' : 'rgba(255,255,255,0.5)' }}
                 >
                     <div>
                         <div className="flex items-center justify-between mb-4">
@@ -410,16 +410,16 @@ export default function LandingPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#F4F7F4] font-['Nunito'] text-[#1A1A2E] overflow-x-hidden selection:bg-[#A8D5BA]/30">
+        <div className="min-h-screen bg-gradient-to-br from-[#F5F7F6] to-[#EDF2EF] font-['Nunito'] text-[#1A1A2E] overflow-x-hidden selection:bg-[#A8D5BA]/30 bg-tactical-grid">
 
             {/* ─── NAVIGATION ─── */}
             <nav className="fixed top-0 left-0 right-0 z-[100] h-16 sm:h-20 md:h-24 px-4 sm:px-6 md:px-12 flex items-center justify-between pointer-events-none">
                 <motion.div
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className="flex items-center gap-2 sm:gap-3 md:gap-4 bg-white/90 backdrop-blur-2xl px-4 sm:px-5 md:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl md:rounded-2xl border border-white shadow-lg sm:shadow-xl shadow-green-900/5 pointer-events-auto"
+                    className="flex items-center gap-2 sm:gap-3 md:gap-4 bg-white/85 backdrop-blur-md px-4 sm:px-5 md:px-6 py-2.5 sm:py-3.5 rounded-2xl border border-white/60 shadow-premium pointer-events-auto"
                 >
-                    <div className="w-8 sm:w-9 md:w-10 h-8 sm:h-9 md:h-10 rounded-lg sm:rounded-[8px] md:rounded-xl bg-gradient-to-br from-[#A8D5BA] to-[#6CC89A] flex items-center justify-center text-white shadow-lg shadow-green-200">
+                    <div className="w-8 sm:w-9 md:w-10 h-8 sm:h-9 md:h-10 rounded-lg sm:rounded-[8px] md:rounded-xl bg-gradient-to-br from-[#A8D5BA] to-[#6CC89A] flex items-center justify-center text-white shadow-md">
                         <Hexagon size={18} className="sm:w-5 sm:h-5 md:w-6 md:h-6" fill="currentColor" fillOpacity={0.2} />
                     </div>
                     <span className="font-['Syne'] font-extrabold text-sm sm:text-base md:text-xl tracking-tighter hidden sm:inline">Territory<span className="text-[#A8D5BA]">Run</span></span>
@@ -429,10 +429,10 @@ export default function LandingPage() {
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     className="flex items-center gap-2 sm:gap-3 md:gap-4 pointer-events-auto">
-                    <Link href="/login" className="hidden md:flex bg-white/90 backdrop-blur-xl border border-black/5 text-[9px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-widest text-slate-500 hover:text-[#A8D5BA] hover:shadow-md transition-all px-4 sm:px-6 md:px-8 py-2 sm:py-3 md:py-4 rounded-lg sm:rounded-xl md:rounded-2xl">
+                    <Link href="/login" className="hidden md:flex bg-white/85 backdrop-blur-md border border-white/60 text-[9px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-widest text-slate-500 hover:text-[#2E7D52] hover:shadow-premium transition-all px-4 sm:px-6 md:px-8 py-2 sm:py-3 md:py-4 rounded-2xl">
                         Log In
                     </Link>
-                    <Link href="/login" className="bg-[#1A1A2E] text-white text-[9px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-widest px-4 sm:px-6 md:px-8 py-2 sm:py-3 md:py-4 rounded-lg sm:rounded-xl md:rounded-2xl shadow-2xl shadow-slate-900/20 hover:scale-105 active:scale-95 transition-all">
+                    <Link href="/login" className="bg-[#1A1A2E] text-white text-[9px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-widest px-4 sm:px-6 md:px-8 py-2 sm:py-3 md:py-4 rounded-2xl shadow-lg hover:scale-105 active:scale-95 transition-all">
                         Launch
                     </Link>
                 </motion.div>
@@ -501,7 +501,7 @@ export default function LandingPage() {
                     transition={{ delay: 1, duration: 0.6 }}
                     className="mt-12 sm:mt-16 md:mt-28 lg:mt-32 w-full max-w-lg px-4 sm:px-0"
                 >
-                    <div className="bg-white/80 backdrop-blur-2xl px-4 sm:px-6 md:px-8 py-4 sm:py-5 rounded-[28px] sm:rounded-[40px] border border-white shadow-2xl shadow-green-900/5 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 group hover:translate-y-[-4px] transition-transform">
+                    <div className="bg-white/75 backdrop-blur-md px-4 sm:px-6 md:px-8 py-4 sm:py-5 rounded-3xl border border-white/60 shadow-premium flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 group hover:translate-y-[-4px] transition-transform">
                         <div className="w-12 sm:w-14 md:w-16 h-12 sm:h-14 md:h-16 rounded-lg sm:rounded-2xl bg-[#A8D5BA] flex items-center justify-center text-white shadow-[0_12px_24px_-8px_#A8D5BA] shrink-0">
                             <Zap size={24} className="sm:w-7 sm:h-7 md:w-8 md:h-8" />
                         </div>
@@ -536,7 +536,7 @@ export default function LandingPage() {
             <StatTicker stats={enhancedStats} />
 
             {/* ─── TOP COMMANDERS & LIVE ACTIVITY ─── */}
-            <section className="py-16 sm:py-24 md:py-32 px-4 sm:px-6 md:px-12 bg-[#F4F7F4] relative">
+            <section className="py-16 sm:py-24 md:py-32 px-4 sm:px-6 md:px-12 bg-[#F4F8F5]/50 border-t border-green-100/30 relative">
                 <div className="max-w-7xl mx-auto">
                     {/* Top Commanders Podium */}
                     <div className="mb-20">
@@ -559,7 +559,7 @@ export default function LandingPage() {
                             initial={{ opacity: 0, y: 30 }}
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true }}
-                            className="bg-white border border-black/5 rounded-[32px] p-8 shadow-lg"
+                            className="bg-white/80 backdrop-blur-md border border-white/60 rounded-[32px] p-8 shadow-premium"
                         >
                             <div className="flex items-center gap-3 mb-8">
                                 <div className="w-12 h-12 rounded-xl bg-[#A8D5BA]/10 flex items-center justify-center">
@@ -572,14 +572,14 @@ export default function LandingPage() {
                             </div>
                             <LiveCityHeatmap cities={cities} />
                         </motion.div>
-
+ 
                         {/* Recent Wins Feed */}
                         <motion.div
                             initial={{ opacity: 0, y: 30 }}
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true }}
                             transition={{ delay: 0.2 }}
-                            className="bg-white border border-black/5 rounded-[32px] p-8 shadow-lg"
+                            className="bg-white/80 backdrop-blur-md border border-white/60 rounded-[32px] p-8 shadow-premium"
                         >
                             <div className="flex items-center gap-3 mb-8">
                                 <div className="w-12 h-12 rounded-xl bg-[#C3B1E1]/10 flex items-center justify-center">

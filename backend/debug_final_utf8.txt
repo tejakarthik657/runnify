@@ -1,0 +1,766 @@
+﻿node.exe : npm verbose cli C:\Program 
+Files\nodejs\node.exe C:\Users\tejak\AppData\Roaming\
+npm\node_modules\npm\bin\npm-cli.js
+At C:\Program Files\nodejs\npm.ps1:29 char:3
++   & $NODE_EXE $NPM_CLI_JS $args
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm     
+verbose cli...\bin\npm-cli.js:String) [], R    
+emoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+npm info using npm@11.5.2
+npm info using node@v22.17.1
+npm warn invalid config cache=false set in command 
+line options
+npm warn invalid config Must be valid filesystem path
+npm warn Unknown cli config "--forceExit". This will 
+stop working in the next major version of npm.
+npm verbose title npm test
+npm verbose argv "test" "--loglevel" "verbose" 
+"--no-cache" "--forceExit"
+npm verbose logfile logs-max:10 dir:C:\Users\tejak\Ap
+pData\Local\npm-cache\_logs\2026-03-03T09_38_32_963Z-
+npm verbose logfile C:\Users\tejak\AppData\Local\npm-
+cache\_logs\2026-03-03T09_38_32_963Z-debug-0.log
+
+> backend@1.0.0 test
+> jest --runInBand --forceExit
+
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: ΓÜÖ∩╕Å  suppress all logs with { quiet: true }
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: ΓÜÖ∩╕Å  enable debug logging with { debug: true }
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+  console.log
+    [TestDB] Connected to in-memory MongoDB
+
+      at Object.log [as connect] (tests/setup/testDb.js:14:13)
+
+  console.log
+    [Registration] Body fields: [ 'username', 'email', 'password', 'city' ]
+
+      at log (auth-service/controller.js:60:11)
+
+  console.log
+    [Registration] File present: false
+
+      at log (auth-service/controller.js:61:11)
+
+  console.log
+    [Registration] No profile image file in request
+
+      at log (auth-service/controller.js:102:12)
+
+  console.log
+    [Registration] Final user payload: {
+      "_id": "69a6ac1ba21c5da269dc9d14",
+      "username": "c_car_1772530715225",
+      "hashcode": "TR-6E63",
+      "color": "#00FF88",
+      "avatarUrl": null,
+      "credits": 0,
+      "hexesOwned": 0,
+      "globalRank": null,
+      "city": "Hyderabad",
+      "homeLocation": {
+        "lat": null,
+        "lng": null,
+        "city": "Hyderabad",
+        "updatedAt": null
+      },
+      "stats": {
+        "totalKm": 0,
+        "totalRuns": 0,
+        "totalHexesClaimed": 0,
+        "totalHexesInvaded": 0,
+        "totalHexesLost": 0,
+        "totalCreditsEarned": 0,
+        "totalCreditsLost": 0,
+        "longestRunKm": 0,
+        "mostHexesInOneRun": 0,
+        "mostCreditsInOneRun": 0,
+        "peakHexesOwned": 0,
+        "peakRank": null,
+        "currentStreak": 0,
+        "longestStreak": 0,
+        "lastRunDate": null
+      },
+      "isPrestige": false,
+      "createdAt": "2026-03-03T09:38:35.354Z",
+      "id": "69a6ac1ba21c5da269dc9d14"
+    }
+
+      at log (auth-service/controller.js:120:11)
+
+  console.log
+    [Registration] Body fields: [ 'username', 'email', 'password', 'city' ]
+
+      at log (auth-service/controller.js:60:11)
+
+  console.log
+    [Registration] File present: false
+
+      at log (auth-service/controller.js:61:11)
+
+  console.error
+    [ERROR] ValidationError: User validation failed: username: Path `username` (`c_teleport_1772530715578`, length 24) is longer than the maximum allowed length (20).
+        at model.Document.invalidate (C:\Projects\runni5\backend\node_modules\mongoose\lib\document.js:3381:32)
+        at C:\Projects\runni5\backend\node_modules\mongoose\lib\document.js:3142:17
+        at C:\Projects\runni5\backend\node_modules\mongoose\lib\schemaType.js:1446:9
+        at processTicksAndRejections (node:internal/process/task_queues:85:11)
+
+    [0m [90m 100 |[39m [90m// ΓöÇΓöÇ Global error handler ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ[39m
+     [90m 101 |[39m app[33m.[39muse((err[33m,[39m req[33m,[39m res[33m,[39m _next) [33m=>[39m {
+    [31m[1m>[22m[39m[90m 102 |[39m   console[33m.[39merror([32m'[ERROR]'[39m[33m,[39m err[33m.[39mstack [33m||[39m err[33m.[39mmessage)[33m;[39m
+     [90m     |[39m           [31m[1m^[22m[39m
+     [90m 103 |[39m   [36mconst[39m status [33m=[39m err[33m.[39mstatus [33m||[39m err[33m.[39mstatusCode [33m||[39m [35m500[39m[33m;[39m
+     [90m 104 |[39m   res[33m.[39mstatus(status)[33m.[39mjson({ error[33m:[39m err[33m.[39mmessage [33m||[39m [32m'Internal Server Error'[39m })[33m;[39m
+     [90m 105 |[39m })[33m;[39m[0m
+
+      at error (api-gateway/index.js:102:11)
+      at Layer.handleError (node_modules/router/lib/layer.js:116:17)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at Layer.handleError (node_modules/router/lib/layer.js:111:12)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at node_modules/router/index.js:688:15
+      at next (node_modules/router/index.js:276:14)
+      at next (node_modules/router/lib/route.js:132:14)
+      at next (auth-service/controller.js:124:3)
+
+  console.log
+    [Registration] Body fields: [ 'username', 'email', 'password', 'city' ]
+
+      at log (auth-service/controller.js:60:11)
+
+  console.log
+    [Registration] File present: false
+
+      at log (auth-service/controller.js:61:11)
+
+  console.error
+    [ERROR] ValidationError: User validation failed: username: Path `username` (`c_driveby_1772530715672`, length 23) is longer than the maximum allowed length (20).
+        at model.Document.invalidate (C:\Projects\runni5\backend\node_modules\mongoose\lib\document.js:3381:32)
+        at C:\Projects\runni5\backend\node_modules\mongoose\lib\document.js:3142:17
+        at C:\Projects\runni5\backend\node_modules\mongoose\lib\schemaType.js:1446:9
+        at processTicksAndRejections (node:internal/process/task_queues:85:11)
+
+    [0m [90m 100 |[39m [90m// ΓöÇΓöÇ Global error handler ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ[39m
+     [90m 101 |[39m app[33m.[39muse((err[33m,[39m req[33m,[39m res[33m,[39m _next) [33m=>[39m {
+    [31m[1m>[22m[39m[90m 102 |[39m   console[33m.[39merror([32m'[ERROR]'[39m[33m,[39m err[33m.[39mstack [33m||[39m err[33m.[39mmessage)[33m;[39m
+     [90m     |[39m           [31m[1m^[22m[39m
+     [90m 103 |[39m   [36mconst[39m status [33m=[39m err[33m.[39mstatus [33m||[39m err[33m.[39mstatusCode [33m||[39m [35m500[39m[33m;[39m
+     [90m 104 |[39m   res[33m.[39mstatus(status)[33m.[39mjson({ error[33m:[39m err[33m.[39mmessage [33m||[39m [32m'Internal Server Error'[39m })[33m;[39m
+     [90m 105 |[39m })[33m;[39m[0m
+
+      at error (api-gateway/index.js:102:11)
+      at Layer.handleError (node_modules/router/lib/layer.js:116:17)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at Layer.handleError (node_modules/router/lib/layer.js:111:12)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at node_modules/router/index.js:688:15
+      at next (node_modules/router/index.js:276:14)
+      at next (node_modules/router/lib/route.js:132:14)
+      at next (auth-service/controller.js:124:3)
+
+FAIL tests/anticheat.scenarios.test.js
+  ├ù Car Cheat: 60km/h run is disqualified (374 ms)
+  ├ù Teleport: Impossible velocity is disqualified 
+(149 ms)
+  ├ù Drive-by: Hexes with < 8s dwell time are 
+filtered out (91 ms)
+
+  ΓùÅ Car Cheat: 60km/h run is disqualified
+
+    expect(received).toBe(expected) // Object.is 
+equality
+
+    Expected: 200
+    Received: 201
+
+    [0m [90m 140 |[39m         })[33m;[39m
+     [90m 141 |[39m
+    [31m[1m>[22m[39m[90m 142 |[39m     expect(s
+tartRes[33m.[39mstatus)[33m.[39mtoBe([35m200[39
+m)[33m;[39m
+     [90m     |[39m                             
+[31m[1m^[22m[39m
+     [90m 143 |[39m
+     [90m 144 |[39m     [36mconst[39m runId 
+[33m=[39m startRes[33m.[39mbody[33m.[39mrun[33
+m?[39m[33m.[39m_id
+     [90m 145 |[39m         [33m||[39m startRes[
+33m.[39mbody[33m.[39mrun[33m?[39m[33m.[39mid[
+0m
+
+      at Object.toBe 
+(tests/anticheat.scenarios.test.js:142:29)
+
+  ΓùÅ Teleport: Impossible velocity is disqualified
+
+    Registration failed: {"error":"User validation 
+failed: username: Path `username` 
+(`c_teleport_1772530715578`, length 24) is longer 
+than the maximum allowed length (20)."}
+
+    [0m [90m 93 |[39m
+     [90m 94 |[39m     [36mif[39m 
+(reg[33m.[39mstatus [33m!==[39m [35m201[39m) {
+    [31m[1m>[22m[39m[90m 95 |[39m         
+[36mthrow[39m [36mnew[39m 
+[33mError[39m([32m`Registration failed: 
+${JSON.stringify(reg.body)}`[39m)[33m;[39m
+     [90m    |[39m               
+[31m[1m^[22m[39m
+     [90m 96 |[39m     }
+     [90m 97 |[39m
+     [90m 98 |[39m     [36mconst[39m login 
+[33m=[39m [36mawait[39m request(app)[0m
+
+      at registerAndLogin 
+(tests/anticheat.scenarios.test.js:95:15)
+      at Object.<anonymous> 
+(tests/anticheat.scenarios.test.js:168:23)
+
+  ΓùÅ Drive-by: Hexes with < 8s dwell time are 
+filtered out
+
+    Registration failed: {"error":"User validation 
+failed: username: Path `username` 
+(`c_driveby_1772530715672`, length 23) is longer 
+than the maximum allowed length (20)."}
+
+    [0m [90m 93 |[39m
+     [90m 94 |[39m     [36mif[39m 
+(reg[33m.[39mstatus [33m!==[39m [35m201[39m) {
+    [31m[1m>[22m[39m[90m 95 |[39m         
+[36mthrow[39m [36mnew[39m 
+[33mError[39m([32m`Registration failed: 
+${JSON.stringify(reg.body)}`[39m)[33m;[39m
+     [90m    |[39m               
+[31m[1m^[22m[39m
+     [90m 96 |[39m     }
+     [90m 97 |[39m
+     [90m 98 |[39m     [36mconst[39m login 
+[33m=[39m [36mawait[39m request(app)[0m
+
+      at registerAndLogin 
+(tests/anticheat.scenarios.test.js:95:15)
+      at Object.<anonymous> 
+(tests/anticheat.scenarios.test.js:201:23)
+
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: ΓÜÖ∩╕Å  write to custom object with { processEnv: myObject }
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: ΓÜÖ∩╕Å  suppress all logs with { quiet: true }
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+  console.log
+    [TestDB] Connected to in-memory MongoDB
+
+      at Object.log [as connect] (tests/setup/testDb.js:14:13)
+
+  console.log
+    [Registration] Body fields: [ 'password', 'username', 'email' ]
+
+      at log (auth-service/controller.js:60:11)
+
+  console.log
+    [Registration] File present: false
+
+      at log (auth-service/controller.js:61:11)
+
+  console.log
+    [Registration] No profile image file in request
+
+      at log (auth-service/controller.js:102:12)
+
+  console.log
+    [Registration] Final user payload: {
+      "_id": "69a6ac1dc520b9d2e4327895",
+      "username": "runnerA",
+      "hashcode": "TR-P2MS",
+      "color": "#00FF88",
+      "avatarUrl": null,
+      "credits": 0,
+      "hexesOwned": 0,
+      "globalRank": null,
+      "city": null,
+      "homeLocation": {
+        "lat": null,
+        "lng": null,
+        "city": null,
+        "updatedAt": null
+      },
+      "stats": {
+        "totalKm": 0,
+        "totalRuns": 0,
+        "totalHexesClaimed": 0,
+        "totalHexesInvaded": 0,
+        "totalHexesLost": 0,
+        "totalCreditsEarned": 0,
+        "totalCreditsLost": 0,
+        "longestRunKm": 0,
+        "mostHexesInOneRun": 0,
+        "mostCreditsInOneRun": 0,
+        "peakHexesOwned": 0,
+        "peakRank": null,
+        "currentStreak": 0,
+        "longestStreak": 0,
+        "lastRunDate": null
+      },
+      "isPrestige": false,
+      "createdAt": "2026-03-03T09:38:37.211Z",
+      "id": "69a6ac1dc520b9d2e4327895"
+    }
+
+      at log (auth-service/controller.js:120:11)
+
+  console.log
+    [Presence] Added runnerA to online_users (main). Status: 1. Record: {"userId":"69a6ac1dc520b9d2e4327895","username":"runnerA","userColor":"#00FF88","socketId":"rPOICUGp2BF3LDF5AAAB","namespace":"main"}
+
+      at Namespace.log (run-service/socket.handlers.js:41:11)
+
+  console.log
+    [Registration] Body fields: [ 'password', 'username', 'email' ]
+
+      at log (auth-service/controller.js:60:11)
+
+  console.log
+    [Registration] File present: false
+
+      at log (auth-service/controller.js:61:11)
+
+  console.log
+    [Registration] No profile image file in request
+
+      at log (auth-service/controller.js:102:12)
+
+  console.log
+    [Registration] Final user payload: {
+      "_id": "69a6ac1dc520b9d2e43278e3",
+      "username": "invaderB",
+      "hashcode": "TR-JN3T",
+      "color": "#00FF88",
+      "avatarUrl": null,
+      "credits": 0,
+      "hexesOwned": 0,
+      "globalRank": null,
+      "city": null,
+      "homeLocation": {
+        "lat": null,
+        "lng": null,
+        "city": null,
+        "updatedAt": null
+      },
+      "stats": {
+        "totalKm": 0,
+        "totalRuns": 0,
+        "totalHexesClaimed": 0,
+        "totalHexesInvaded": 0,
+        "totalHexesLost": 0,
+        "totalCreditsEarned": 0,
+        "totalCreditsLost": 0,
+        "longestRunKm": 0,
+        "mostHexesInOneRun": 0,
+        "mostCreditsInOneRun": 0,
+        "peakHexesOwned": 0,
+        "peakRank": null,
+        "currentStreak": 0,
+        "longestStreak": 0,
+        "lastRunDate": null
+      },
+      "isPrestige": false,
+      "createdAt": "2026-03-03T09:38:37.616Z",
+      "id": "69a6ac1dc520b9d2e43278e3"
+    }
+
+      at log (auth-service/controller.js:120:11)
+
+  console.log
+    [Presence] Cleanup for runnerA
+
+      at Socket.log (run-service/socket.handlers.js:63:12)
+
+PASS tests/twouser.test.js
+  TerritoryRun - Two-User GPS Simulation
+    ΓêÜ User A clean run: start, socket stream, and 
+end verification (573 ms)
+    ΓêÜ User B invades User A territory (204 ms)
+
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: ≡ƒöÉ prevent committing .env to code: https://dotenvx.com/precommit
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+  console.log
+    [dotenv@17.3.1] injecting env (0) from .env -- tip: ΓÜÖ∩╕Å  override existing env vars with { override: true }
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+  console.log
+    [TestDB] Connected to in-memory MongoDB
+
+      at Object.log [as connect] (tests/setup/testDb.js:14:13)
+
+  console.log
+    [Registration] Body fields: [ 'password', 'username', 'email', 'city' ]
+
+      at log (auth-service/controller.js:60:11)
+
+  console.log
+    [Registration] File present: false
+
+      at log (auth-service/controller.js:61:11)
+
+  console.log
+    [Registration] No profile image file in request
+
+      at log (auth-service/controller.js:102:12)
+
+  console.log
+    [Registration] Final user payload: {
+      "_id": "69a6ac1f4dcca6bfa8bf02bb",
+      "username": "user_a",
+      "hashcode": "TR-Z4PS",
+      "color": "#00FF88",
+      "avatarUrl": null,
+      "credits": 0,
+      "hexesOwned": 0,
+      "globalRank": null,
+      "city": "Hyd",
+      "homeLocation": {
+        "lat": null,
+        "lng": null,
+        "city": "Hyd",
+        "updatedAt": null
+      },
+      "stats": {
+        "totalKm": 0,
+        "totalRuns": 0,
+        "totalHexesClaimed": 0,
+        "totalHexesInvaded": 0,
+        "totalHexesLost": 0,
+        "totalCreditsEarned": 0,
+        "totalCreditsLost": 0,
+        "longestRunKm": 0,
+        "mostHexesInOneRun": 0,
+        "mostCreditsInOneRun": 0,
+        "peakHexesOwned": 0,
+        "peakRank": null,
+        "currentStreak": 0,
+        "longestStreak": 0,
+        "lastRunDate": null
+      },
+      "isPrestige": false,
+      "createdAt": "2026-03-03T09:38:39.007Z",
+      "id": "69a6ac1f4dcca6bfa8bf02bb"
+    }
+
+      at log (auth-service/controller.js:120:11)
+
+  console.log
+    [Registration] Body fields: [ 'password', 'username', 'email', 'city' ]
+
+      at log (auth-service/controller.js:60:11)
+
+  console.log
+    [Registration] File present: false
+
+      at log (auth-service/controller.js:61:11)
+
+  console.log
+    [Registration] No profile image file in request
+
+      at log (auth-service/controller.js:102:12)
+
+  console.log
+    [Registration] Final user payload: {
+      "_id": "69a6ac1f4dcca6bfa8bf0300",
+      "username": "user_b",
+      "hashcode": "TR-SJHX",
+      "color": "#00FF88",
+      "avatarUrl": null,
+      "credits": 0,
+      "hexesOwned": 0,
+      "globalRank": null,
+      "city": "Hyd",
+      "homeLocation": {
+        "lat": null,
+        "lng": null,
+        "city": "Hyd",
+        "updatedAt": null
+      },
+      "stats": {
+        "totalKm": 0,
+        "totalRuns": 0,
+        "totalHexesClaimed": 0,
+        "totalHexesInvaded": 0,
+        "totalHexesLost": 0,
+        "totalCreditsEarned": 0,
+        "totalCreditsLost": 0,
+        "longestRunKm": 0,
+        "mostHexesInOneRun": 0,
+        "mostCreditsInOneRun": 0,
+        "peakHexesOwned": 0,
+        "peakRank": null,
+        "currentStreak": 0,
+        "longestStreak": 0,
+        "lastRunDate": null
+      },
+      "isPrestige": false,
+      "createdAt": "2026-03-03T09:38:39.302Z",
+      "id": "69a6ac1f4dcca6bfa8bf0300"
+    }
+
+      at log (auth-service/controller.js:120:11)
+
+  console.log
+    [Registration] Body fields: [ 'password', 'username', 'email', 'city' ]
+
+      at log (auth-service/controller.js:60:11)
+
+  console.log
+    [Registration] File present: false
+
+      at log (auth-service/controller.js:61:11)
+
+  console.log
+    [Registration] No profile image file in request
+
+      at log (auth-service/controller.js:102:12)
+
+  console.log
+    [Registration] Final user payload: {
+      "_id": "69a6ac1f4dcca6bfa8bf0319",
+      "username": "user_c",
+      "hashcode": "TR-2YDK",
+      "color": "#00FF88",
+      "avatarUrl": null,
+      "credits": 0,
+      "hexesOwned": 0,
+      "globalRank": null,
+      "city": "Hyd",
+      "homeLocation": {
+        "lat": null,
+        "lng": null,
+        "city": "Hyd",
+        "updatedAt": null
+      },
+      "stats": {
+        "totalKm": 0,
+        "totalRuns": 0,
+        "totalHexesClaimed": 0,
+        "totalHexesInvaded": 0,
+        "totalHexesLost": 0,
+        "totalCreditsEarned": 0,
+        "totalCreditsLost": 0,
+        "longestRunKm": 0,
+        "mostHexesInOneRun": 0,
+        "mostCreditsInOneRun": 0,
+        "peakHexesOwned": 0,
+        "peakRank": null,
+        "currentStreak": 0,
+        "longestStreak": 0,
+        "lastRunDate": null
+      },
+      "isPrestige": false,
+      "createdAt": "2026-03-03T09:38:39.511Z",
+      "id": "69a6ac1f4dcca6bfa8bf0319"
+    }
+
+      at log (auth-service/controller.js:120:11)
+
+PASS tests/blockchain.test.js
+  TerritoryRun - Blockchain & Merkle Tests
+    ΓêÜ Merkle Root is deterministic and sensitive 
+to changes (4 ms)
+    ΓêÜ Daily Anchor exclusion of disqualified runs 
+(17 ms)
+    ΓêÜ User verification endpoint (5 ms)
+
+  console.log
+    [TestDB] Connected to in-memory MongoDB
+
+      at Object.log [as connect] (tests/setup/testDb.js:14:13)
+
+  console.log
+    JOGGER FLAGS: []
+
+      at Object.log (tests/anticheat.test.js:534:15)
+
+  console.log
+    JOGGER WEIGHT: 0
+
+      at Object.log (tests/anticheat.test.js:535:15)
+
+PASS tests/anticheat.test.js
+  Anti-Cheat System
+    Layer 1: Speed Filter
+      ΓêÜ 1.1 ΓÇö Jogging at 2.0 m/s (7.2 km/h) 
+should pass (1 ms)
+      ΓêÜ 1.2 ΓÇö Speed exceeding 7.5 m/s (27 km/h) 
+should flag
+      ΓêÜ 1.3 ΓÇö Sustained 5.5+ m/s for 5+ 
+consecutive points should escalate
+      ΓêÜ 1.4 ΓÇö Zero speed (stationary point) 
+should not flag
+    Layer 2: Path Smoothness
+      ΓêÜ 2.1 ΓÇö Smooth circular jog should pass (1 
+ms)
+      ΓêÜ 2.2 ΓÇö Erratic bearing changes should flag
+      ΓêÜ 2.3 ΓÇö Low GPS accuracy should flag 
+precision (1 ms)
+      ΓêÜ 2.4 ΓÇö High speed variation flag
+    Layer 3: Impossible Pace
+      ΓêÜ 3.1 ΓÇö 3:00 min/km pace over 2km should 
+pass (1 ms)
+      ΓêÜ 3.2 ΓÇö 1:50 min/km pace over 1km should 
+flag
+      ΓêÜ 3.3 ΓÇö Pace flagging should only trigger 
+on >0.5km (1 ms)
+    Layer 4: Hex Dwell Time
+      ΓêÜ 4.1 ΓÇö 15 second dwell in one hex should 
+pass
+      ΓêÜ 4.2 ΓÇö 5 second dwell in hex should fail 
+(1 ms)
+      ΓêÜ 4.3 ΓÇö 55% failure rate should flag dwell 
+anomaly
+      ΓêÜ 4.4 ΓÇö No hexes claimed should not flag 
+(1 ms)
+    Layer 5: Location Integrity
+      ΓêÜ 5.1 ΓÇö Legitimate altitude gain (100m 
+climb) should pass (1 ms)
+      ΓêÜ 5.2 ΓÇö Instantaneous 1000m altitude gain 
+should flag
+      ΓêÜ 5.3 ΓÇö GPS accuracy > 50m should flag low 
+precision if consistent (1 ms)
+      ΓêÜ 5.4 ΓÇö Multiple IP changes during run 
+should flag
+    Layer 6: Account Farming
+      ΓêÜ 6.1 ΓÇö Single run per account should not 
+flag farming
+      ΓêÜ 6.2 ΓÇö 20 runs in 1 hour from same IP 
+should flag
+      ΓêÜ 6.3 ΓÇö Reclaim within 10 minutes should 
+flag
+      ΓêÜ 6.4 ΓÇö Same IP, different users, rapid 
+sequential runs should flag
+    Scoring & Deduplication
+      ΓêÜ 7.1 ΓÇö Clean run should score 0 and pass 
+(1 ms)
+      ΓêÜ 7.2 ΓÇö Duplicate flags same type counted 
+once
+      ΓêÜ 7.3 ΓÇö Warned status (40-79 points) (1 ms)
+      ΓêÜ 7.4 ΓÇö Partial status (80-149 points) (1 
+ms)
+      ΓêÜ 7.5 ΓÇö Disqualified status (150+ points)
+    Real-World Scenarios
+      ΓêÜ 8.1 ΓÇö Legitimate 5km jogger (4 ms)
+      ΓêÜ 8.2 ΓÇö Cyclist (speeds 7-8 m/s should 
+adapt) (1 ms)
+      ΓêÜ 8.3 ΓÇö Spoofer jumps 500km instantly (1 
+ms)
+      ΓêÜ 8.4 ΓÇö Drive-by runner (very high speed, 
+limited hexes) (1 ms)
+      ΓêÜ 8.5 ΓÇö Dwell abuse (drive-by claiming 
+hexes) (1 ms)
+    Edge Cases
+      ΓêÜ 9.1 ΓÇö No GPS points should handle 
+gracefully (1 ms)
+      ΓêÜ 9.2 ΓÇö Single GPS point should not crash
+      ΓêÜ 9.3 ΓÇö Negative altitude (below sea 
+level) should flag
+      ΓêÜ 9.4 ΓÇö Extremely high distance with few 
+points
+    Tuning Constants
+      ΓêÜ 10.1 ΓÇö LIMITS has all required 
+parameters (1 ms)
+      ΓêÜ 10.2 ΓÇö WEIGHT has scoring multipliers 
+for all flags
+      ΓêÜ 10.3 ΓÇö THRESHOLD defines verdict 
+boundaries (1 ms)
+
+PASS tests/unit/h3.service.test.js
+  H3 Service
+    ΓêÜ gpsToHex returns a valid H3 cell string (1 
+ms)
+    ΓêÜ gpsToHex is deterministic
+    ΓêÜ validateGpsPoint rejects high-accuracy GPS 
+(> 50m) (1 ms)
+    ΓêÜ validateGpsPoint accepts valid point
+    ΓêÜ validateGpsPoint rejects out-of-range 
+coordinates (1 ms)
+    ΓêÜ processGpsBatch returns unique hex IDs
+    ΓêÜ processGpsBatch rejects low-accuracy points 
+(1 ms)
+    ΓêÜ calculateDistanceKm returns 0 for single 
+point
+    ΓêÜ calculateDistanceKm is roughly correct for 
+known distance
+    ΓêÜ hexesInBoundingBox returns array of hex IDs 
+(10 ms)
+
+PASS tests/unit/credit.engine.test.js
+  Credit Engine
+    ΓêÜ calculateRunCredits: claimed only, off-peak 
+(1 ms)
+    ΓêÜ calculateRunCredits: invasions earn more 
+credits
+    ΓêÜ calculateRunCredits: peak hour multiplier at 
+7 AM UTC (1 ms)
+    ΓêÜ isPeakHour: 7 AM UTC is peak
+    ΓêÜ isPeakHour: 2 AM UTC is not peak
+    ΓêÜ calculateDefenderLoss: correct formula (1 ms)
+    ΓêÜ calculateRunCredits: mixed claimed + invaded 
+off-peak
+
+PASS tests/unit/decay.test.js
+  Decay Engine
+    ΓêÜ fresh hex has no decay
+    ΓêÜ 10-day inactive hex loses about 18%
+    ΓêÜ decay never returns less than 1
+
+PASS tests/integration/run.test.js
+  Run Integration Placeholder
+    ΓêÜ placeholder (1 ms)
+
+PASS tests/integration/territory.test.js
+  Territory Integration Placeholder
+    ΓêÜ placeholder (1 ms)
+
+Test Suites: 1 failed, 8 passed, 9 total
+Tests:       3 failed, 67 passed, 70 total
+Snapshots:   0 total
+Time:        7.786 s, estimated 11 s
+Ran all test suites.
+Force exiting Jest: Have you considered using 
+`--detectOpenHandles` to detect async operations 
+that kept running after all tests finished?
+npm verbose cwd C:\Projects\runni5\backend
+npm verbose os Windows_NT 10.0.26200
+npm verbose node v22.17.1
+npm verbose npm  v11.5.2
+npm verbose exit 1
+npm verbose code 1

@@ -25,8 +25,8 @@ export default function BottomNav() {
     const pathname = usePathname();
 
     return (
-        <nav className="fixed bottom-0 left-0 right-0 z-[60] bg-white/95 border-t border-black/5 px-2 py-2 safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.07)] lg:hidden backdrop-blur">
-            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+        <nav className="fixed bottom-5 left-4 right-4 z-[60] bg-white/80 border border-white/60 px-4 py-2.5 rounded-3xl safe-area-bottom shadow-premium lg:hidden backdrop-blur flex justify-around items-center">
+            <div className="flex items-center justify-between w-full px-1">
                 {NAV_ITEMS.map((item) => {
                     const isActive = pathname === item.href;
                     const Icon = item.icon;
@@ -36,14 +36,13 @@ export default function BottomNav() {
                             <Link
                                 key={item.href}
                                 href={item.href}
-                                className="shrink-0"
+                                className="shrink-0 -mt-5"
                             >
                                 <div
-                                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-white border border-white/40 shadow-[0_6px_24px_rgba(168,213,186,0.5)] transition-transform active:scale-95"
+                                    className="w-12 h-12 rounded-full text-white border-2 border-white flex items-center justify-center shadow-[0_8px_24px_rgba(108,200,154,0.3)] transition-transform active:scale-90"
                                     style={{ background: 'linear-gradient(135deg, #A8D5BA, #6CC89A)' }}
                                 >
-                                    <Icon size={16} fill="currentColor" />
-                                    <span className="text-[11px] font-black uppercase tracking-wider">{item.label}</span>
+                                    <Icon size={22} fill="currentColor" />
                                 </div>
                             </Link>
                         );
@@ -60,10 +59,10 @@ export default function BottomNav() {
                                         window.location.href = '/login';
                                     });
                                 }}
-                                className="shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-2 border border-transparent text-gray-500 active:scale-95"
+                                className="shrink-0 flex flex-col items-center gap-0.5 text-gray-400 active:scale-95"
                             >
-                                <Icon size={15} className="text-red-400" />
-                                <span className="text-[11px] tracking-wide font-bold text-red-400 uppercase">
+                                <Icon size={18} className="text-red-400/80" />
+                                <span className="text-[8px] tracking-wide font-black text-red-400/70 uppercase">
                                     {item.label}
                                 </span>
                             </button>
@@ -74,12 +73,12 @@ export default function BottomNav() {
                         <Link
                             key={item.href}
                             href={item.href}
-                            className={`shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-2 border transition-all active:scale-95 ${
-                                isActive ? 'border-[#A8D5BA]/50 bg-[#F0F7F4] text-[#2E7D52]' : 'border-transparent text-gray-500'
+                            className={`shrink-0 flex flex-col items-center gap-0.5 transition-all active:scale-95 ${
+                                isActive ? 'text-[#2E7D52]' : 'text-gray-400 hover:text-gray-600'
                             }`}
                         >
-                            <Icon size={15} strokeWidth={isActive ? 2.5 : 2} />
-                            <span className={`text-[11px] tracking-wide uppercase ${isActive ? 'font-black text-[#2E7D52]' : 'font-bold text-gray-500'}`}>
+                            <Icon size={18} strokeWidth={isActive ? 3 : 2} />
+                            <span className={`text-[8px] tracking-wide uppercase ${isActive ? 'font-black' : 'font-bold'}`}>
                                 {item.label}
                             </span>
                         </Link>

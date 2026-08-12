@@ -39,7 +39,7 @@ export default function StatCard({
         <motion.div
             whileHover={{ y: -4 }}
             className={`
-                bg-white p-5 rounded-[24px] border border-black/5 shadow-[0_4px_12px_rgba(0,0,0,0.02)]
+                bg-white/80 backdrop-blur-md p-5 rounded-[24px] border border-white/60 shadow-premium
                 flex flex-col justify-between min-h-[140px] transition-all
             `}
         >

@@ -168,7 +168,7 @@ export default function DashboardPage() {
                 </Link>
             </div>
 
-            <div className="bg-white/50 backdrop-blur-sm rounded-[40px] p-6 border border-black/5 shadow-sm">
+            <div className="bg-white/75 backdrop-blur-md rounded-[36px] p-6 border border-white/60 shadow-premium">
                 <MomentsTray />
             </div>
 
@@ -204,7 +204,7 @@ export default function DashboardPage() {
                 />
             </div>
 
-            <div className="rounded-3xl border border-[#A8D5BA]/25 bg-gradient-to-r from-white to-[#F3FAF5] p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="rounded-[28px] border border-white/60 bg-gradient-to-r from-white/80 to-[#F0F7F4]/80 backdrop-blur-md p-6 shadow-premium flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Faction Impact</p>
                     <h3 className="text-lg font-black text-[#1a1a2e] mt-1">
@@ -232,7 +232,7 @@ export default function DashboardPage() {
                     />
 
                     {/* Mission Logs */}
-                    <div className="bg-white rounded-[32px] border border-black/5 p-6 md:p-8 shadow-sm">
+                    <div className="bg-white/80 backdrop-blur-md rounded-[32px] border border-white/60 p-6 md:p-8 shadow-premium">
                         <div className="flex items-center justify-between mb-8">
                             <h3 className="text-lg font-black tracking-tight text-[#1a1a2e]">Mission Logs</h3>
                             <Link href="/profile" className="text-xs font-bold text-[#A8D5BA] hover:text-[#2E7D52] transition-colors">
