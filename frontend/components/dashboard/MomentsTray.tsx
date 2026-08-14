@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import useSWR from 'swr';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Clock, MapPin, Navigation2, Camera, Loader2, X, Upload } from 'lucide-react';
@@ -18,6 +19,10 @@ export default function MomentsTray() {
     const [momentFile, setMomentFile] = useState<File | null>(null);
     const [momentCaption, setMomentCaption] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -161,135 +166,111 @@ export default function MomentsTray() {
                 </AnimatePresence>
             </div>
 
-            {/* Lightbox */}
-            <AnimatePresence>
-                {selectedMoment && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={() => setSelectedMoment(null)}
-                        className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-6"
-                    >
+            {/* Lightbox Portal */}
+            {mounted && typeof window !== 'undefined' && createPortal(
+                <AnimatePresence>
+                    {selectedMoment && (
                         <motion.div
-                            initial={{ scale: 0.9, y: 20 }}
-                            animate={{ scale: 1, y: 0 }}
-                            exit={{ scale: 0.9, y: 20 }}
-                            onClick={e => e.stopPropagation()}
-                            className="bg-white max-w-md w-full rounded-[48px] overflow-hidden shadow-2xl relative"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setSelectedMoment(null)}
+                            className="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-md flex items-center justify-center p-6"
                         >
-                            <button
-                                onClick={() => setSelectedMoment(null)}
-                                className="absolute top-6 right-6 z-10 w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-white/40 transition-all"
+                            <motion.div
+                                initial={{ scale: 0.9, y: 20 }}
+                                animate={{ scale: 1, y: 0 }}
+                                exit={{ scale: 0.9, y: 20 }}
+                                onClick={e => e.stopPropagation()}
+                                className="bg-white max-w-md w-full rounded-[48px] overflow-hidden shadow-2xl relative"
                             >
-                                <X size={20} />
-                            </button>
-
-                            <div className="relative h-[400px]">
-                                <img src={selectedMoment.imageUrl} className="w-full h-full object-cover" />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-
-                                <div className="absolute bottom-8 left-8 right-8 text-white flex items-end justify-between">
-                                    <div className="flex items-center gap-4">
-                                        {selectedMoment.userAvatarUrl ? (
-                                            <div className="w-14 h-14 rounded-2xl border border-white/30 shadow-lg overflow-hidden">
-                                                <img src={selectedMoment.userAvatarUrl} alt={selectedMoment.username} className="w-full h-full object-cover" />
-                                            </div>
-                                        ) : (
-                                            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-xl font-black shadow-lg" style={{ color: selectedMoment.userColor }}>
-                                                {selectedMoment.username[0].toUpperCase()}
-                                            </div>
-                                        )}
-                                        <div>
-                                            <h4 className="text-xl font-black uppercase tracking-tight leading-none mb-1">{selectedMoment.username}</h4>
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-white/60">Deployment Sector: {selectedMoment.city || 'Wild_Zone'}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="p-8 space-y-6">
-                                <div className="p-6 bg-[#F8FAFB] rounded-[32px] border border-black/5">
-                                    <p className="text-sm font-bold text-[#1a1a2e] leading-relaxed italic">
-                                        "{selectedMoment.caption}"
-                                    </p>
-                                </div>
-
-                                {selectedMoment.stats && (
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="p-4 bg-[#F0F7F4] rounded-2xl border border-[#A8D5BA]/20">
-                                            <div className="text-[10px] font-black text-[#2E7D52] uppercase tracking-[0.2em] mb-1">Distance</div>
-                                            <div className="text-lg font-black text-[#1a1a2e]">{selectedMoment.stats.distanceKm.toFixed(1)} KM</div>
-                                        </div>
-                                        <div className="p-4 bg-[#F5F3FF] rounded-2xl border border-[#A594D3]/20">
-                                            <div className="text-[10px] font-black text-[#A594D3] uppercase tracking-[0.2em] mb-1">Captured</div>
-                                            <div className="text-lg font-black text-[#1a1a2e]">{selectedMoment.stats.hexCount} HEX</div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                <div className="flex items-center justify-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] pb-2">
-                                    <Clock size={12} />
-                                    This data will self-destruct in {Math.max(1, Math.floor((new Date(selectedMoment.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60)))} hours
-                                </div>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Share Moment Modal */}
-            <AnimatePresence>
-                {showShareModal && momentImage && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={() => {
-                            setShowShareModal(false);
-                            setMomentImage(null);
-                            setMomentFile(null);
-                            setMomentCaption('');
-                        }}
-                        className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-md flex items-center justify-center p-6"
-                    >
-                        <motion.div
-                            initial={{ scale: 0.9, y: 20 }}
-                            animate={{ scale: 1, y: 0 }}
-                            exit={{ scale: 0.9, y: 20 }}
-                            onClick={e => e.stopPropagation()}
-                            className="bg-white max-w-md w-full rounded-[48px] overflow-hidden shadow-2xl"
-                        >
-                            <div className="relative h-[320px]">
-                                <img src={momentImage} alt="Moment preview" className="w-full h-full object-cover" />
                                 <button
-                                    onClick={() => {
-                                        setShowShareModal(false);
-                                        setMomentImage(null);
-                                        setMomentFile(null);
-                                        setMomentCaption('');
-                                    }}
-                                    className="absolute top-6 right-6 w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-white/40 transition-all"
+                                    onClick={() => setSelectedMoment(null)}
+                                    className="absolute top-6 right-6 z-10 w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-white/40 transition-all"
                                 >
                                     <X size={20} />
                                 </button>
-                            </div>
 
-                            <div className="p-8 space-y-6">
-                                <div>
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-3">
-                                        Moment Caption (Optional)
-                                    </label>
-                                    <textarea
-                                        value={momentCaption}
-                                        onChange={(e) => setMomentCaption(e.target.value.slice(0, 160))}
-                                        placeholder="Add a message to your moment..."
-                                        className="w-full h-20 p-4 bg-[#F8FAFB] border border-black/5 rounded-2xl text-sm font-bold text-[#1a1a2e] placeholder:text-gray-300 focus:outline-none focus:border-[#A8D5BA] resize-none"
-                                    />
-                                    <p className="text-[8px] text-gray-400 mt-2">{momentCaption.length}/160</p>
+                                <div className="relative h-[400px]">
+                                    <img src={selectedMoment.imageUrl} className="w-full h-full object-cover" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+
+                                    <div className="absolute bottom-8 left-8 right-8 text-white flex items-end justify-between">
+                                        <div className="flex items-center gap-4">
+                                            {selectedMoment.userAvatarUrl ? (
+                                                <div className="w-14 h-14 rounded-2xl border border-white/30 shadow-lg overflow-hidden">
+                                                    <img src={selectedMoment.userAvatarUrl} alt={selectedMoment.username} className="w-full h-full object-cover" />
+                                                </div>
+                                            ) : (
+                                                <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-xl font-black shadow-lg" style={{ color: selectedMoment.userColor }}>
+                                                    {selectedMoment.username[0].toUpperCase()}
+                                                </div>
+                                            )}
+                                            <div>
+                                                <h4 className="text-xl font-black uppercase tracking-tight leading-none mb-1">{selectedMoment.username}</h4>
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-white/60">Deployment Sector: {selectedMoment.city || 'Wild_Zone'}</p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <div className="flex gap-3">
+                                <div className="p-8 space-y-6">
+                                    <div className="p-6 bg-[#F8FAFB] rounded-[32px] border border-black/5">
+                                        <p className="text-sm font-bold text-[#1a1a2e] leading-relaxed italic">
+                                            "{selectedMoment.caption}"
+                                        </p>
+                                    </div>
+
+                                    {selectedMoment.stats && (
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="p-4 bg-[#F0F7F4] rounded-2xl border border-[#A8D5BA]/20">
+                                                <div className="text-[10px] font-black text-[#2E7D52] uppercase tracking-[0.2em] mb-1">Distance</div>
+                                                <div className="text-lg font-black text-[#1a1a2e]">{selectedMoment.stats.distanceKm.toFixed(1)} KM</div>
+                                            </div>
+                                            <div className="p-4 bg-[#F5F3FF] rounded-2xl border border-[#A594D3]/20">
+                                                <div className="text-[10px] font-black text-[#A594D3] uppercase tracking-[0.2em] mb-1">Captured</div>
+                                                <div className="text-lg font-black text-[#1a1a2e]">{selectedMoment.stats.hexCount} HEX</div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="flex items-center justify-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] pb-2">
+                                        <Clock size={12} />
+                                        This data will self-destruct in {Math.max(1, Math.floor((new Date(selectedMoment.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60)))} hours
+                                    </div>
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
+
+            {/* Share Moment Modal Portal */}
+            {mounted && typeof window !== 'undefined' && createPortal(
+                <AnimatePresence>
+                    {showShareModal && momentImage && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => {
+                                setShowShareModal(false);
+                                setMomentImage(null);
+                                setMomentFile(null);
+                                setMomentCaption('');
+                            }}
+                            className="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-md flex items-center justify-center p-6"
+                        >
+                            <motion.div
+                                initial={{ scale: 0.9, y: 20 }}
+                                animate={{ scale: 1, y: 0 }}
+                                exit={{ scale: 0.9, y: 20 }}
+                                onClick={e => e.stopPropagation()}
+                                className="bg-white max-w-md w-full rounded-[48px] overflow-hidden shadow-2xl"
+                            >
+                                <div className="relative h-[320px]">
+                                    <img src={momentImage} alt="Moment preview" className="w-full h-full object-cover" />
                                     <button
                                         onClick={() => {
                                             setShowShareModal(false);
@@ -297,33 +278,63 @@ export default function MomentsTray() {
                                             setMomentFile(null);
                                             setMomentCaption('');
                                         }}
-                                        className="flex-1 h-12 bg-gray-100 hover:bg-gray-200 text-[10px] font-black uppercase tracking-widest text-gray-600 rounded-[20px] transition-all active:scale-95"
+                                        className="absolute top-6 right-6 w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-white/40 transition-all"
                                     >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={shareMoment}
-                                        disabled={isSharing}
-                                        className="flex-1 h-12 bg-gradient-to-r from-[#A8D5BA] to-[#6CC89A] hover:shadow-lg disabled:opacity-50 text-white font-black uppercase text-[10px] tracking-[0.2em] rounded-[20px] transition-all flex items-center justify-center gap-2 active:scale-95"
-                                    >
-                                        {isSharing ? (
-                                            <>
-                                                <Loader2 size={14} className="animate-spin" />
-                                                Sharing...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Upload size={14} />
-                                                Share Now
-                                            </>
-                                        )}
+                                        <X size={20} />
                                     </button>
                                 </div>
-                            </div>
+
+                                <div className="p-8 space-y-6">
+                                    <div>
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-3">
+                                            Moment Caption (Optional)
+                                        </label>
+                                        <textarea
+                                            value={momentCaption}
+                                            onChange={(e) => setMomentCaption(e.target.value.slice(0, 160))}
+                                            placeholder="Add a message to your moment..."
+                                            className="w-full h-20 p-4 bg-[#F8FAFB] border border-black/5 rounded-2xl text-sm font-bold text-[#1a1a2e] placeholder:text-gray-300 focus:outline-none focus:border-[#A8D5BA] resize-none"
+                                        />
+                                        <p className="text-[8px] text-gray-400 mt-2">{momentCaption.length}/160</p>
+                                    </div>
+
+                                    <div className="flex gap-3">
+                                        <button
+                                            onClick={() => {
+                                                setShowShareModal(false);
+                                                setMomentImage(null);
+                                                setMomentFile(null);
+                                                setMomentCaption('');
+                                            }}
+                                            className="flex-1 h-12 bg-gray-100 hover:bg-gray-200 text-[10px] font-black uppercase tracking-widest text-gray-600 rounded-[20px] transition-all active:scale-95"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={shareMoment}
+                                            disabled={isSharing}
+                                            className="flex-1 h-12 bg-gradient-to-r from-[#A8D5BA] to-[#6CC89A] hover:shadow-lg disabled:opacity-50 text-white font-black uppercase text-[10px] tracking-[0.2em] rounded-[20px] transition-all flex items-center justify-center gap-2 active:scale-95"
+                                        >
+                                            {isSharing ? (
+                                                <>
+                                                    <Loader2 size={14} className="animate-spin" />
+                                                    Sharing...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Upload size={14} />
+                                                    Share Now
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            </motion.div>
                         </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
         </div>
     );
 }
