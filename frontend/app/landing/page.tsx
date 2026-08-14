@@ -165,39 +165,55 @@ function TopCommandersPodium({ commanders }: { commanders: any[] }) {
     }
 
     const medals = ['🥇', '🥈', '🥉'];
-    const heights = ['h-64', 'h-56', 'h-48'];
+    const rankLabels = ['1st Place', '2nd Place', '3rd Place'];
+    const heights = ['h-[330px]', 'h-[290px]', 'h-[260px]'];
+    const borderColors = [
+        'border-[#A8D5BA] shadow-[0_12px_36px_-6px_rgba(168,213,186,0.25)]',
+        'border-[#C3B1E1]/60 shadow-[0_10px_30px_-6px_rgba(195,177,225,0.2)]',
+        'border-[#FFD6A5]/60 shadow-[0_8px_24px_-6px_rgba(255,214,165,0.2)]'
+    ];
 
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 items-end justify-center gap-4 sm:gap-6 py-8">
-            {commanders.map((c, i) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 items-end justify-center gap-6 py-8">
+            {commanders.slice(0, 3).map((c, i) => (
                 <motion.div
                     key={c.userId || c.username || i}
                     initial={{ opacity: 0, y: 40 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.6, delay: i * 0.15 }}
-                    className={`bg-white/85 backdrop-blur-md border border-white/60 rounded-[32px] p-6 shadow-premium hover:shadow-pastel-glow hover:-translate-y-2 transition-all group ${heights[i]} w-full max-w-[22rem] mx-auto flex flex-col justify-between`}
-                    style={{ borderColor: i === 0 ? '#A8D5BA' : 'rgba(255,255,255,0.5)' }}
+                    className={`bg-white/85 backdrop-blur-md border rounded-[32px] p-6 hover:-translate-y-2 transition-all duration-300 group ${heights[i]} ${borderColors[i]} w-full max-w-[22rem] mx-auto flex flex-col justify-between relative overflow-hidden`}
                 >
+                    {/* Subtle place background indicator */}
+                    <div className="absolute -right-6 -bottom-6 text-[100px] font-black text-slate-100/35 pointer-events-none select-none font-brand tracking-tighter">
+                        {i + 1}
+                    </div>
+
                     <div>
                         <div className="flex items-center justify-between mb-4">
-                            <span className="text-4xl">{medals[i]}</span>
-                            <div className="w-3 h-3 rounded-full shadow-lg" style={{ backgroundColor: c.color }} />
+                            <div className="flex items-center gap-2">
+                                <span className="text-3xl">{medals[i]}</span>
+                                <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">{rankLabels[i]}</span>
+                            </div>
+                            <div className="w-3.5 h-3.5 rounded-full border-2 border-white shadow-md animate-pulse" style={{ backgroundColor: c.color }} />
                         </div>
+
                         <div className="mb-2">
-                            <p className="font-['Syne'] font-extrabold text-xl text-[#1A1A2E] truncate">{c.username}</p>
-                            <p className="text-[9px] font-black uppercase tracking-widest text-slate-300">{c.hashcode}</p>
+                            <p className="font-['Syne'] font-extrabold text-2xl text-[#1A1A2E] truncate tracking-tight">{c.username}</p>
+                            <p className="text-[9px] font-black uppercase tracking-widest text-slate-400/80 mt-0.5">{c.hashcode || 'TR-XXXX'}</p>
                         </div>
+
                         {c.city && (
-                            <div className="bg-[#F0F7F4] px-2 py-1 rounded-lg inline-block mb-3">
+                            <div className="bg-[#F0F7F4] px-2.5 py-1 rounded-xl inline-block mb-3">
                                 <span className="text-[9px] font-black uppercase tracking-wider text-[#2E7D52]">{c.city}</span>
                             </div>
                         )}
                     </div>
-                    <div className="space-y-2 border-t border-black/5 pt-4">
+
+                    <div className="space-y-2 border-t border-slate-100 pt-4 relative z-10 bg-white/40 backdrop-blur-sm rounded-2xl p-3 border border-white/50">
                         <div className="flex justify-between items-center">
                             <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Credits</span>
-                            <span className="text-sm font-black text-[#A8D5BA]">{(c.credits / 1000).toFixed(1)}K</span>
+                            <span className="text-sm font-black text-[#2E7D52]">{(c.credits / 1000).toFixed(1)}K</span>
                         </div>
                         <div className="flex justify-between items-center">
                             <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Hexes</span>
@@ -206,7 +222,7 @@ function TopCommandersPodium({ commanders }: { commanders: any[] }) {
                         {c.currentStreak > 0 && (
                             <div className="flex justify-between items-center">
                                 <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Streak</span>
-                                <span className="text-sm font-black text-[#F4B8C1]">{c.currentStreak}🔥</span>
+                                <span className="text-sm font-black text-rose-500">{c.currentStreak} 🔥</span>
                             </div>
                         )}
                     </div>
