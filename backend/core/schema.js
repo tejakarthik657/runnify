@@ -126,6 +126,8 @@ const UserSchema = new Schema({
   bio: { type: String, default: '', maxlength: 160 },
   city: { type: String, default: null, index: true },
   country: { type: String, default: null },
+  unfoggedHexes: { type: [String], default: [], index: true },
+
   homeLocation: {
     lat: { type: Number, default: null },
     lng: { type: Number, default: null },
@@ -220,6 +222,7 @@ UserSchema.virtual('publicProfile').get(function () {
         updatedAt: this.homeLocation.updatedAt,
       }
       : { lat: null, lng: null, city: null, updatedAt: null },
+    unfoggedHexes: this.unfoggedHexes,
     stats: this.privacy.hideStatsFromPublic ? null : this.stats,
     isPrestige: this.isPrestige,
     faction: this.faction,
@@ -863,7 +866,35 @@ const RunMoment = mongoose.model('RunMoment', RunMomentSchema);
 
 
 // ═══════════════════════════════════════════════════════════════════════
-// 16. CITY_STATS  (aggregate metrics per city — updated by cron)
+// 17. BOSS_RAIDS  (co-op invasion bosses)
+// ═══════════════════════════════════════════════════════════════════════
+
+const BossRaidSchema = new Schema({
+  name: { type: String, required: true },
+  centerHex: { type: String, required: true },
+  guardHexes: { type: [String], required: true },
+  capturedGuards: { type: [String], default: [] },
+  totalHp: { type: Number, required: true },
+  currentHp: { type: Number, required: true },
+  rewardPool: { type: Number, default: 5000 },
+  contributors: [{
+    userId: { type: Schema.Types.ObjectId, ref: 'User' },
+    username: String,
+    damage: { type: Number, default: 0 },
+  }],
+  status: { type: String, enum: ['active', 'defeated', 'expired'], default: 'active' },
+  expiresAt: { type: Date, required: true },
+  schemaVersion: { type: String, default: SCHEMA_VERSION },
+}, { timestamps: true, collection: 'boss_raids_v1' });
+
+BossRaidSchema.index({ status: 1, expiresAt: 1 });
+BossRaidSchema.index({ centerHex: 1 });
+
+const BossRaid = mongoose.model('BossRaid', BossRaidSchema);
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// 18. CITY_STATS  (aggregate metrics per city — updated by cron)
 // ═══════════════════════════════════════════════════════════════════════
 
 const CityStatsSchema = new Schema({
@@ -974,6 +1005,7 @@ module.exports = {
   Session,
   CityStats,
   RunMoment,
+  BossRaid,
 
   // Init functions
   ensureIndexes,

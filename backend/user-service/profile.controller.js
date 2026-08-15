@@ -200,6 +200,7 @@ async function getProfile(req, res, next) {
       stats,
       createdAt: user.createdAt,
       privacy: isSelf ? user.privacy : undefined,
+      unfoggedHexes: isSelf ? (user.unfoggedHexes || []) : undefined,
     });
   } catch (err) {
     next(err);

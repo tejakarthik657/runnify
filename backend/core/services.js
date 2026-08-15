@@ -11,13 +11,25 @@ const {
   User, Territory, Run, GpsPoint, CreditLedger,
   Invasion, LeaderboardCache, Notification, ChatMessage,
   ChatRoom, AchievementDef, UserAchievement, DailyProof,
-  Report, Session, CityStats,
+  Report, Session, CityStats, BossRaid,
   PLAYER_COLORS, NOTIFICATION_TYPES, SCHEMA_VERSION,
 } = require('./schema');
 const { getRedis } = require('../config/redis');
 const h3js = require('h3-js');
 
 const AntiCheatEngine = require('../run-service/anticheat.engine');
+
+let getIO = null;
+function ensureIO() {
+  if (!getIO) {
+    try {
+      getIO = require('../run-service/socket.handlers').getIO;
+    } catch (_) {
+      getIO = () => null;
+    }
+  }
+  return getIO();
+}
 
 // ─────────────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -233,6 +245,46 @@ const H3Service = {
 
 
 // ═══════════════════════════════════════════════════════════════════════
+// SKIRMISH SERVICE
+// ═══════════════════════════════════════════════════════════════════════
+
+const SkirmishService = {
+
+  /** Check if a hex borders rival faction territory */
+  async isSkirmishHex(hexId, userFaction, session) {
+    if (!userFaction) return false;
+    const neighbors = h3.gridDisk(hexId, 1);
+    const rival = await Territory.findOne({
+      hexId: { $in: neighbors },
+      faction: { $ne: userFaction, $exists: true, $nin: [null, userFaction] },
+    }).session(session);
+    return !!rival;
+  },
+
+  /** Count how many of the given hexes are skirmish cells */
+  async countSkirmishHexes(hexIds, userFaction, session) {
+    if (!userFaction || !hexIds.length) return 0;
+    const allNeighbors = new Set();
+    for (const hexId of hexIds) {
+      const ring = h3.gridDisk(hexId, 1);
+      for (const n of ring) allNeighbors.add(n);
+    }
+    const rivalNeighbors = await Territory.find({
+      hexId: { $in: [...allNeighbors] },
+      faction: { $nin: [null, userFaction] },
+    }).session(session).select('hexId faction');
+    const rivalSet = new Set(rivalNeighbors.map(t => t.hexId));
+    let count = 0;
+    for (const hexId of hexIds) {
+      const ring = h3.gridDisk(hexId, 1);
+      if (ring.some(n => rivalSet.has(n))) count++;
+    }
+    return count;
+  },
+};
+
+
+// ═══════════════════════════════════════════════════════════════════════
 // CREDIT ENGINE
 // ═══════════════════════════════════════════════════════════════════════
 
@@ -253,13 +305,14 @@ const CreditEngine = {
   },
 
   /** Calculate credits for a completed run */
-  calculate({ hexesClaimed, hexesInvaded, hexesRetouched }, timezone = 'UTC') {
+  calculate({ hexesClaimed, hexesInvaded, hexesRetouched, skirmishHexCount = 0 }, timezone = 'UTC') {
     const multiplier = CreditEngine.isPeakHour(timezone) ? PEAK_MULTIPLIER : 1.0;
+    const skirmishBonus = skirmishHexCount * CREDITS_PER_CLAIM * 2; // 3x total = base + 2x bonus
     const fromClaims = hexesClaimed.length * CREDITS_PER_CLAIM;
     const fromInvasions = hexesInvaded.length * CREDITS_PER_INVASION;
     const fromRetouch = hexesRetouched.length * CREDITS_PER_RETOUCH;
-    const total = Math.floor((fromClaims + fromInvasions + fromRetouch) * multiplier);
-    return { total, fromClaims, fromInvasions, fromRetouch, multiplier };
+    const total = Math.floor((fromClaims + fromInvasions + fromRetouch + skirmishBonus) * multiplier);
+    return { total, fromClaims, fromInvasions, fromRetouch, skirmishBonus, multiplier };
   },
 
   /** Apply decay to inactive territories (called by nightly cron) */
@@ -549,6 +602,7 @@ const RunService = {
           globalRank: userAfter.globalRank,
           cityRank: userAfter.cityRank,
           stats: userAfter.stats,
+          unfoggedHexes: userAfter.unfoggedHexes || [],
         },
         summary: {
           hexesClaimed: 0,
@@ -562,6 +616,22 @@ const RunService = {
           enclosureBonus: 0,
         }
       };
+    }
+
+    const mongoose = require('mongoose');
+    let session = null;
+    let useTransaction = false;
+
+    try {
+      const isReplicaSet = mongoose.connection.client.topology?.description?.type?.includes('ReplicaSet') || 
+                           mongoose.connection.client.topology?.description?.type === 'ReplicaSetNoPrimary';
+      if (isReplicaSet) {
+        session = await mongoose.startSession();
+        session.startTransaction();
+        useTransaction = true;
+      }
+    } catch (_) {
+      session = null;
     }
 
     // Only process hexes that passed anti-cheat filters (e.g. dwell time)
@@ -601,8 +671,11 @@ const RunService = {
     // Upsert territory ownership
     const user = await User.findById(userId).select('username color hashcode faction timezone');
 
+    // ── Skirmish Zones: count contested border hexes ──
+    const skirmishHexCount = await SkirmishService.countSkirmishHexes(hexesClaimed, user.faction, session);
+
     // Calculate credits (multiplied by AC verdict)
-    const rawCredits = CreditEngine.calculate({ hexesClaimed, hexesInvaded, hexesRetouched }, user.timezone || 'UTC');
+    const rawCredits = CreditEngine.calculate({ hexesClaimed, hexesInvaded, hexesRetouched, skirmishHexCount }, user.timezone || 'UTC');
     const enclosureBonus = enclosedHexes.length * ENCLOSURE_BONUS_PER_HEX;
     const finalCreditsTotal = Math.floor((rawCredits.total + enclosureBonus) * acResult.creditMultiplier);
 
@@ -692,22 +765,6 @@ const RunService = {
       });
     }
 
-    const mongoose = require('mongoose');
-    let session = null;
-    let useTransaction = false;
-
-    try {
-      const isReplicaSet = mongoose.connection.client.topology?.description?.type?.includes('ReplicaSet') || 
-                           mongoose.connection.client.topology?.description?.type === 'ReplicaSetNoPrimary';
-      if (isReplicaSet) {
-        session = await mongoose.startSession();
-        session.startTransaction();
-        useTransaction = true;
-      }
-    } catch (_) {
-      session = null;
-    }
-
     try {
       const opts = useTransaction ? { session } : {};
 
@@ -785,6 +842,51 @@ const RunService = {
         }
       }
 
+      // ── Boss Raid: co-op invasion boss combat ──
+      const activeRaids = await BossRaid.find({
+        status: 'active',
+        expiresAt: { $gt: new Date() }
+      }).session(session);
+
+      for (const raid of activeRaids) {
+        const uncaptured = raid.guardHexes.filter(g => !raid.capturedGuards.includes(g));
+        const matchedHexes = hexesClaimed.filter(hex => uncaptured.includes(hex));
+        if (matchedHexes.length === 0) continue;
+
+        raid.capturedGuards.push(...matchedHexes);
+        raid.currentHp -= matchedHexes.length;
+
+        let contrib = raid.contributors.find(c => c.userId.toString() === userId.toString());
+        if (!contrib) {
+          raid.contributors.push({ userId, username: user.username, damage: matchedHexes.length });
+        } else {
+          contrib.damage += matchedHexes.length;
+        }
+
+        if (raid.currentHp <= 0) {
+          raid.status = 'defeated';
+          raid.currentHp = 0;
+          for (const c of raid.contributors) {
+            const reward = Math.round((c.damage / raid.totalHp) * raid.rewardPool);
+            if (reward <= 0) continue;
+            await User.findByIdAndUpdate(c.userId, { $inc: { credits: reward } }, { session });
+            await CreditLedger.create([{
+              userId: c.userId,
+              amount: reward,
+              balanceAfter: 0,
+              type: 'run_claim',
+              hexIds: matchedHexes,
+              hexCount: matchedHexes.length,
+              note: `Raid Defeated: ${raid.name}`,
+              occurredAt: new Date(),
+              schemaVersion: SCHEMA_VERSION,
+            }], opts);
+          }
+        }
+
+        await raid.save({ session });
+      }
+
       // Add credits to runner + Update Strikes
       const userUpdate = {
         $inc: {
@@ -805,6 +907,21 @@ const RunService = {
       }
 
       const userAfter = await User.findByIdAndUpdate(userId, userUpdate, { new: true, ...opts });
+
+      // ── Fog of War: unfog touched hexes + ring-1 neighbors ──
+      const newlyUnfogged = new Set();
+      for (const hexId of touchedHexIds) {
+        newlyUnfogged.add(hexId);
+        const neighbors = h3.gridDisk(hexId, 1);
+        for (const n of neighbors) {
+          newlyUnfogged.add(n);
+        }
+      }
+      if (newlyUnfogged.size > 0) {
+        await User.findByIdAndUpdate(userId, {
+          $addToSet: { unfoggedHexes: { $each: Array.from(newlyUnfogged) } }
+        }, opts);
+      }
 
       // Credit ledger for runner (non-critical)
       try {
@@ -857,6 +974,32 @@ const RunService = {
         await session.commitTransaction();
       }
 
+      // Emit boss raid updates after successful commit
+      try {
+        const io = ensureIO();
+        if (io && activeRaids.length > 0) {
+          for (const raid of activeRaids) {
+            if (raid.currentHp <= 0 || raid.status === 'defeated') {
+              io.emit('boss_hp_update', {
+                raidId: raid._id,
+                currentHp: 0,
+                status: 'defeated',
+                name: raid.name,
+              });
+            } else {
+              io.emit('boss_hp_update', {
+                raidId: raid._id,
+                currentHp: raid.currentHp,
+                status: raid.status,
+                name: raid.name,
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[BossRaid] socket emit failed:', err.message);
+      }
+
       // Safely clear Redis buffer *only after* database write success!
       try {
         await redis.del(redisKey);
@@ -904,6 +1047,7 @@ const RunService = {
           globalRank: userAfter.globalRank,
           cityRank: userAfter.cityRank,
           stats: userAfter.stats,
+          unfoggedHexes: userAfter.unfoggedHexes || [],
         },
         summary: {
           hexesClaimed: hexesClaimed.length,

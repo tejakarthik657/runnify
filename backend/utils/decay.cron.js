@@ -8,33 +8,58 @@
 
 const mongoose = require('mongoose');
 const cron = require('node-cron');
+const h3 = require('h3-js');
 require('dotenv').config();
 
 const logger = require('./logger');
 const { connectDB } = require('../config/db');
-const { Territory, CreditsLedger, User } = require('../core/schema');
+const { Territory, CreditLedger, User } = require('../core/schema');
 const { applyDecay } = require('../run-service/credit.engine');
+
+const SKIRMISH_DECAY_MULTIPLIER = 4;
 
 // ─────────────────────────────────────────────────────────────
 // DECAY CALCULATION
 // ─────────────────────────────────────────────────────────────
 
+function buildFactionMap() {
+  const map = new Map();
+  const all = Territory.find({}).select('hexId faction').lean();
+  // Note: find() returns a Query, not an array. We need to await it in runDecaySweep.
+  return all;
+}
+
+async function isSkirmishHex(hexId, factionMap) {
+  if (!hexId) return false;
+  const neighbors = h3.gridDisk(hexId, 1);
+  const ownFaction = factionMap.get(hexId);
+  for (const n of neighbors) {
+    const f = factionMap.get(n);
+    if (f && ownFaction && f !== ownFaction) return true;
+  }
+  return false;
+}
+
 /**
  * Calculate decay for a single territory
  * Formula: credits × (0.98 ^ days_inactive), minimum 1
+ * Skirmish hexes decay at 4x rate
  * 
  * @param {Document} territory — Territory document with credits, lastActiveAt
+ * @param {Boolean} isSkirmish — whether this is a contested border hex
  * @returns {Object} { previousCredits, newCredits, decayApplied }
  */
-function calculateTerritoryDecay(territory) {
+function calculateTerritoryDecay(territory, isSkirmish = false) {
   const previousCredits = territory.credits || 0;
-  const newCredits = applyDecay(previousCredits, territory.lastActiveAt);
+  const decayMultiplier = isSkirmish ? SKIRMISH_DECAY_MULTIPLIER : 1;
+  const newCredits = applyDecay(previousCredits, territory.lastActiveAt, decayMultiplier);
   const decayApplied = Math.max(0, previousCredits - newCredits);
 
   return {
     previousCredits,
     newCredits,
     decayApplied,
+    isSkirmish,
     percentageRetained: newCredits > 0 ? Math.round((newCredits / previousCredits) * 100) : 0
   };
 }
@@ -60,16 +85,27 @@ async function runDecaySweep() {
 
     logger.info(`📊 Processing ${territories.length} territories for decay...`);
 
+    // Build faction map for skirmish detection
+    const factionCursor = Territory.find({}).select('hexId faction').cursor();
+    const factionMap = new Map();
+    for await (const t of factionCursor) {
+      if (t.hexId && t.faction) factionMap.set(t.hexId, t.faction);
+    }
+    logger.info(`⚔️ Faction map built: ${factionMap.size} territories`);
+
     // 2. Prepare bulk operations & ledger entries
     const territoryUpdates = [];
     const ledgerEntries = [];
     const userCreditsChange = {};
     let totalDecayApplied = 0;
+    let skirmishDecayCount = 0;
 
     for (const territory of territories) {
-      const decay = calculateTerritoryDecay(territory);
+      const skirmish = await isSkirmishHex(territory.hexId, factionMap);
+      const decay = calculateTerritoryDecay(territory, skirmish);
 
       if (decay.decayApplied <= 0) continue; // Skip if no decay occurred
+      if (skirmish) skirmishDecayCount++;
 
       // Track territory update
       territoryUpdates.push({
@@ -97,13 +133,15 @@ async function runDecaySweep() {
         creditsDelta: -decay.decayApplied,
         previousBalance: decay.previousCredits,
         newBalance: decay.newCredits,
-        reason: 'Nightly territory decay (inactivity)',
+        reason: skirmish ? 'Nightly territory decay (skirmish border)' : 'Nightly territory decay (inactivity)',
         city: territory.city,
         timestamp: new Date(),
         automated: true,
         metadata: {
           daysInactive: Math.floor((Date.now() - territory.lastActiveAt) / (1000 * 60 * 60 * 24)),
-          decayMultiplier: decay.newCredits / decay.previousCredits
+          decayMultiplier: decay.newCredits / decay.previousCredits,
+          isSkirmish: skirmish,
+          decayMultiplierApplied: skirmish ? SKIRMISH_DECAY_MULTIPLIER : 1,
         }
       });
 
@@ -127,7 +165,7 @@ async function runDecaySweep() {
 
     // 4. Insert ledger entries (immutable audit log)
     logger.info(`📝 Creating ${ledgerEntries.length} ledger entries...`);
-    await CreditsLedger.insertMany(ledgerEntries, { ordered: false });
+    await CreditLedger.insertMany(ledgerEntries, { ordered: false });
 
     // 5. Update user credit balances
     logger.info(`👥 Updating ${Object.keys(userCreditsChange).length} user credit balances...`);
@@ -151,6 +189,7 @@ async function runDecaySweep() {
       `✅ Decay sweep complete!\n` +
       `   📍 Territories updated: ${territoryResult.modifiedCount}\n` +
       `   📊 Total credits decayed: ${totalDecayApplied.toFixed(2)}\n` +
+      `   ⚔️ Skirmish borders decayed: ${skirmishDecayCount}\n` +
       `   🔗 Ledger entries created: ${ledgerEntries.length}\n` +
       `   👥 Users affected: ${Object.keys(userCreditsChange).length}`
     );
@@ -159,6 +198,7 @@ async function runDecaySweep() {
     process.emit('decay:complete', {
       territoriesUpdated: territoryResult.modifiedCount,
       totalDecayApplied: totalDecayApplied.toFixed(2),
+      skirmishDecayCount,
       ledgerEntriesCreated: ledgerEntries.length,
       usersAffected: Object.keys(userCreditsChange).length,
       timestamp: new Date()

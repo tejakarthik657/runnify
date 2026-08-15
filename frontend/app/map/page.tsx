@@ -15,7 +15,9 @@ import {
     Trophy,
     Footprints,
     Shield,
-    X
+    X,
+    Navigation2,
+    Bot
 } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback } from 'react';
@@ -29,6 +31,10 @@ import { toast } from 'react-hot-toast';
 import MapContent from '../../components/map/MapContent';
 import MapSearch from '../../components/map/MapSearch';
 import FloatingLeaderboard from '../../components/map/FloatingLeaderboard';
+import FogOfWarLayer from '../../components/map/FogOfWarLayer';
+import AICopilotOverlay from '../../components/map/AICopilotOverlay';
+import { attachP2PSocket, detachP2PSocket, sendPositionToPeers, getActivePeers } from '../../services/p2pRadar';
+import { queueOfflineClaim, getQueuedOperations, clearQueuedOperations } from '../../services/offlineStore';
 import L from 'leaflet';
 
 import { latLngToCell, gridDisk } from 'h3-js';
@@ -57,12 +63,17 @@ export default function MapPage() {
     const [traceQuality, setTraceQuality] = useState<'high' | 'medium' | 'low'>('medium');
     const [activePanel, setActivePanel] = useState<'leaderboard' | 'steps' | 'faction' | null>(null);
     const [followUser, setFollowUser] = useState(true);
+    const [nearbyPeers, setNearbyPeers] = useState<Array<{ socketId: string; username: string; userColor: string }>>([]);
+    const [showAiCopilot, setShowAiCopilot] = useState(false);
+    const [showRoutePlanner, setShowRoutePlanner] = useState(false);
+    const [routeTargetKm, setRouteTargetKm] = useState(5);
     const isRunningRef = useRef(false);
     const runIdRef = useRef<string | null>(null);
     const hexSetRef = useRef<Set<string>>(new Set());
     const accelStepsRef = useRef(0); // Track accelerometer steps separately
     const gpsFallbackStepsRef = useRef(0); // GPS-based backup steps when accelerometer is weak
     const isDetectingRef = useRef(false);
+    const lastPingRef = useRef<number>(0);
 
     const [initialMapView] = useState<{ center: [number, number]; zoom: number }>(() => {
         try {
@@ -103,6 +114,26 @@ export default function MapPage() {
         const interval = setInterval(fetchFactionStats, 30000);
         return () => clearInterval(interval);
     }, []);
+
+    // ── P2P Radar: WebRTC proximity signaling ──
+    useEffect(() => {
+        if (!socket) return;
+        attachP2PSocket(socket);
+
+        const handleP2PPosition = (evt: any) => {
+            setNearbyPeers(prev => {
+                const exists = prev.find(p => p.socketId === evt.detail.socketId);
+                if (exists) return prev;
+                return [...prev, { socketId: evt.detail.socketId, username: 'Runner', userColor: '#A8D5BA' }];
+            });
+        };
+
+        window.addEventListener('p2p-position', handleP2PPosition);
+        return () => {
+            detachP2PSocket();
+            window.removeEventListener('p2p-position', handleP2PPosition);
+        };
+    }, [socket]);
 
     const startTimer = useCallback(() => {
         if (statsInterval.current) return;
@@ -222,10 +253,27 @@ export default function MapPage() {
             const h3Index = latLngToCell(point.lat, point.lng, 9);
             const isNew = !hexSetRef.current.has(h3Index);
             hexSetRef.current.add(h3Index);
-            if (isNew) console.log(`[HEX] Territory discovered: ${h3Index.slice(-6)}, total: ${hexSetRef.current.size}`);
+            if (isNew) {
+                console.log(`[HEX] Territory discovered: ${h3Index.slice(-6)}, total: ${hexSetRef.current.size}`);
+                const user = useAuthStore.getState().user;
+                if (user) {
+                    queueOfflineClaim({
+                        hexId: h3Index,
+                        userId: user.id,
+                        faction: user.faction || 'green',
+                        timestamp: Date.now(),
+                        action: 'add',
+                    }).catch(() => {});
+                }
+            }
         } catch (err) { 
             console.error('[HEX-ERROR]', err);
         }
+
+        // P2P Radar: broadcast position to connected peers
+        try {
+            sendPositionToPeers(point.lat, point.lng);
+        } catch { /* p2p non-critical */ }
 
         // Visual path trail with smart deduplication
         setRunPath(prev => {
@@ -294,6 +342,17 @@ export default function MapPage() {
         enabled: true,
         onUpdate: handleGpsUpdate
     });
+
+    const currentHexId = position?.lat && position?.lng ? latLngToCell(position.lat, position.lng, 9) : undefined;
+
+    // ── Location ping for proximity detection ──
+    useEffect(() => {
+        if (!socket || !position?.lat || !position?.lng) return;
+        const now = Date.now();
+        if (now - lastPingRef.current < 3000) return;
+        lastPingRef.current = now;
+        socket.emit('location_ping', { lat: position.lat, lng: position.lng });
+    }, [socket, position?.lat, position?.lng]);
 
     // Initialize step counter with accelerometer
     const { stepRate, cadence, isDetecting, start: startStepCounter, stop: stopStepCounter, reset: resetStepCounter } = useStepCounter({
@@ -440,6 +499,7 @@ export default function MapPage() {
                     credits: data.user.credits,
                     hexesOwned: data.user.hexesOwned,
                     rank: data.user.globalRank ? String(data.user.globalRank) : undefined,
+                    unfoggedHexes: data.user.unfoggedHexes,
                     ...(data.user.stats ? { stats: data.user.stats } : {}),
                 });
             }
@@ -476,6 +536,17 @@ export default function MapPage() {
             // Show results and update leaderboard
             const summary = data?.summary || {};
             toast.success(`Campaign Concluded • ${summary.hexesClaimed || 0} claims • ${summary.creditsEarned || 0} credits`);
+
+            // Sync offline CRDT queue if any
+            try {
+                const ops = await getQueuedOperations();
+                if (ops.length > 0) {
+                    await api.post('/run/sync-crdt', { operations: ops });
+                    await clearQueuedOperations();
+                }
+            } catch (syncErr) {
+                console.warn('[CRDT] Sync failed, will retry next run:', syncErr);
+            }
 
             // Soft reset stats for next run
             setStats({ distance: 0, time: 0, hexCount: 0, credits: 0, steps: 0 });
@@ -849,6 +920,55 @@ export default function MapPage() {
                 )}
             </AnimatePresence>
 
+            {/* Route Planner Panel */}
+            <AnimatePresence>
+                {showRoutePlanner && (
+                    <motion.div
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        className="absolute left-4 top-4 z-[1000] w-72 pointer-events-auto"
+                    >
+                        <div className="bg-white/90 backdrop-blur-xl border border-white/60 shadow-2xl rounded-3xl p-4">
+                            <div className="flex items-center justify-between mb-3">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-[#1a1a2e]">Route Planner</span>
+                                <button onClick={() => setShowRoutePlanner(false)} className="w-7 h-7 rounded-lg bg-white border border-black/10 flex items-center justify-center text-gray-500 hover:text-[#1a1a2e]">
+                                    <X size={14} />
+                                </button>
+                            </div>
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 block mb-1">Target Distance (km)</label>
+                                    <input
+                                        type="number"
+                                        value={routeTargetKm}
+                                        onChange={(e) => setRouteTargetKm(Number(e.target.value))}
+                                        min={1}
+                                        max={50}
+                                        className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm font-bold focus:outline-none focus:border-[#2E7D52]"
+                                    />
+                                </div>
+                                <button className="w-full py-2.5 bg-[#1a1a2e] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all">
+                                    Generate Route
+                                </button>
+                                <p className="text-[9px] font-bold text-gray-400 leading-relaxed">
+                                    A* planner finds a circular route maximizing unclaimed territory capture near your current position.
+                                </p>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Route Planner Toggle */}
+            <motion.button
+                initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
+                onClick={() => setShowRoutePlanner(!showRoutePlanner)}
+                className={`absolute top-4 left-4 z-[1000] w-12 h-12 rounded-2xl shadow-xl flex items-center justify-center active:scale-95 transition-all ${showRoutePlanner ? 'bg-[#2E7D52] text-white' : 'bg-white text-[#2E7D52] border border-black/10'}`}
+            >
+                <Navigation2 size={22} />
+            </motion.button>
+
             {/* Map Body */}
             <div className="flex-1 relative z-0">
                 <LeafletMap
@@ -870,6 +990,7 @@ export default function MapPage() {
                         stepRate={stepRate}
                         onCurrentTerritoryChange={setCurrentTerritory}
                     />
+                    <FogOfWarLayer unfoggedHexes={user?.unfoggedHexes || []} />
                 </LeafletMap>
 
                 {/* Recenter Button */}
@@ -885,6 +1006,26 @@ export default function MapPage() {
                         <Crosshair size={24} />
                     </motion.button>
                 )}
+
+                {/* AI Copilot Toggle */}
+                <motion.button
+                    initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
+                    onClick={() => setShowAiCopilot(!showAiCopilot)}
+                    className={`absolute top-4 right-4 z-[1000] w-12 h-12 rounded-2xl shadow-xl flex items-center justify-center active:scale-95 transition-all ${showAiCopilot ? 'bg-[#A594D3] text-white' : 'bg-white text-[#A594D3] border border-black/10'}`}
+                >
+                    <Bot size={22} />
+                </motion.button>
+
+                {/* AI Copilot Overlay */}
+                <AnimatePresence>
+                    {showAiCopilot && (
+                                <AICopilotOverlay
+                                    currentHex={currentHexId}
+                                    faction={user?.faction || undefined}
+                                    onClose={() => setShowAiCopilot(false)}
+                                />
+                    )}
+                </AnimatePresence>
 
                 {(!position?.lat || !position?.lng) && !gpsError && (
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[500] pointer-events-none">
@@ -920,6 +1061,12 @@ export default function MapPage() {
                                 <StatItem label="Hexes" value={stats.hexCount} color="text-[#2E7D52]" icon={<Crosshair size={10} />} />
                                 <StatItem label="Yield" value={stats.credits} color="text-[#A594D3]" icon={<Zap size={10} />} />
                                 <StatItem label="Territory" value={currentTerritory?.ownerUsername?.substring(0, 8) || 'Wild'} color="text-[#2E7D52]" />
+                                {nearbyPeers.length > 0 && (
+                                    <div className="flex flex-col items-center">
+                                        <span className="text-[9px] font-black uppercase tracking-widest text-[#6B7280]">P2P Radar</span>
+                                        <span className="text-lg font-black text-[#00C896]">{nearbyPeers.length}</span>
+                                    </div>
+                                )}
 
                                 {nearestRunner && (
                                     <div className="absolute -top-16 left-1/2 -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded-full font-black text-[10px] uppercase shadow-xl animate-bounce border-2 border-white flex items-center gap-2">

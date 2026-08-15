@@ -202,11 +202,64 @@ router.get('/history/me', authenticateJWT, async (req, res, next) => {
 	}
 });
 
-router.get('/:id', authenticateJWT, async (req, res, next) => {
+router.post('/:id', authenticateJWT, async (req, res, next) => {
 	try {
 		const run = await Run.findOne({ _id: req.params.id, userId: req.userId });
 		if (!run) return res.status(404).json({ error: 'Run not found' });
 		res.json({ run });
+	} catch (error) {
+		next(error);
+	}
+});
+
+router.post('/sync-crdt', authenticateJWT, async (req, res, next) => {
+	try {
+		const { operations } = req.body;
+		if (!Array.isArray(operations)) {
+			return res.status(400).json({ error: 'operations must be an array' });
+		}
+
+		const { Territory } = require('../core/schema');
+		const mongoose = require('mongoose');
+		const session = await mongoose.startSession();
+
+		try {
+			await session.withTransaction(async () => {
+				for (const op of operations) {
+					const existing = await Territory.findOne({ hexId: op.hexId }).session(session);
+					const opTime = new Date(op.timestamp);
+
+					if (!existing) {
+						await Territory.create([{
+							hexId: op.hexId,
+							ownerId: op.userId,
+							ownerUsername: '',
+							ownerColor: '#A8D5BA',
+							faction: op.faction,
+							claimedAt: opTime,
+							firstClaimedAt: opTime,
+							lastActiveAt: opTime,
+							creditValue: 10,
+							decayFactor: 1.0,
+							schemaVersion: 'v1',
+						}], { session });
+					} else if (opTime > existing.claimedAt) {
+						existing.ownerId = op.userId;
+						existing.faction = op.faction;
+						existing.claimedAt = opTime;
+						existing.lastActiveAt = opTime;
+						await existing.save({ session });
+					}
+				}
+			});
+
+			res.json({ status: 'merged_success', merged: operations.length });
+		} catch (error) {
+			await session.abortTransaction();
+			throw error;
+		} finally {
+			await session.endSession();
+		}
 	} catch (error) {
 		next(error);
 	}

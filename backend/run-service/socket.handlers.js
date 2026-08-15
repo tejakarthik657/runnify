@@ -31,6 +31,7 @@ function authenticateSocket(socket) {
 }
 
 let ioInstance = null;
+const activePositions = new Map();
 
 function initSocketHandlers(io) {
 	ioInstance = io;
@@ -66,23 +67,70 @@ function initSocketHandlers(io) {
 		socket.on('join_map_zone', (hexId) => socket.join(`zone:${hexId}`));
 		socket.on('leave_map_zone', (hexId) => socket.leave(`zone:${hexId}`));
 
-		// On disconnect, remove user from online list and running status
-		socket.on('disconnect', async () => {
-			const userRecord = JSON.stringify({ userId, username, userColor, socketId: socket.id, namespace: 'main' });
-			await Promise.all([
-				redis.srem('online_users', userRecord),
-				redis.del(`user:running:${userId}`),
-				redis.del(`user:live:pos:${userId}`)
-			]);
-			console.log(`[Presence] Cleanup for ${username}`);
-		});
-
 		socket.on('gps_update', async (data) => {
 			try {
 				await handleGpsUpdate(socket, io, userId, data);
 			} catch (error) {
 				socket.emit('error', { message: error.message });
 			}
+		});
+
+		// ── Proximity signaling for WebRTC P2P radar ──
+		socket.on('location_ping', (pos) => {
+			if (!pos || typeof pos.lat !== 'number' || typeof pos.lng !== 'number') return;
+			activePositions.set(socket.id, { lat: pos.lat, lng: pos.lng, userId, username, userColor });
+
+			for (const [otherSocketId, otherPos] of activePositions.entries()) {
+				if (otherSocketId === socket.id) continue;
+				const dist = haversineMeters(pos.lat, pos.lng, otherPos.lat, otherPos.lng);
+				if (dist <= 200) {
+					io.to(socket.id).emit('proximity_near', { peerSocketId: otherSocketId, peerUserId: otherPos.userId, peerUsername: otherPos.username, peerUserColor: otherPos.userColor, distanceMeters: Math.round(dist) });
+					io.to(otherSocketId).emit('proximity_near', { peerSocketId: socket.id, peerUserId: userId, peerUsername: username, peerUserColor: userColor, distanceMeters: Math.round(dist) });
+				}
+			}
+		});
+
+		// ── WebRTC signaling relay ──
+		socket.on('webrtc_offer', (data) => {
+			if (data?.targetSocketId) {
+				io.to(data.targetSocketId).emit('webrtc_offer', {
+					fromSocketId: socket.id,
+					userId,
+					username,
+					userColor,
+					sdp: data.sdp,
+				});
+			}
+		});
+
+		socket.on('webrtc_answer', (data) => {
+			if (data?.targetSocketId) {
+				io.to(data.targetSocketId).emit('webrtc_answer', {
+					fromSocketId: socket.id,
+					sdp: data.sdp,
+				});
+			}
+		});
+
+		socket.on('webrtc_ice_candidate', (data) => {
+			if (data?.targetSocketId && data?.candidate) {
+				io.to(data.targetSocketId).emit('webrtc_ice_candidate', {
+					fromSocketId: socket.id,
+					candidate: data.candidate,
+				});
+			}
+		});
+
+		// On disconnect, remove user from online list and running status
+		socket.on('disconnect', async () => {
+			console.log(`[Presence] Cleanup for ${username}`);
+			const userRecord = JSON.stringify({ userId, username, userColor, socketId: socket.id, namespace: 'main' });
+			await Promise.all([
+				redis.srem('online_users', userRecord),
+				redis.del(`user:running:${userId}`),
+				redis.del(`user:live:pos:${userId}`)
+			]);
+			activePositions.delete(socket.id);
 		});
 
 		socket.on('presence_sync', async (data) => {

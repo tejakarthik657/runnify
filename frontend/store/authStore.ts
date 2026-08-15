@@ -20,6 +20,7 @@ interface User {
   };
   faction?: 'red' | 'blue' | 'green' | null;
   factionJoinedAt?: Date | null;
+  unfoggedHexes?: string[];
 }
 
 interface AuthState {

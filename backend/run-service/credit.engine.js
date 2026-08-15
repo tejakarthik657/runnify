@@ -19,18 +19,21 @@ function isPeakHour(timestamp = Date.now(), timezone = 'UTC') {
 	return (localHour >= 6 && localHour < 9) || (localHour >= 17 && localHour < 20);
 }
 
-function calculateRunCredits(hexesClaimed = [], hexesInvaded = [], timestamp = Date.now(), timezone = 'UTC') {
+function calculateRunCredits(hexesClaimed = [], hexesInvaded = [], skirmishHexCount = 0, timestamp = Date.now(), timezone = 'UTC') {
 	const claimedBase = hexesClaimed.length * CREDITS_PER_CLAIMED_HEX;
+	const skirmishBonus = skirmishHexCount * CREDITS_PER_CLAIMED_HEX * 2;
 	const invasionBonus = hexesInvaded.length * CREDITS_PER_INVADED_HEX;
-	const subtotal = claimedBase + invasionBonus;
+	const subtotal = claimedBase + invasionBonus + skirmishBonus;
 	const peakMultiplier = isPeakHour(timestamp, timezone) ? PEAK_HOUR_MULTIPLIER : 1.0;
 	const total = Math.floor(subtotal * peakMultiplier);
 
 	return {
 		hexesClaimed: hexesClaimed.length,
 		hexesInvaded: hexesInvaded.length,
+		skirmishHexCount,
 		claimedBase,
 		invasionBonus,
+		skirmishBonus,
 		peakMultiplier,
 		total,
 	};
@@ -40,12 +43,12 @@ function calculateDefenderLoss(hexCount) {
 	return hexCount * CREDIT_TRANSFER_ON_LOSS;
 }
 
-function applyDecay(creditValue, lastActiveAt) {
-	const msInactive = Date.now() - new Date(lastActiveAt).getTime();
-	const daysInactive = msInactive / (1000 * 60 * 60 * 24);
-	const decayFactor = Math.pow(DECAY_RATE_PER_DAY, Math.floor(daysInactive));
-	const decayed = Math.floor(creditValue * decayFactor);
-	return Math.max(decayed, 1);
+function applyDecay(creditValue, lastActiveAt, decayMultiplier = 1) {
+  const msInactive = Date.now() - new Date(lastActiveAt).getTime();
+  const daysInactive = msInactive / (1000 * 60 * 60 * 24);
+  const decayFactor = Math.pow(DECAY_RATE_PER_DAY, Math.floor(daysInactive) * decayMultiplier);
+  const decayed = Math.floor(creditValue * decayFactor);
+  return Math.max(decayed, 1);
 }
 
 module.exports = {
