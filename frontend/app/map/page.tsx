@@ -31,6 +31,7 @@ import { toast } from 'react-hot-toast';
 import MapContent from '../../components/map/MapContent';
 import MapSearch from '../../components/map/MapSearch';
 import FloatingLeaderboard from '../../components/map/FloatingLeaderboard';
+import FogOfWarLayer from '../../components/map/FogOfWarLayer';
 import AICopilotOverlay from '../../components/map/AICopilotOverlay';
 import { attachP2PSocket, detachP2PSocket, sendPositionToPeers, getActivePeers } from '../../services/p2pRadar';
 import { queueOfflineClaim, getQueuedOperations, clearQueuedOperations } from '../../services/offlineStore';
@@ -989,6 +990,7 @@ export default function MapPage() {
                         stepRate={stepRate}
                         onCurrentTerritoryChange={setCurrentTerritory}
                     />
+                    <FogOfWarLayer unfoggedHexes={user?.unfoggedHexes || []} />
                 </LeafletMap>
 
                 {/* Recenter Button */}

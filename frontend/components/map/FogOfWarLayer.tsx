@@ -3,17 +3,15 @@
 import { useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
 import { cellToBoundary } from 'h3-js';
-import L from 'leaflet';
 
-const FOG_COLOR = 'rgba(10, 12, 18, 0.88)';
-const REDRAW_THROTTLE_MS = 80;
+const FOG_BASE = 'rgba(210, 218, 226, 0.45)';
+const FOG_EDGE = 'rgba(180, 190, 200, 0.25)';
 
 export default function FogOfWarLayer({ unfoggedHexes }: { unfoggedHexes: string[] }) {
   const map = useMap();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const paneRef = useRef<HTMLElement | null>(null);
   const rafRef = useRef<number | null>(null);
-  const lastDrawArgs = useRef<string>('');
   const hexSetRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -66,13 +64,11 @@ export default function FogOfWarLayer({ unfoggedHexes }: { unfoggedHexes: string
 
       const unfogged = hexSetRef.current;
       if (unfogged.size === 0) {
-        ctx.fillStyle = FOG_COLOR;
-        ctx.fillRect(0, 0, w, h);
+        drawFogBackground(ctx, w, h);
         return;
       }
 
-      ctx.fillStyle = FOG_COLOR;
-      ctx.fillRect(0, 0, w, h);
+      drawFogBackground(ctx, w, h);
 
       const zoom = map.getZoom();
       const simplifyAtZoom = (z: number) => z > 16 ? 1 : z > 14 ? 2 : z > 12 ? 3 : z > 10 ? 4 : 5;
@@ -107,6 +103,15 @@ export default function FogOfWarLayer({ unfoggedHexes }: { unfoggedHexes: string
 
       ctx.restore();
     };
+
+    function drawFogBackground(ctx: CanvasRenderingContext2D, w: number, h: number) {
+      const gradient = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.2, w / 2, h / 2, Math.max(w, h) * 0.75);
+      gradient.addColorStop(0, 'rgba(210, 218, 226, 0.08)');
+      gradient.addColorStop(0.5, 'rgba(200, 210, 220, 0.35)');
+      gradient.addColorStop(1, 'rgba(180, 190, 200, 0.55)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, w, h);
+    }
 
     map.on('move zoom moveend zoomend resize', requestDraw);
     resize();

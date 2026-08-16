@@ -26,9 +26,21 @@ export default function AICopilotOverlay({ currentHex, faction, onClose }: AICop
       });
     },
     onError: (err) => {
-        setMessages(prev => [...prev, { role: 'assistant', text: `Error: ${err}` }]);
+      setMessages(prev => [...prev, { role: 'assistant', text: `Error: ${err}` }]);
     }
   });
+
+  const suggestions = [
+    'Suggest a 5km route nearby',
+    'Best time to run for max credits',
+    'How do invasions work?',
+    'Tips for defending my territory',
+  ];
+
+  const handleSuggestion = (suggestion: string) => {
+    setMessages(prev => [...prev, { role: 'user', text: suggestion }]);
+    generate(suggestion, systemPrompt);
+  };
 
   const systemPrompt = `You are a tactical running copilot for TerritoryRun. Current H3 hex: ${currentHex || 'unknown'}. Faction: ${faction || 'none'}. Provide brief, strategic running advice.`;
 
@@ -64,11 +76,22 @@ export default function AICopilotOverlay({ currentHex, faction, onClose }: AICop
               <div className="w-12 h-12 mx-auto rounded-2xl bg-[#A594D3]/10 flex items-center justify-center mb-3">
                 <Bot size={24} className="text-[#A594D3]" />
               </div>
-              <p className="text-[11px] font-bold text-gray-500">
+              <p className="text-[11px] font-bold text-gray-500 mb-4">
                 Groq-powered copilot ready. Ask for route suggestions or tactical advice.
               </p>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {suggestions.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => handleSuggestion(s)}
+                    className="px-3 py-1.5 rounded-xl bg-[#F0F7F4] border border-black/5 text-[10px] font-bold text-[#1a1a2e] hover:bg-[#A8D5BA]/20 hover:border-[#A8D5BA]/30 transition-all"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
               {error && (
-                <p className="text-[10px] font-bold text-red-500 mt-2">API error: {error}</p>
+                <p className="text-[10px] font-bold text-red-500 mt-3">API error: {error}</p>
               )}
             </div>
           )}
