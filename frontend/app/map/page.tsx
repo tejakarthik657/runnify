@@ -581,11 +581,11 @@ export default function MapPage() {
 
             setActiveRunners(prev => {
                 const existing = prev[data.userId];
-                const newPath = existing?.path || [];
+                const newPath = existing?.path ? [...existing.path] : [];
                 
                 // Append new point to path (limit to last 100 points to avoid memory issues)
                 if (newPath.length === 0 || 
-                    getDistance(newPath[newPath.length - 1][0], newPath[newPath.length - 1][1], data.lat, data.lng) > 0.005) {
+                    getDistance(newPath[newPath.length - 1][0], newPath[newPath.length - 1][1], data.lat, data.lng) > 0.001) {
                     newPath.push([data.lat, data.lng]);
                     if (newPath.length > 100) newPath.shift();
                 }
@@ -613,11 +613,11 @@ export default function MapPage() {
 
             setActiveRunners(prev => {
                 const existing = prev[data.userId];
-                const newPath = existing?.path || [];
+                const newPath = existing?.path ? [...existing.path] : [];
                 
                 // Append new point to path (limit to last 100 points)
                 if (newPath.length === 0 || 
-                    getDistance(newPath[newPath.length - 1][0], newPath[newPath.length - 1][1], data.lat, data.lng) > 0.005) {
+                    getDistance(newPath[newPath.length - 1][0], newPath[newPath.length - 1][1], data.lat, data.lng) > 0.001) {
                     newPath.push([data.lat, data.lng]);
                     if (newPath.length > 100) newPath.shift();
                 }
