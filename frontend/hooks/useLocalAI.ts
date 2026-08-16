@@ -10,76 +10,90 @@ export interface LocalAIOptions {
 }
 
 export function useLocalAI(options: LocalAIOptions = {}) {
-  const workerRef = useRef<Worker | null>(null);
-  const [isReady, setIsReady] = useState(false);
+  const [isReady, setIsReady] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const initWorker = async () => {
-      try {
-        const worker = new Worker(new URL('../workers/ai.worker.ts', import.meta.url), {
-          type: 'module',
-        });
-
-        worker.onmessage = (event) => {
-          const { type, text, error } = event.data;
-          switch (type) {
-            case 'token':
-              options.onToken?.(text);
-              break;
-            case 'complete':
-              setIsLoading(false);
-              setIsReady(true);
-              options.onComplete?.(text);
-              break;
-            case 'error':
-              setError(error);
-              setIsLoading(false);
-              options.onError?.(error);
-              break;
-          }
-        };
-
-        worker.onerror = (err) => {
-          setError(err.message);
-          setIsLoading(false);
-          options.onError?.(err.message);
-        };
-
-        workerRef.current = worker;
-      } catch (err: any) {
-        setError(err.message);
-        options.onError?.(err.message);
-      }
-    };
-
-    initWorker();
-
-    return () => {
-      workerRef.current?.terminate();
-      workerRef.current = null;
-    };
-  }, []);
-
   const generate = useCallback(
-    (prompt: string, systemPrompt?: string) => {
-      if (!workerRef.current) {
-        setError('AI worker not initialized');
+    async (prompt: string, systemPrompt?: string) => {
+      const apiKey = process.env.NEXT_PUBLIC_GROQ_API_KEY;
+      if (!apiKey) {
+        const err = 'Missing NEXT_PUBLIC_GROQ_API_KEY';
+        setError(err);
+        options.onError?.(err);
         return;
       }
 
       setIsLoading(true);
       setError(null);
 
-      workerRef.current.postMessage({
-        prompt,
-        systemPrompt: systemPrompt || options.systemPrompt,
-      });
+      try {
+        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile',
+            messages: [
+              { role: 'system', content: systemPrompt || 'You are a tactical running copilot.' },
+              { role: 'user', content: prompt },
+            ],
+            temperature: 0.7,
+            max_tokens: 120,
+            stream: true,
+          }),
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`Groq error ${res.status}: ${text}`);
+        }
+
+        const reader = res.body?.getReader();
+        if (!reader) throw new Error('No response body');
+
+        const decoder = new TextDecoder();
+        let fullText = '';
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || !trimmed.startsWith('data:')) continue;
+            const payload = trimmed.slice(5).trim();
+            if (payload === '[DONE]') continue;
+            try {
+              const json = JSON.parse(payload);
+              const delta = json.choices?.[0]?.delta?.content;
+              if (delta) {
+                fullText += delta;
+                options.onToken?.(fullText);
+              }
+            } catch {
+              // skip malformed JSON
+            }
+          }
+        }
+
+        setIsLoading(false);
+        setIsReady(true);
+        options.onComplete?.(fullText);
+      } catch (err: any) {
+        setError(err.message);
+        setIsLoading(false);
+        options.onError?.(err.message);
+      }
     },
-    [options.systemPrompt]
+    [options]
   );
 
   return {

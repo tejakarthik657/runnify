@@ -74,13 +74,10 @@ export default function AICopilotOverlay({ currentHex, faction, onClose }: AICop
                 <Bot size={24} className="text-[#A594D3]" />
               </div>
               <p className="text-[11px] font-bold text-gray-500">
-                Local AI copilot ready. Ask for route suggestions or tactical advice.
+                Groq-powered copilot ready. Ask for route suggestions or tactical advice.
               </p>
-              {!isReady && !error && (
-                <p className="text-[10px] font-bold text-[#A594D3] mt-2">Loading model...</p>
-              )}
               {error && (
-                <p className="text-[10px] font-bold text-red-500 mt-2">Model load failed: {error}</p>
+                <p className="text-[10px] font-bold text-red-500 mt-2">API error: {error}</p>
               )}
             </div>
           )}
