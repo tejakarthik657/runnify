@@ -40,7 +40,7 @@ function isModelUnavailableError(err) {
 // ─────────────────────────────────────────────────────────────
 // SYSTEM PROMPT — defines bot persona and scope
 // ─────────────────────────────────────────────────────────────
-const SYSTEM_PROMPT = `You are TerritoryBot, the official game assistant for TerritoryRun.
+const SYSTEM_PROMPT = `You are TerritoryBot, the official game assistant and TACTICAL COPILOT for TerritoryRun.
 
 TerritoryRun is a real-world territory-control game where players run GPS routes to claim hexagonal map cells, invade enemies' territory, earn credits, and compete on leaderboards.
 
@@ -59,20 +59,27 @@ Anti-Cheat System:
 - Disqualified runs earn 0 credits
 - Repeated violations = shadow ban (no earnings)
 
+As a Tactical Running Copilot, you have 10 CORE FEATURES to assist players on their routes:
+1. ⚔️ Rival Intercept Alerts: Warning when other runners are closing in on your territories.
+2. 🗺️ Optimal Credit Route Suggestions: High-density unclaimed or decayed paths nearby.
+3. ⏰ Peak-Hour Tactical Timers: When to start runs to trigger the 1.5x multiplier.
+4. 👾 Boss Raid Coordination: Guiding on active Boss Raid guard-hex statuses.
+5. 🛡️ Decay Defense Warnings: Flagging owned hexes with high decay risk.
+6. 👤 Stealth Route Planning: Custom routes through unowned "blind spots".
+7. 🌦️ Weather Multiplier Maximizers: Factoring dynamic weather conditions for reward boosts.
+8. 🧬 Prestige Rebirth Advice: RPG-style progression tip mappings.
+9. 📦 Loot Air-Drop Radars: Pointing to geo-located supply crates nearby.
+10. 🤝 Wager Duel Scouts: Evaluating potential direct competitive wagers.
+
 You answer questions about:
-- Game mechanics (how credits work, what invasions are, how decay works)
-- How to play and strategy tips
-- Credit formula and peak hour bonuses
-- Territory and decay mechanics
+- Game mechanics, tactical strategy, route optimization, and nearby active runners.
+- You can read the player's live location context (if provided) and tell them if other runners are close or suggest a route direction.
 
 You NEVER reveal:
-- Any user's real-time location
-- Another user's exact credit balance in real time
-- Private or personally identifiable information
-- Questions about locating other players
+- Absolute home locations of other players (always speak in relative distance like "runner A is 150m away").
+- Secret cryptographic keys.
 
-If asked something outside your scope, politely redirect to game topics.
-Keep answers concise (2–4 sentences max unless a complex explanation is needed).`;
+Keep answers tactical, brief, and highly immersive (2–4 sentences max unless a complex route explanation is needed).`;
 
 // ─────────────────────────────────────────────────────────────
 // INITIALIZE — set up Groq client
@@ -124,7 +131,7 @@ async function completeWithFallback(messages) {
 // QUERY — ask the bot a question
 // Returns STRUCTURED RESPONSE with answer + sources
 // ─────────────────────────────────────────────────────────────
-async function query(userQuestion) {
+async function query(userQuestion, mapContext = null) {
   if (!isReady || !groqClient) {
     return {
       answer: 'Bot is currently unavailable.',
@@ -132,7 +139,7 @@ async function query(userQuestion) {
     };
   }
 
-  // Safety check — don't answer location/privacy questions
+  // Safety check — don't answer location/privacy questions outside immediate relative vicinity
   const blockedPhrases = [
     'where is',
     'location of',
@@ -143,7 +150,7 @@ async function query(userQuestion) {
     'position of'
   ];
 
-  if (blockedPhrases.some(phrase => userQuestion.toLowerCase().includes(phrase))) {
+  if (blockedPhrases.some(phrase => userQuestion.toLowerCase().includes(phrase)) && !mapContext) {
     return {
       answer: "I can't help with locating other players. Ask me about game mechanics instead!",
       sources: ['TerritoryRun game rules']
@@ -171,13 +178,27 @@ async function query(userQuestion) {
       ]);
 
       // Build live context string
-      const liveContext = `
+      let liveContext = `
   Current game stats (live, real-time):
   - Total players: ${totalUsers}
   - Total hexes claimed: ${totalHexes}
   - Total runs completed: ${totalRuns}
   - Top 5 players: ${top5.map((u, i) => `${i + 1}. ${u.username} (${u.credits} credits, ${u.city || 'Global'})`).join(' | ')}
   `;
+
+      if (mapContext) {
+        liveContext += `
+  Tactical Map Context (for current user):
+  - Current H3 Hex ID: ${mapContext.currentHex || 'Unknown'}
+  - Current Coordinates: Lat ${mapContext.userPosition?.lat?.toFixed(5) || 'N/A'}, Lng ${mapContext.userPosition?.lng?.toFixed(5) || 'N/A'}
+  - Current Faction: ${mapContext.faction || 'None'}
+  - Active Runners in Proximity: ${
+    mapContext.activeRunners && mapContext.activeRunners.length > 0
+      ? mapContext.activeRunners.map(r => `${r.username} (${r.faction || 'No Faction'}, ${r.distanceMeters}m away)`).join(', ')
+      : 'None'
+  }
+  `;
+      }
 
       // Inject live data into system prompt
       const systemPromptWithContext = SYSTEM_PROMPT + '\n' + liveContext;

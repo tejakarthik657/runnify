@@ -8,22 +8,28 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface AICopilotOverlayProps {
   currentHex: string | undefined;
   faction: string | undefined;
+  activeRunners: Record<string, any>;
+  userPosition: { lat: number | null; lng: number | null } | null;
   onClose: () => void;
 }
 
-export default function AICopilotOverlay({ currentHex, faction, onClose }: AICopilotOverlayProps) {
+function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+export default function AICopilotOverlay({ currentHex, faction, activeRunners, userPosition, onClose }: AICopilotOverlayProps) {
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; text: string }>>([]);
   const [input, setInput] = useState('');
   const { generate, isReady, isLoading, error } = useLocalAI({
     onComplete: (text) => {
-      setMessages(prev => {
-        const updated = [...prev];
-        const last = updated[updated.length - 1];
-        if (last?.role === 'assistant') {
-          last.text = text;
-        }
-        return updated;
-      });
+      setMessages(prev => [...prev, { role: 'assistant', text }]);
     },
     onError: (err) => {
       setMessages(prev => [...prev, { role: 'assistant', text: `Error: ${err}` }]);
@@ -31,6 +37,27 @@ export default function AICopilotOverlay({ currentHex, faction, onClose }: AICop
   });
 
   const systemPrompt = `You are a tactical running copilot for TerritoryRun. Current H3 hex: ${currentHex || 'unknown'}. Faction: ${faction || 'none'}. Provide brief, strategic running advice.`;
+
+  const getMapContext = () => {
+    const runners = Object.values(activeRunners).map((runner: any) => {
+      let distanceMeters = 9999;
+      if (userPosition?.lat && userPosition?.lng && runner.lat && runner.lng) {
+        distanceMeters = Math.round(haversineMeters(userPosition.lat, userPosition.lng, runner.lat, runner.lng));
+      }
+      return {
+        username: runner.username,
+        faction: runner.faction,
+        distanceMeters,
+      };
+    });
+
+    return {
+      currentHex,
+      faction,
+      userPosition: userPosition ? { lat: userPosition.lat, lng: userPosition.lng } : null,
+      activeRunners: runners,
+    };
+  };
 
   const suggestions = [
     { icon: '🗺️', text: 'Suggest a 5km route nearby' },
@@ -41,7 +68,7 @@ export default function AICopilotOverlay({ currentHex, faction, onClose }: AICop
 
   const handleSuggestion = (suggestion: string) => {
     setMessages(prev => [...prev, { role: 'user', text: suggestion }]);
-    generate(suggestion, systemPrompt);
+    generate(suggestion, systemPrompt, getMapContext());
   };
 
   const handleSend = () => {
@@ -49,7 +76,7 @@ export default function AICopilotOverlay({ currentHex, faction, onClose }: AICop
     const userMsg = input.trim();
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setInput('');
-    generate(userMsg, systemPrompt);
+    generate(userMsg, systemPrompt, getMapContext());
   };
 
   return (

@@ -16,7 +16,7 @@ export function useLocalAI(options: LocalAIOptions = {}) {
   const [error, setError] = useState<string | null>(null);
 
   const generate = useCallback(
-    async (prompt: string, systemPrompt?: string) => {
+    async (prompt: string, systemPrompt?: string, mapContext?: any) => {
       setIsLoading(true);
       setError(null);
 
@@ -25,6 +25,7 @@ export function useLocalAI(options: LocalAIOptions = {}) {
         
         const { data } = await api.post('/bot/ask', {
           question: fullPrompt,
+          mapContext,
         });
 
         const answer = data?.answer || 'No response from copilot.';

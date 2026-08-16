@@ -1022,6 +1022,8 @@ export default function MapPage() {
                                 <AICopilotOverlay
                                     currentHex={currentHexId}
                                     faction={user?.faction || undefined}
+                                    activeRunners={activeRunners}
+                                    userPosition={position}
                                     onClose={() => setShowAiCopilot(false)}
                                 />
                     )}

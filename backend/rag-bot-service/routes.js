@@ -32,7 +32,7 @@ router.get('/health', (req, res) => {
  */
 router.post('/ask', optionalAuth, aiRateLimit, async (req, res, next) => {
   try {
-    const { question } = req.body;
+    const { question, mapContext } = req.body;
 
     if (!question || typeof question !== 'string') {
       return res.status(400).json({ error: 'question (string) required' });
@@ -44,14 +44,14 @@ router.post('/ask', optionalAuth, aiRateLimit, async (req, res, next) => {
       });
     }
 
-    const maxLength = 500;
+    const maxLength = 5000;
     if (question.length > maxLength) {
       return res.status(400).json({
         error: `Question exceeds ${maxLength} characters`,
       });
     }
 
-    const result = await query(question);
+    const result = await query(question, mapContext);
 
     res.json({
       question,
