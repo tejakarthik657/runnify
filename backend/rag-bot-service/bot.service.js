@@ -151,6 +151,12 @@ async function query(userQuestion) {
   }
 
   try {
+      // Sanitize user question — strip any image URLs or base64 data to prevent
+      // "model does not support image input" errors from text-only Groq models.
+      const sanitizedQuestion = userQuestion
+        .replace(/https?:\/\/[^\s]+\.(png|jpg|jpeg|gif|webp|bmp|svg)/gi, '[image removed]')
+        .replace(/data:image\/[a-zA-Z]+;base64,[^\s]+/gi, '[image removed]');
+
       // Fetch live game data
       const { User, Territory, Run } = require('../config/models');
       const [totalUsers, totalHexes, totalRuns, top5] = await Promise.all([
@@ -178,7 +184,7 @@ async function query(userQuestion) {
 
       const completion = await completeWithFallback([
         { role: 'system', content: systemPromptWithContext },
-        { role: 'user', content: userQuestion },
+        { role: 'user', content: sanitizedQuestion },
       ]);
 
       const answer = completion.choices[0]?.message?.content || 'No answer generated.';

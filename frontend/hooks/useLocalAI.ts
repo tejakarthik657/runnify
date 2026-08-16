@@ -34,9 +34,23 @@ export function useLocalAI(options: LocalAIOptions = {}) {
         options.onComplete?.(answer);
       } catch (err: any) {
         const message = err?.message || 'Failed to reach copilot service.';
-        setError(message);
+        
+        let friendlyMessage = message;
+        if (message.includes('image') || message.includes('image.png')) {
+          friendlyMessage = 'The AI model is currently unavailable. Please try again in a moment.';
+        } else if (message.includes('timeout') || message.includes('ETIMEDOUT')) {
+          friendlyMessage = 'Request timed out. The copilot is taking too long to respond.';
+        } else if (message.includes('Network') || message.includes('ECONNREFUSED')) {
+          friendlyMessage = 'Cannot reach the copilot service. Check your connection.';
+        } else if (message.includes('401') || message.includes('403')) {
+          friendlyMessage = 'Authentication failed. Please log in again.';
+        } else if (message.includes('429')) {
+          friendlyMessage = 'Too many requests. Please wait a moment before trying again.';
+        }
+        
+        setError(friendlyMessage);
         setIsLoading(false);
-        options.onError?.(message);
+        options.onError?.(friendlyMessage);
       }
     },
     [options]

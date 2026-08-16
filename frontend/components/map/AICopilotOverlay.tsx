@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Bot, Send, Loader2 } from 'lucide-react';
 import { useLocalAI } from '../../hooks/useLocalAI';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -30,19 +30,19 @@ export default function AICopilotOverlay({ currentHex, faction, onClose }: AICop
     }
   });
 
+  const systemPrompt = `You are a tactical running copilot for TerritoryRun. Current H3 hex: ${currentHex || 'unknown'}. Faction: ${faction || 'none'}. Provide brief, strategic running advice.`;
+
   const suggestions = [
-    'Suggest a 5km route nearby',
-    'Best time to run for max credits',
-    'How do invasions work?',
-    'Tips for defending my territory',
+    { icon: '🗺️', text: 'Suggest a 5km route nearby' },
+    { icon: '⏰', text: 'Best time to run for max credits' },
+    { icon: '⚔️', text: 'How do invasions work?' },
+    { icon: '🛡️', text: 'Tips for defending my territory' },
   ];
 
   const handleSuggestion = (suggestion: string) => {
     setMessages(prev => [...prev, { role: 'user', text: suggestion }]);
     generate(suggestion, systemPrompt);
   };
-
-  const systemPrompt = `You are a tactical running copilot for TerritoryRun. Current H3 hex: ${currentHex || 'unknown'}. Faction: ${faction || 'none'}. Provide brief, strategic running advice.`;
 
   const handleSend = () => {
     if (!input.trim()) return;
@@ -57,51 +57,59 @@ export default function AICopilotOverlay({ currentHex, faction, onClose }: AICop
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20 }}
-      className="absolute right-4 top-24 z-[1000] w-[min(360px,calc(100vw-6rem))] pointer-events-auto"
+      className="absolute right-4 top-24 z-[1000] w-[min(380px,calc(100vw-6rem))] pointer-events-auto"
     >
-      <div className="bg-white/90 backdrop-blur-xl border border-white/60 shadow-2xl rounded-3xl overflow-hidden">
+      <div className="bg-white/95 backdrop-blur-xl border border-white/60 shadow-2xl rounded-3xl overflow-hidden">
         <div className="px-4 py-3 border-b border-black/5 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Bot size={14} className="text-[#A594D3]" />
+            <Bot size={16} className="text-[#A594D3]" />
             <span className="text-[10px] font-black uppercase tracking-widest text-[#1a1a2e]">Tactical Copilot</span>
           </div>
-          <button onClick={onClose} className="w-7 h-7 rounded-lg bg-white border border-black/10 flex items-center justify-center text-gray-500 hover:text-[#1a1a2e]">
+          <button onClick={onClose} className="w-7 h-7 rounded-lg bg-white border border-black/10 flex items-center justify-center text-gray-500 hover:text-[#1a1a2e] transition-colors">
             <X size={14} />
           </button>
         </div>
 
-        <div className="p-3 space-y-3 max-h-[400px] overflow-y-auto">
+        <div className="p-4 space-y-3 max-h-[420px] overflow-y-auto">
           {messages.length === 0 && (
-            <div className="text-center py-6">
-              <div className="w-12 h-12 mx-auto rounded-2xl bg-[#A594D3]/10 flex items-center justify-center mb-3">
-                <Bot size={24} className="text-[#A594D3]" />
+            <div className="text-center py-4">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-[#A594D3]/20 to-[#A594D3]/5 flex items-center justify-center mb-4 border border-[#A594D3]/20">
+                <Bot size={28} className="text-[#A594D3]" />
               </div>
-              <p className="text-[11px] font-bold text-gray-500 mb-4">
-                Groq-powered copilot ready. Ask for route suggestions or tactical advice.
+              <p className="text-xs font-bold text-gray-600 mb-1">Groq-Powered Copilot</p>
+              <p className="text-[10px] font-semibold text-gray-400 mb-5 leading-relaxed">
+                Ask about routes, credits, invasions, or strategy.
               </p>
-              <div className="flex flex-wrap gap-2 justify-center">
-                {suggestions.map((s) => (
+              
+              <div className="grid grid-cols-1 gap-2">
+                {suggestions.map((s, i) => (
                   <button
-                    key={s}
-                    onClick={() => handleSuggestion(s)}
-                    className="px-3 py-1.5 rounded-xl bg-[#F0F7F4] border border-black/5 text-[10px] font-bold text-[#1a1a2e] hover:bg-[#A8D5BA]/20 hover:border-[#A8D5BA]/30 transition-all"
+                    key={i}
+                    onClick={() => handleSuggestion(s.text)}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#F8FAFB] border border-black/5 text-left hover:bg-[#A8D5BA]/10 hover:border-[#A8D5BA]/20 active:scale-[0.98] transition-all group"
                   >
-                    {s}
+                    <span className="text-base group-hover:scale-110 transition-transform">{s.icon}</span>
+                    <span className="text-[11px] font-bold text-gray-600 group-hover:text-[#1a1a2e] transition-colors">{s.text}</span>
                   </button>
                 ))}
               </div>
+
               {error && (
-                <p className="text-[10px] font-bold text-red-500 mt-3">API error: {error}</p>
+                <div className="mt-4 p-3 rounded-xl bg-red-50 border border-red-100">
+                  <p className="text-[10px] font-bold text-red-500 leading-relaxed">
+                    Service error: {error}
+                  </p>
+                </div>
               )}
             </div>
           )}
 
           {messages.map((msg, idx) => (
             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-[11px] font-semibold ${
+              <div className={`max-w-[85%] rounded-2xl px-3 py-2.5 text-[11px] font-semibold leading-relaxed ${
                 msg.role === 'user'
                   ? 'bg-[#1a1a2e] text-white rounded-br-md'
-                  : 'bg-[#F0F7F4] text-[#1a1a2e] rounded-bl-md'
+                  : 'bg-[#F0F7F4] text-[#1a1a2e] rounded-bl-md border border-black/5'
               }`}>
                 {msg.text}
               </div>
@@ -110,7 +118,7 @@ export default function AICopilotOverlay({ currentHex, faction, onClose }: AICop
 
           {isLoading && messages[messages.length - 1]?.role === 'user' && (
             <div className="flex justify-start">
-              <div className="bg-[#F0F7F4] rounded-2xl rounded-bl-md px-3 py-2">
+              <div className="bg-[#F0F7F4] rounded-2xl rounded-bl-md px-3 py-2 border border-black/5">
                 <Loader2 size={14} className="animate-spin text-[#A594D3]" />
               </div>
             </div>
@@ -118,16 +126,20 @@ export default function AICopilotOverlay({ currentHex, faction, onClose }: AICop
         </div>
 
         {isReady && (
-          <div className="p-3 border-t border-black/5">
+          <div className="p-3 border-t border-black/5 bg-white/50">
             <div className="flex gap-2">
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                 placeholder="Ask copilot..."
-                className="flex-1 rounded-xl border border-black/10 bg-white px-3 py-2 text-[11px] font-semibold focus:outline-none focus:border-[#A594D3]"
+                className="flex-1 rounded-xl border border-black/10 bg-white px-3 py-2.5 text-[11px] font-semibold focus:outline-none focus:border-[#A594D3] focus:ring-1 focus:ring-[#A594D3]/20 transition-all"
               />
-              <button onClick={handleSend} disabled={!input.trim() || isLoading} className="w-9 h-9 rounded-xl bg-[#1a1a2e] text-white flex items-center justify-center disabled:opacity-40">
+              <button 
+                onClick={handleSend} 
+                disabled={!input.trim() || isLoading} 
+                className="w-9 h-9 rounded-xl bg-[#1a1a2e] text-white flex items-center justify-center disabled:opacity-30 hover:bg-[#2E7D52] active:scale-95 transition-all"
+              >
                 <Send size={14} />
               </button>
             </div>
