@@ -13,9 +13,11 @@ let isReady = false;
 let activeModel = null;
 
 const FALLBACK_MODELS = [
+  'groq/compound-mini',
+  'qwen/qwen3.6-27b',
+  'allam-2-7b',
   'llama-3.3-70b-versatile',
   'llama-3.1-8b-instant',
-  'mixtral-8x7b-32768',
 ];
 
 function getModelCandidates() {
