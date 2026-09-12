@@ -428,84 +428,84 @@ export default function LandingPage() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-[#F5F7F6] to-[#EDF2EF] font-['Nunito'] text-[#1A1A2E] overflow-x-hidden selection:bg-[#A8D5BA]/30 bg-tactical-grid">
 
-            {/* ─── NAVIGATION ─── */}
-            <nav className="fixed top-0 left-0 right-0 z-[100] h-16 sm:h-20 md:h-24 px-4 sm:px-6 md:px-12 flex items-center justify-between pointer-events-none">
+            {/* ─── NINTENDO 2001 CARBON COMMAND BAR ─── */}
+            <nav className="fixed top-0 left-0 right-0 z-[100] h-16 sm:h-20 px-4 sm:px-8 flex items-center justify-between pointer-events-none border-b-2 border-[#5A5F8C] nintendo-carbon">
                 <motion.div
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className="flex items-center gap-2 sm:gap-3 md:gap-4 bg-white/85 backdrop-blur-md px-4 sm:px-5 md:px-6 py-2.5 sm:py-3.5 rounded-2xl border border-white/60 shadow-premium pointer-events-auto"
+                    className="flex items-center gap-3 pointer-events-auto"
                 >
-                    <div className="w-8 sm:w-9 md:w-10 h-8 sm:h-9 md:h-10 rounded-lg sm:rounded-[8px] md:rounded-xl bg-gradient-to-br from-[#A8D5BA] to-[#6CC89A] flex items-center justify-center text-white shadow-md">
-                        <Hexagon size={18} className="sm:w-5 sm:h-5 md:w-6 md:h-6" fill="currentColor" fillOpacity={0.2} />
+                    {/* Nintendo Red Racetrack Pill Logo */}
+                    <div className="bg-[#E60012] px-3.5 py-1.5 rounded-full border-2 border-white flex items-center gap-2 shadow-md">
+                        <Hexagon size={16} className="text-white" fill="currentColor" />
+                        <span className="font-black text-xs md:text-sm tracking-wider text-white uppercase font-brand">NINTENDO / TR</span>
                     </div>
-                    <span className="font-['Syne'] font-extrabold text-sm sm:text-base md:text-xl tracking-tighter hidden sm:inline">Territory<span className="text-[#A8D5BA]">Run</span></span>
                 </motion.div>
 
                 <motion.div
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className="flex items-center gap-2 sm:gap-3 md:gap-4 pointer-events-auto">
-                    <Link href="/login" className="hidden md:flex bg-white/85 backdrop-blur-md border border-white/60 text-[9px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-widest text-slate-500 hover:text-[#2E7D52] hover:shadow-premium transition-all px-4 sm:px-6 md:px-8 py-2 sm:py-3 md:py-4 rounded-2xl">
+                    className="flex items-center gap-3 pointer-events-auto">
+                    <Link href="/login" className="hidden md:flex btn-amber text-[10px] sm:text-[11px] font-black uppercase tracking-widest px-4 py-2 rounded-sm transition-all">
                         Log In
                     </Link>
-                    <Link href="/login" className="bg-[#1A1A2E] text-white text-[9px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-widest px-4 sm:px-6 md:px-8 py-2 sm:py-3 md:py-4 rounded-2xl shadow-lg hover:scale-105 active:scale-95 transition-all">
-                        Launch
+                    <Link href="/login" className="btn-signal text-[10px] sm:text-[11px] font-black uppercase tracking-widest px-5 py-2 rounded-sm shadow-md transition-all">
+                        Launch System
                     </Link>
                 </motion.div>
             </nav>
 
-            {/* ─── HERO SECTION ─── */}
-            <section className="relative pt-20 sm:pt-32 md:pt-48 pb-12 sm:pb-16 md:pb-24 px-4 sm:px-6 md:px-12 min-h-screen flex flex-col items-center justify-center overflow-hidden">
+            {/* ─── HERO SECTION (PERIWINKLE & LAVENDER CONSOLE PLATE) ─── */}
+            <section className="relative pt-24 sm:pt-32 md:pt-40 pb-12 sm:pb-16 px-4 sm:px-8 min-h-[85vh] flex flex-col items-center justify-center overflow-hidden">
                 <DecorativeHexGrid />
 
-                {/* Floating Soft Orbs */}
-                <div className="absolute top-1/4 -right-20 w-[600px] h-[600px] bg-[#A8D5BA]/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
-                <div className="absolute bottom-1/4 -left-20 w-[500px] h-[500px] bg-[#C3B1E1]/10 rounded-full blur-[100px] pointer-events-none" />
-
-                <div className="max-w-7xl mx-auto flex flex-col items-center text-center relative z-10 w-full">
+                <div className="max-w-6xl mx-auto flex flex-col items-center text-center relative z-10 w-full">
+                    {/* Status Badge */}
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.6 }}
-                        className="inline-flex items-center gap-2 sm:gap-3 bg-white/80 backdrop-blur-md border border-[#A8D5BA]/30 px-3 sm:px-6 py-1.5 sm:py-2 rounded-full mb-6 sm:mb-8 md:mb-12 shadow-sm"
+                        className="inline-flex items-center gap-2 bg-[#ECAB37] text-[#21242E] border-2 border-[#FFE085] px-4 py-1.5 rounded-sm mb-6 shadow-md"
                     >
-                        <div className="flex h-1.5 w-1.5 sm:h-2.5 sm:w-2.5 rounded-full bg-[#A8D5BA] shadow-[0_0_10px_#A8D5BA]" />
-                        <span className="text-[9px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-[0.2em] text-[#2E7D52]">
-                            {onlineCount > 0 ? `${onlineCount.toLocaleString()} Claiming Territory Now` : 'S04 ACTIVE'}
+                        <div className="h-2 w-2 rounded-full bg-[#E60012] animate-pulse" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">
+                            {onlineCount > 0 ? `${onlineCount.toLocaleString()} RUNNERS ON GRID` : 'SYSTEM ONLINE • S04 ACTIVE'}
                         </span>
                     </motion.div>
 
+                    {/* Box-Art Display Title */}
                     <motion.h1
-                        initial={{ opacity: 0, y: 40 }}
+                        initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8, delay: 0.1 }}
-                        className="font-['Syne'] font-extrabold text-[clamp(32px,8vw,120px)] leading-[0.9] tracking-tighter mb-6 sm:mb-10 md:mb-12">
+                        className="nintendo-display text-[clamp(36px,7vw,96px)] leading-[0.95] tracking-tight mb-6"
+                    >
                         CLAIM YOUR <br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#A8D5BA] via-[#6CC89A] to-[#C3B1E1] filter drop-shadow-sm">STREETS.</span>
+                        <span className="text-[#FFBA66] drop-shadow-[0_4px_0_#9E4A00]">STREETS.</span>
                     </motion.h1>
 
                     <motion.p
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8, delay: 0.2 }}
-                        className="text-sm sm:text-lg md:text-2xl text-slate-400 font-bold max-w-3xl mx-auto mb-8 sm:mb-10 md:mb-14 leading-relaxed tracking-tight px-4"
+                        className="text-sm sm:text-base md:text-xl text-[#21242E] font-bold max-w-2xl mx-auto mb-8 leading-relaxed tracking-wide px-4"
                     >
-                        Step into global territory control. Every kilometre expands your empire.
+                        Step into real-world territory conquest. Every kilometer expands your empire across the city grid.
                     </motion.p>
 
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8, delay: 0.3 }}
-                        className="flex flex-col w-full sm:flex-row gap-4 sm:gap-6 justify-center items-center"
+                        className="flex flex-col w-full sm:flex-row gap-4 justify-center items-center"
                     >
-                        <Link href="/login" className="w-full sm:w-auto px-6 sm:px-12 py-4 sm:py-6 bg-gradient-to-r from-[#A8D5BA] to-[#6CC89A] text-white rounded-[24px] sm:rounded-[32px] shadow-[0_20px_40px_-10px_rgba(168,213,186,0.5)] font-black uppercase text-[10px] sm:text-xs tracking-[0.2em] hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 sm:gap-4 group">
+                        <Link href="/login" className="w-full sm:w-auto px-8 py-4 btn-signal rounded-sm text-xs font-black uppercase tracking-widest flex items-center justify-center gap-3 shadow-lg group">
                             Start Run
-                            <ArrowRight size={16} className="sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
+                            <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                         </Link>
-                        <Link href="/community" className="w-full sm:w-auto px-6 sm:px-12 py-4 sm:py-6 bg-white border border-black/5 rounded-[24px] sm:rounded-[32px] shadow-xl shadow-slate-900/5 text-[#1A1A2E] font-black uppercase text-[10px] sm:text-xs tracking-[0.2em] hover:bg-white transition-all flex items-center justify-center gap-2 sm:gap-4 group">
-                            <Play size={16} className="sm:w-5 sm:h-5 fill-[#A8D5BA] text-[#A8D5BA] group-hover:scale-110 transition-transform" />
-                            Brief
+                        <Link href="/community" className="w-full sm:w-auto px-8 py-4 btn-amber rounded-sm text-xs font-black uppercase tracking-widest flex items-center justify-center gap-3 shadow-md group">
+                            <Play size={16} fill="currentColor" />
+                            Tactical Brief
                         </Link>
                     </motion.div>
                 </div>

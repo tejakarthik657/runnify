@@ -37,31 +37,30 @@ export default function StatCard({
 
     return (
         <motion.div
-            whileHover={{ y: -4 }}
+            whileHover={{ y: -2 }}
             className={`
-                bg-white/80 backdrop-blur-md p-5 rounded-[24px] border border-white/60 shadow-premium
-                flex flex-col justify-between min-h-[140px] transition-all
+                nintendo-card p-4 rounded-xl flex flex-col justify-between min-h-[140px] transition-all
             `}
         >
-            <div className="flex items-center justify-between mb-4">
-                <div className={`p-2 rounded-xl ${styleClasses.split(' ')[0]} ${styleClasses.split(' ')[1]}`}>
+            <div className="flex items-center justify-between mb-3">
+                <div className="p-2 rounded-md btn-amber flex items-center justify-center">
                     {icon}
                 </div>
                 {trend && (
-                    <div className={`text-[10px] font-black px-2 py-0.5 rounded-full ${trend.isPositive ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                    <div className={`text-[10px] font-black px-2 py-0.5 rounded-sm uppercase tracking-wider ${trend.isPositive ? 'bg-[#F68D1F] text-white' : 'bg-[#E60012] text-white'}`}>
                         {trend.isPositive ? '↑' : '↓'} {trend.value}
                     </div>
                 )}
             </div>
 
-            <div>
-                <div className="text-[11px] font-black uppercase tracking-wider text-gray-400 mb-1">{label}</div>
+            <div className="nintendo-row p-2.5 rounded-md">
+                <div className="text-[10px] font-black uppercase tracking-wider text-[#3D4F97] mb-0.5">{label}</div>
                 <div className="flex items-baseline gap-2">
-                    <h2 className="text-2xl font-black tracking-tight text-[#1a1a2e]">
-                        {loading ? <div className="h-8 w-16 bg-gray-100 animate-pulse rounded-lg" /> : value}
+                    <h2 className="text-2xl font-black tracking-tight text-[#21242E]">
+                        {loading ? <div className="h-7 w-16 bg-[#C0D5E6] animate-pulse rounded" /> : value}
                     </h2>
                     {subText && !loading && (
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{subText}</span>
+                        <span className="text-[9px] font-bold text-[#60619C] uppercase tracking-widest">{subText}</span>
                     )}
                 </div>
             </div>
