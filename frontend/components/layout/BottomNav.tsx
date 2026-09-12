@@ -25,7 +25,7 @@ export default function BottomNav() {
     const pathname = usePathname();
 
     return (
-        <nav className="fixed bottom-5 left-4 right-4 z-[60] nintendo-carbon px-4 py-2.5 rounded-2xl safe-area-bottom shadow-2xl lg:hidden flex justify-around items-center border-t-2 border-[#5A5F8C]">
+        <nav className="fixed bottom-5 left-4 right-4 z-[60] bg-white/80 border border-white/60 px-4 py-2.5 rounded-3xl safe-area-bottom shadow-premium lg:hidden backdrop-blur flex justify-around items-center">
             <div className="flex items-center justify-between w-full px-1">
                 {NAV_ITEMS.map((item) => {
                     const isActive = pathname === item.href;
@@ -36,10 +36,11 @@ export default function BottomNav() {
                             <Link
                                 key={item.href}
                                 href={item.href}
-                                className="shrink-0 -mt-6"
+                                className="shrink-0 -mt-5"
                             >
                                 <div
-                                    className="w-13 h-13 rounded-full btn-signal flex items-center justify-center transition-transform active:scale-90 shadow-lg"
+                                    className="w-12 h-12 rounded-full text-white border-2 border-white flex items-center justify-center shadow-[0_8px_24px_rgba(108,200,154,0.3)] transition-transform active:scale-90"
+                                    style={{ background: 'linear-gradient(135deg, #A8D5BA, #6CC89A)' }}
                                 >
                                     <Icon size={22} fill="currentColor" />
                                 </div>
@@ -58,10 +59,10 @@ export default function BottomNav() {
                                         window.location.href = '/login';
                                     });
                                 }}
-                                className="shrink-0 flex flex-col items-center gap-0.5 text-[#E60012] active:scale-95"
+                                className="shrink-0 flex flex-col items-center gap-0.5 text-gray-400 active:scale-95"
                             >
-                                <Icon size={18} className="text-[#E60012]" />
-                                <span className="text-[9px] tracking-wider font-bold text-[#E60012] uppercase">
+                                <Icon size={18} className="text-red-400/80" />
+                                <span className="text-[8px] tracking-wide font-black text-red-400/70 uppercase">
                                     {item.label}
                                 </span>
                             </button>
@@ -73,11 +74,11 @@ export default function BottomNav() {
                             key={item.href}
                             href={item.href}
                             className={`shrink-0 flex flex-col items-center gap-0.5 transition-all active:scale-95 ${
-                                isActive ? 'text-[#E48600]' : 'text-[#9FBEE7] hover:text-[#FFFFFF]'
+                                isActive ? 'text-[#2E7D52]' : 'text-gray-400 hover:text-gray-600'
                             }`}
                         >
                             <Icon size={18} strokeWidth={isActive ? 3 : 2} />
-                            <span className={`text-[9px] tracking-wider uppercase ${isActive ? 'font-black text-[#E48600]' : 'font-bold text-[#9FBEE7]'}`}>
+                            <span className={`text-[8px] tracking-wide uppercase ${isActive ? 'font-black' : 'font-bold'}`}>
                                 {item.label}
                             </span>
                         </Link>

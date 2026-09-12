@@ -124,25 +124,25 @@ export default function DashboardPage() {
             </div>
 
             {/* Greeting Banner */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 nintendo-plate p-5 rounded-xl">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-2 sm:gap-3 md:gap-4">
                 <div>
-                    <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-[#FFFFFF] font-brand drop-shadow-[0_2px_0_#3D4F97]">
+                    <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black tracking-tight text-[#1a1a2e]">
                         Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 18 ? 'Afternoon' : 'Evening'}, {currentUser?.username || 'Player'} 👋
                     </h1>
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mt-3">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 mt-2">
                         <Badge variant="sage" pulse>Active Status: Tactical</Badge>
-                        <span className="text-xs font-bold text-[#9FBEE7]">
-                            Current Location: <span className="text-white font-black">{currentUser?.city || 'Sector_01'}</span>
+                        <span className="text-xs sm:text-sm font-bold text-gray-400">
+                            Current Location: <span className="text-[#1a1a2e]">{currentUser?.city || 'Sector_01'}</span>
                         </span>
                     </div>
                 </div>
-                <div className="nintendo-row p-3 rounded-md flex items-center gap-3 w-full sm:w-auto">
-                    <div className="w-9 h-9 rounded btn-amber flex items-center justify-center text-[#21242E] flex-shrink-0">
-                        <Layers size={18} />
+                <div className="bg-white p-3 sm:p-4 rounded-2xl border border-black/5 shadow-sm flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
+                    <div className="w-9 sm:w-10 h-9 sm:h-10 rounded-xl bg-[#F0F7F4] flex items-center justify-center text-[#2E7D52] flex-shrink-0">
+                        <Layers size={18} className="sm:w-5 sm:h-5" />
                     </div>
                     <div className="min-w-0">
-                        <div className="text-[9px] font-black text-[#3D4F97] uppercase tracking-widest">Territory Control</div>
-                        <div className="text-xs font-extrabold text-[#21242E] truncate">12% of Sector 7</div>
+                        <div className="text-[8px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest">Territory Control</div>
+                        <div className="text-xs sm:text-sm font-extrabold text-[#1a1a2e] truncate">12% of Sector 7</div>
                     </div>
                 </div>
             </div>
