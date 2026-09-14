@@ -81,7 +81,9 @@ export default function LeafletMap({ center, zoom, children, onMapReady, followU
                 >
                     {/* Light-themed Base Layer: Carto Voyager */}
                     <TileLayer
-                        url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+                        url={`https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?key=${process.env.NEXT_PUBLIC_CARTO_API_KEY || 'cb1_3kfc_1_768d5315273affdf9aea07d2'}`}
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                        subdomains="abcd"
                         opacity={1}
                         maxZoom={20}
                         maxNativeZoom={18}
