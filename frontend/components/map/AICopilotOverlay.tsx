@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Bot, Send, Loader2, Sparkles, Shield, Swords, Compass, Clock, Zap, Sun, Package, Trophy, Gift } from 'lucide-react';
+import { X, Bot, Send, Loader2, Sparkles, Shield, Swords, Compass, Clock, Zap, Sun, Package, Trophy, Gift, ShieldAlert, EyeOff, Dna } from 'lucide-react';
 import { useLocalAI } from '../../hooks/useLocalAI';
 import { motion } from 'framer-motion';
 
@@ -26,16 +26,16 @@ function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number)
 
 // 10 Tactical Copilot Core Features
 const TACTICAL_FEATURES = [
-  { id: 'rivals', icon: '⚔️', title: 'Rival Intercept Alerts', query: 'Are there any rival runners closing in on my hexes?' },
-  { id: 'optimal_route', icon: '🗺️', title: 'Optimal Credit Routes', query: 'Suggest a 5km route nearby for maximum hex credit gains.' },
-  { id: 'peak_hours', icon: '⏰', title: 'Peak-Hour Tactical Timers', query: 'When is the next 1.5x credit multiplier window?' },
-  { id: 'boss_raid', icon: '👾', title: 'Boss Raid Intel', query: 'What is the current status of nearby Boss Raid guard hexes?' },
-  { id: 'decay_defense', icon: '🛡️', title: 'Decay Defense Warnings', query: 'Which of my owned hexes are at high decay risk today?' },
-  { id: 'stealth_route', icon: '👤', title: 'Stealth Blind-Spot Routes', query: 'Plan a stealth route avoiding heavy enemy territory.' },
-  { id: 'weather', icon: '🌦️', title: 'Weather Reward Boosts', query: 'What weather multiplier boosts are active right now?' },
-  { id: 'prestige', icon: '🧬', title: 'Prestige Rebirth Tips', query: 'How can I optimize my stats for the next Prestige Rebirth?' },
-  { id: 'airdrop', icon: '📦', title: 'Loot Air-Drop Radars', query: 'Are there any supply crates or air-drops near my coordinates?' },
-  { id: 'wagers', icon: '🤝', title: 'Wager Duel Scouting', query: 'Evaluate nearby runners for a competitive credit wager duel.' },
+  { id: 'rivals', icon: Swords, title: 'Rival Intercept Alerts', query: 'Are there any rival runners closing in on my hexes?' },
+  { id: 'optimal_route', icon: Compass, title: 'Optimal Credit Routes', query: 'Suggest a 5km route nearby for maximum hex credit gains.' },
+  { id: 'peak_hours', icon: Clock, title: 'Peak-Hour Tactical Timers', query: 'When is the next 1.5x credit multiplier window?' },
+  { id: 'boss_raid', icon: ShieldAlert, title: 'Boss Raid Intel', query: 'What is the current status of nearby Boss Raid guard hexes?' },
+  { id: 'decay_defense', icon: Shield, title: 'Decay Defense Warnings', query: 'Which of my owned hexes are at high decay risk today?' },
+  { id: 'stealth_route', icon: EyeOff, title: 'Stealth Blind-Spot Routes', query: 'Plan a stealth route avoiding heavy enemy territory.' },
+  { id: 'weather', icon: Sun, title: 'Weather Reward Boosts', query: 'What weather multiplier boosts are active right now?' },
+  { id: 'prestige', icon: Dna, title: 'Prestige Rebirth Tips', query: 'How can I optimize my stats for the next Prestige Rebirth?' },
+  { id: 'airdrop', icon: Package, title: 'Loot Air-Drop Radars', query: 'Are there any supply crates or air-drops near my coordinates?' },
+  { id: 'wagers', icon: Trophy, title: 'Wager Duel Scouting', query: 'Evaluate nearby runners for a competitive credit wager duel.' },
 ];
 
 export default function AICopilotOverlay({ currentHex, faction, activeRunners, userPosition, onClose }: AICopilotOverlayProps) {
@@ -122,7 +122,7 @@ Answer with concise, strategic running advice focusing on the 10 tactical copilo
               title={feat.title}
               className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white border border-black/10 text-[10px] font-extrabold text-[#1a1a2e] hover:border-[#2E7D52] hover:bg-[#F0F7F4] shrink-0 active:scale-95 transition-all shadow-sm"
             >
-              <span>{feat.icon}</span>
+              <feat.icon size={13} className="text-[#2E7D52] shrink-0" />
               <span>{feat.title}</span>
             </button>
           ))}
@@ -148,7 +148,7 @@ Answer with concise, strategic running advice focusing on the 10 tactical copilo
                     onClick={() => handleFeatureClick(f.query)}
                     className="flex items-center gap-2 p-2 rounded-xl bg-[#F8FAFB] border border-black/5 hover:bg-[#F0F7F4] hover:border-[#2E7D52]/30 text-left transition-all group"
                   >
-                    <span className="text-sm group-hover:scale-110 transition-transform">{f.icon}</span>
+                    <f.icon size={14} className="text-[#2E7D52] shrink-0 group-hover:scale-110 transition-transform" />
                     <span className="text-[10px] font-bold text-gray-700 truncate">{f.title}</span>
                   </button>
                 ))}

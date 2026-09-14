@@ -168,16 +168,16 @@ async function fallbackNominatimPOISearch(
 
 function getCategoryIcon(cat: string): string {
   const map: Record<string, string> = {
-    cafe: '☕',
-    restaurant: '🍕',
-    park: '🌳',
-    gym: '🏋️',
-    fuel: '⛽',
-    hospital: '🏥',
-    bank: '🏦',
-    hotel: '🏨',
-    bar: '🍺',
-    store: '🛍️',
+    cafe: 'coffee',
+    restaurant: 'utensils',
+    park: 'trees',
+    gym: 'dumbbell',
+    fuel: 'fuel',
+    hospital: 'hospital',
+    bank: 'building',
+    hotel: 'bed',
+    bar: 'wine',
+    store: 'shopping-bag',
   };
-  return map[cat.toLowerCase()] || '📍';
+  return map[cat.toLowerCase()] || 'map-pin';
 }

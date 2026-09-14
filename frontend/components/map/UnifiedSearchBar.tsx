@@ -16,12 +16,14 @@ interface UnifiedSearchBarProps {
   onOpenDirectionsTo?: (place: GeocodingResult) => void;
 }
 
+import { Coffee, Utensils, Trees, Dumbbell, Fuel } from 'lucide-react';
+
 const CATEGORY_CHIPS = [
-  { icon: '☕', label: 'Cafes', category: 'cafe' },
-  { icon: '🍕', label: 'Restaurants', category: 'restaurant' },
-  { icon: '🌳', label: 'Parks', category: 'park' },
-  { icon: '🏋️', label: 'Gyms', category: 'gym' },
-  { icon: '⛽', label: 'Fuel', category: 'fuel' },
+  { icon: Coffee, label: 'Cafes', category: 'cafe' },
+  { icon: Utensils, label: 'Restaurants', category: 'restaurant' },
+  { icon: Trees, label: 'Parks', category: 'park' },
+  { icon: Dumbbell, label: 'Gyms', category: 'gym' },
+  { icon: Fuel, label: 'Fuel', category: 'fuel' },
 ];
 
 export default function UnifiedSearchBar({
@@ -151,7 +153,7 @@ export default function UnifiedSearchBar({
                   }}
                   className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#F0F7F4] border border-black/5 text-[10px] font-bold text-gray-700 hover:bg-[#A8D5BA]/20 hover:border-[#2E7D52]/30 shrink-0 transition-all active:scale-95"
                 >
-                  <span>{chip.icon}</span>
+                  <chip.icon size={13} className="text-[#2E7D52]" />
                   <span>{chip.label}</span>
                 </button>
               ))}

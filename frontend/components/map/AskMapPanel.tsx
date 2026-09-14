@@ -88,9 +88,10 @@ export default function AskMapPanel({
                   <button
                     key={sug}
                     onClick={() => handleAsk(sug)}
-                    className="px-2.5 py-1 rounded-xl bg-[#F0F7F4] border border-black/5 text-[10px] font-bold text-[#2E7D52] hover:bg-[#A8D5BA]/30 active:scale-95 transition-all"
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#F0F7F4] border border-black/5 text-[10px] font-bold text-[#2E7D52] hover:bg-[#A8D5BA]/30 active:scale-95 transition-all"
                   >
-                    ✨ {sug}
+                    <Sparkles size={11} className="shrink-0" />
+                    <span>{sug}</span>
                   </button>
                 ))}
               </div>
@@ -120,7 +121,9 @@ export default function AskMapPanel({
                         className="flex items-center justify-between p-2 bg-white rounded-xl border border-black/5 hover:border-[#2E7D52] cursor-pointer group transition-all"
                       >
                         <div className="flex items-center gap-2 truncate">
-                          <span className="text-sm">{poi.icon}</span>
+                          <div className="w-6 h-6 rounded-lg bg-[#A8D5BA]/20 text-[#2E7D52] flex items-center justify-center shrink-0">
+                            <MapPin size={13} />
+                          </div>
                           <div className="truncate">
                             <div className="text-xs font-black text-[#1a1a2e] truncate">{poi.name}</div>
                             <div className="text-[10px] text-gray-400 font-bold">

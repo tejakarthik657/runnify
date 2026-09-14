@@ -46,7 +46,7 @@ import PlaceCard, { PlaceDetail } from '../../components/map/PlaceCard';
 import DirectionsPanel from '../../components/map/DirectionsPanel';
 import AskMapPanel from '../../components/map/AskMapPanel';
 import { RouteResponse } from '../../services/routing.service';
-import { PlacePOI } from '../../services/places.service';
+import { PlacePOI, searchNearbyPOIs } from '../../services/places.service';
 
 const LeafletMap = dynamic(() => import('../../components/map/LeafletMap'), { ssr: false });
 
@@ -65,6 +65,21 @@ export default function MapPage() {
     const [activeRoute, setActiveRoute] = useState<RouteResponse | null>(null);
     const [poiPlaces, setPoiPlaces] = useState<PlacePOI[]>([]);
     const [isRunning, setIsRunning] = useState(false);
+
+    const handleLocateUser = useCallback(async (lat: number, lng: number) => {
+        setFollowUser(true);
+        mapInstance.current?.flyTo([lat, lng], 17, { duration: 0.8 });
+
+        try {
+            const nearby = await searchNearbyPOIs('restaurant', lat, lng, 2500);
+            if (nearby && nearby.length > 0) {
+                setPoiPlaces(nearby);
+                toast.success(`Loaded ${nearby.length} real locations near your live position!`);
+            }
+        } catch (err) {
+            console.warn('[LiveLocate] Failed to load nearby places:', err);
+        }
+    }, []);
     const [runId, setRunId] = useState<string | null>(null);
     const [searchOpen, setSearchOpen] = useState(false);
     const mapInstance = useRef<L.Map | null>(null);
@@ -176,16 +191,6 @@ export default function MapPage() {
 
     const lastGpsPoint = useRef<{ lat: number; lng: number; accuracy?: number } | null>(null);
     const lastGpsTs = useRef<number | null>(null);
-
-    const handleLocateUser = useCallback((lat: number, lng: number) => {
-        setFollowUser(false);
-        if (mapInstance.current) {
-            mapInstance.current.flyTo([lat, lng], 18, {
-                duration: 1.5,
-                easeLinearity: 0.25
-            });
-        }
-    }, []);
 
     const handleGpsPoint = useCallback((point: { lat: number; lng: number; accuracy?: number; altitude?: number }) => {
         if (!isRunningRef.current || !runIdRef.current) return;
