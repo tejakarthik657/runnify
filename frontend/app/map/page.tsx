@@ -41,6 +41,12 @@ import L from 'leaflet';
 import { latLngToCell, gridDisk } from 'h3-js';
 
 import MapControls, { MapLayerId } from '../../components/map/MapControls';
+import UnifiedSearchBar, { SearchTab } from '../../components/map/UnifiedSearchBar';
+import PlaceCard, { PlaceDetail } from '../../components/map/PlaceCard';
+import DirectionsPanel from '../../components/map/DirectionsPanel';
+import AskMapPanel from '../../components/map/AskMapPanel';
+import { RouteResponse } from '../../services/routing.service';
+import { PlacePOI } from '../../services/places.service';
 
 const LeafletMap = dynamic(() => import('../../components/map/LeafletMap'), { ssr: false });
 
@@ -54,6 +60,10 @@ export default function MapPage() {
     const socket = useSocket('main');
 
     const [activeLayer, setActiveLayer] = useState<MapLayerId>('voyager');
+    const [searchTab, setSearchTab] = useState<SearchTab>('search');
+    const [selectedPlace, setSelectedPlace] = useState<PlaceDetail | null>(null);
+    const [activeRoute, setActiveRoute] = useState<RouteResponse | null>(null);
+    const [poiPlaces, setPoiPlaces] = useState<PlacePOI[]>([]);
     const [isRunning, setIsRunning] = useState(false);
     const [runId, setRunId] = useState<string | null>(null);
     const [searchOpen, setSearchOpen] = useState(false);
@@ -982,6 +992,9 @@ export default function MapPage() {
                     followUser={followUser}
                     onManualMove={() => setFollowUser(false)}
                     activeLayer={activeLayer}
+                    activeRouteGeometry={activeRoute?.geometry}
+                    poiPlaces={poiPlaces}
+                    onSelectPOI={(poi) => setSelectedPlace(poi)}
                 >
                     <MapContent
                         isRunning={isRunning}
@@ -997,6 +1010,74 @@ export default function MapPage() {
                     />
                     <FogOfWarLayer unfoggedHexes={user?.unfoggedHexes || []} />
                 </LeafletMap>
+
+                {/* Google-Maps-Style Unified Top Search Deck */}
+                <UnifiedSearchBar
+                    activeTab={searchTab}
+                    onTabChange={(tab) => {
+                        setSearchTab(tab);
+                        if (tab !== 'directions') setActiveRoute(null);
+                    }}
+                    onSelectPlace={(place) => {
+                        setSelectedPlace(place);
+                        setFollowUser(false);
+                        mapInstance.current?.flyTo([place.lat, place.lng], 16, { duration: 0.8 });
+                    }}
+                    userLat={position?.lat || undefined}
+                    userLng={position?.lng || undefined}
+                    onOpenDirectionsTo={(place) => {
+                        setSelectedPlace(place);
+                        setSearchTab('directions');
+                    }}
+                />
+
+                {/* Directions Deck */}
+                <AnimatePresence>
+                    {searchTab === 'directions' && (
+                        <DirectionsPanel
+                            userLat={position?.lat || undefined}
+                            userLng={position?.lng || undefined}
+                            destination={selectedPlace}
+                            onClose={() => {
+                                setSearchTab('search');
+                                setActiveRoute(null);
+                            }}
+                            onRouteCalculated={(route) => setActiveRoute(route)}
+                        />
+                    )}
+                </AnimatePresence>
+
+                {/* Ask Map AI Panel */}
+                <AnimatePresence>
+                    {searchTab === 'ask' && (
+                        <AskMapPanel
+                            userLat={position?.lat || undefined}
+                            userLng={position?.lng || undefined}
+                            onClose={() => setSearchTab('search')}
+                            onSelectPOI={(poi) => {
+                                setSelectedPlace(poi);
+                                setFollowUser(false);
+                                mapInstance.current?.flyTo([poi.lat, poi.lng], 17, { duration: 0.8 });
+                            }}
+                            onPOIsFound={(pois) => setPoiPlaces(pois)}
+                        />
+                    )}
+                </AnimatePresence>
+
+                {/* Place Detail Card */}
+                <AnimatePresence>
+                    {selectedPlace && (
+                        <PlaceCard
+                            place={selectedPlace}
+                            onClose={() => setSelectedPlace(null)}
+                            onGetDirections={(place) => {
+                                setSelectedPlace(place);
+                                setSearchTab('directions');
+                            }}
+                            onAskAIAboutPlace={() => setSearchTab('ask')}
+                        />
+                    )}
+                </AnimatePresence>
 
                 {/* Map Controls: Layers, GPS Re-center, Zoom (+/-), Fullscreen */}
                 <MapControls

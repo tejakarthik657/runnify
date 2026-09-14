@@ -16,6 +16,8 @@ L.Marker.prototype.options.icon = DefaultIcon;
 
 import { MAP_LAYERS, MapLayerId } from './MapControls';
 
+import { PlacePOI } from '../../services/places.service';
+
 interface LeafletMapProps {
     center: [number, number];
     zoom: number;
@@ -24,6 +26,9 @@ interface LeafletMapProps {
     followUser?: boolean;
     onManualMove?: () => void;
     activeLayer?: MapLayerId;
+    activeRouteGeometry?: [number, number][];
+    poiPlaces?: PlacePOI[];
+    onSelectPOI?: (poi: PlacePOI) => void;
 }
 
 // 6.0 Motion Rule: Smooth view transitions
@@ -66,7 +71,18 @@ function MapInstanceHandler({ onReady }: { onReady?: (map: L.Map | null) => void
     return null;
 }
 
-export default function LeafletMap({ center, zoom, children, onMapReady, followUser, onManualMove, activeLayer = 'voyager' }: LeafletMapProps) {
+export default function LeafletMap({
+    center,
+    zoom,
+    children,
+    onMapReady,
+    followUser,
+    onManualMove,
+    activeLayer = 'voyager',
+    activeRouteGeometry,
+    poiPlaces,
+    onSelectPOI,
+}: LeafletMapProps) {
     const selectedLayer = MAP_LAYERS.find(l => l.id === activeLayer) || MAP_LAYERS[0];
 
     return (
@@ -95,6 +111,38 @@ export default function LeafletMap({ center, zoom, children, onMapReady, followU
                         maxNativeZoom={18}
                     />
 
+                    {/* Active Navigation Polyline Route */}
+                    {activeRouteGeometry && activeRouteGeometry.length > 0 && (
+                        <Polyline
+                            positions={activeRouteGeometry}
+                            pathOptions={{
+                                color: '#2E7D52',
+                                weight: 6,
+                                opacity: 0.9,
+                                lineCap: 'round',
+                                lineJoin: 'round',
+                            }}
+                        />
+                    )}
+
+                    {/* Ask Map POI Markers */}
+                    {poiPlaces && poiPlaces.map((poi) => (
+                        <Marker
+                            key={poi.id}
+                            position={[poi.lat, poi.lng]}
+                            eventHandlers={{
+                                click: () => onSelectPOI && onSelectPOI(poi),
+                            }}
+                        >
+                            <Popup className="pastel-popup">
+                                <div className="p-1 space-y-1 text-center">
+                                    <div className="text-sm font-black text-[#1a1a2e]">{poi.icon} {poi.name}</div>
+                                    <div className="text-[10px] text-gray-500 font-bold">{poi.rating}★ • {poi.category}</div>
+                                </div>
+                            </Popup>
+                        </Marker>
+                    ))}
+
                     <ChangeView center={center} zoom={zoom} enabled={!!followUser} />
                     <MapInstanceHandler onReady={onMapReady} />
                     <MapEventsHandler onManualMove={onManualMove} />
@@ -102,7 +150,6 @@ export default function LeafletMap({ center, zoom, children, onMapReady, followU
                     {/* Friendly Zoom Control Styling */}
                     <ZoomControl position="bottomright" />
 
-                    {children}
                 </MapContainer>
             </div>
 
