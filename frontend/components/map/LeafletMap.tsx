@@ -14,6 +14,8 @@ const DefaultIcon = L.divIcon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
+import { MAP_LAYERS, MapLayerId } from './MapControls';
+
 interface LeafletMapProps {
     center: [number, number];
     zoom: number;
@@ -21,6 +23,7 @@ interface LeafletMapProps {
     onMapReady?: (map: L.Map | null) => void;
     followUser?: boolean;
     onManualMove?: () => void;
+    activeLayer?: MapLayerId;
 }
 
 // 6.0 Motion Rule: Smooth view transitions
@@ -63,7 +66,9 @@ function MapInstanceHandler({ onReady }: { onReady?: (map: L.Map | null) => void
     return null;
 }
 
-export default function LeafletMap({ center, zoom, children, onMapReady, followUser, onManualMove }: LeafletMapProps) {
+export default function LeafletMap({ center, zoom, children, onMapReady, followUser, onManualMove, activeLayer = 'voyager' }: LeafletMapProps) {
+    const selectedLayer = MAP_LAYERS.find(l => l.id === activeLayer) || MAP_LAYERS[0];
+
     return (
         <div className="h-full w-full bg-[#F4F7F4] relative group">
             {/* Soft Grid Overlay Layer */}
@@ -79,11 +84,12 @@ export default function LeafletMap({ center, zoom, children, onMapReady, followU
                     className="h-full w-full bg-[#F4F7F4]"
                     maxZoom={20}
                 >
-                    {/* Light-themed Base Layer: Carto Voyager */}
+                    {/* Dynamic Base Layer Tile Setup */}
                     <TileLayer
-                        url={`https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?key=${process.env.NEXT_PUBLIC_CARTO_API_KEY || 'cb1_3kfc_1_768d5315273affdf9aea07d2'}`}
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                        subdomains="abcd"
+                        key={selectedLayer.id}
+                        url={selectedLayer.url}
+                        attribution={selectedLayer.attribution}
+                        subdomains={selectedLayer.subdomains}
                         opacity={1}
                         maxZoom={20}
                         maxNativeZoom={18}

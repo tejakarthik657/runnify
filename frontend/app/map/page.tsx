@@ -20,6 +20,7 @@ import {
     Bot
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCallback } from 'react';
 import { mutate } from 'swr';
 import { useGps } from '../../hooks/useGps';
@@ -39,7 +40,7 @@ import L from 'leaflet';
 
 import { latLngToCell, gridDisk } from 'h3-js';
 
-
+import MapControls, { MapLayerId } from '../../components/map/MapControls';
 
 const LeafletMap = dynamic(() => import('../../components/map/LeafletMap'), { ssr: false });
 
@@ -48,6 +49,11 @@ const MIN_ACCURACY_METERS = 30;
 const STEP_LENGTH_METERS = 0.7; // Average human step length (0.7m)
 
 export default function MapPage() {
+    const router = useRouter();
+    const { user, updateUser, isAuthenticated } = useAuthStore();
+    const socket = useSocket('main');
+
+    const [activeLayer, setActiveLayer] = useState<MapLayerId>('voyager');
     const [isRunning, setIsRunning] = useState(false);
     const [runId, setRunId] = useState<string | null>(null);
     const [searchOpen, setSearchOpen] = useState(false);
@@ -88,8 +94,6 @@ export default function MapPage() {
         return { center: [20, 0], zoom: 3 };
     });
 
-    const { user, updateUser } = useAuthStore();
-    const socket = useSocket('main');
     const [factionStats, setFactionStats] = useState({ red: 0, blue: 0, green: 0, total: 1 });
 
     useEffect(() => {
@@ -977,6 +981,7 @@ export default function MapPage() {
                     onMapReady={(map) => { mapInstance.current = map; }}
                     followUser={followUser}
                     onManualMove={() => setFollowUser(false)}
+                    activeLayer={activeLayer}
                 >
                     <MapContent
                         isRunning={isRunning}
@@ -993,19 +998,18 @@ export default function MapPage() {
                     <FogOfWarLayer unfoggedHexes={user?.unfoggedHexes || []} />
                 </LeafletMap>
 
-                {/* Recenter Button */}
-                {!followUser && position?.lat && (
-                    <motion.button
-                        initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
-                        onClick={() => {
-                            setFollowUser(true);
-                            handleLocateUser(position.lat!, position.lng!);
-                        }}
-                        className="absolute bottom-24 right-4 z-[1000] w-12 h-12 bg-[#2E7D52] text-white rounded-2xl shadow-xl flex items-center justify-center active:scale-95 transition-all"
-                    >
-                        <Crosshair size={24} />
-                    </motion.button>
-                )}
+                {/* Map Controls: Layers, GPS Re-center, Zoom (+/-), Fullscreen */}
+                <MapControls
+                    currentLayer={activeLayer}
+                    onSelectLayer={(layerId) => setActiveLayer(layerId)}
+                    onLocateUser={position?.lat && position?.lng ? () => {
+                        setFollowUser(true);
+                        handleLocateUser(position.lat!, position.lng!);
+                    } : undefined}
+                    onZoomIn={() => mapInstance.current?.zoomIn()}
+                    onZoomOut={() => mapInstance.current?.zoomOut()}
+                    isLocating={followUser}
+                />
 
                 {/* AI Copilot Toggle */}
                 <motion.button
