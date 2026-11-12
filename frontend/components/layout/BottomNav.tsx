@@ -5,20 +5,18 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
   Radio,
-  Search,
+  Compass,
   MessageCircle,
   Moon,
-  Shield,
   Gamepad2,
   User
 } from 'lucide-react';
 
 const MOBILE_NAV_ITEMS = [
   { label: 'Pulse', icon: Radio, href: '/' },
-  { label: 'Mystery', icon: Search, href: '/mystery' },
+  { label: 'Discover', icon: Compass, href: '/#discover' },
   { label: 'Connect', icon: MessageCircle, href: '/connect', isAction: true },
   { label: 'Lounges', icon: Moon, href: '/after-hours' },
-  { label: 'Squads', icon: Shield, href: '/squads' },
   { label: 'Profile', icon: User, href: '/profile' },
 ];
 

@@ -5,11 +5,9 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Radio,
-  Search,
+  Compass,
   MessageCircle,
   Moon,
-  Shield,
-  Gamepad2,
   User,
   ChevronRight,
   ChevronLeft,
@@ -21,11 +19,9 @@ import { useBunkStore } from '../../store/bunkStore';
 
 const BUNK_NAV_ITEMS = [
   { label: 'Campus Pulse', icon: Radio, href: '/', badge: 'LIVE', badgeColor: 'bg-rose-500/20 text-rose-400 border-rose-500/30' },
-  { label: 'Mystery Room', icon: Search, href: '/mystery', badge: 'EP 01', badgeColor: 'bg-purple-500/20 text-purple-400 border-purple-500/30' },
+  { label: 'Discover', icon: Compass, href: '/#discover', badge: 'FRESH', badgeColor: 'bg-orange-500/20 text-orange-400 border-orange-500/30' },
   { label: 'Blind Connect', icon: MessageCircle, href: '/connect', badge: 'MATCH', badgeColor: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
   { label: 'After Hours', icon: Moon, href: '/after-hours', badge: '3 LIVE', badgeColor: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
-  { label: 'Squads & Wars', icon: Shield, href: '/squads', badge: 'KITSW #1', badgeColor: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30' },
-  { label: 'The Arcade', icon: Gamepad2, href: '/arcade', badge: 'NEW', badgeColor: 'bg-violet-500/20 text-violet-400 border-violet-500/30' },
   { label: 'My Passport', icon: User, href: '/profile' },
 ];
 
@@ -156,11 +152,11 @@ export default function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-bold text-white truncate">{user.name.split(' ')[0]}</span>
-                <span className="text-[9px] px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold">
-                  Lv.{user.level}
+                <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-bold">
+                  VERIFIED
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400 truncate">{user.branch} • {user.xp} XP</p>
+              <p className="text-[10px] text-slate-400 truncate">{user.branch} • {user.year}</p>
             </div>
           )}
         </Link>
