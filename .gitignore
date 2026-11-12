@@ -13,3 +13,8 @@ vector_store/
 venv/
 .venv/
 .vercel
+.vibe/
+.kilo/
+.zencoder/
+.zenflow/
+backend/logs/

@@ -1,259 +1,134 @@
 'use client';
 
-import React, { useEffect } from 'react';
-import useSWR from 'swr';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, Check, Clock, ArrowLeft, Loader2, Trophy, Zap, Swords, Trash2, ShieldCheck, ChevronRight, Hash, Target, Sparkles } from 'lucide-react';
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import {
+  Bell,
+  Flame,
+  Search,
+  Users,
+  Shield,
+  CheckCheck,
+  Sparkles,
+  ArrowRight,
+  Clock
+} from 'lucide-react';
 import Link from 'next/link';
-import api from '../../services/api';
-import { useSocket } from '../../hooks/useSocket';
-import { formatDistanceToNow } from 'date-fns';
-import { toast } from 'react-hot-toast';
-import Badge from '../../components/ui/Badge';
 
-const fetcher = (url: string) => api.get(url).then(res => res.data);
-
-const C = {
-    sage: '#A8D5BA',
-    sageDark: '#6CC89A',
-    sageDeep: '#2E7D52',
-    rose: '#F4B8C1',
-    roseDeep: '#E89BA5',
-    lavender: '#C3B1E1',
-    lavenderDeep: '#A594D3',
-    sky: '#B5D5F5',
-    peach: '#FFD6A5',
-    ink: '#1A1A2E',
-    bg: '#F8FAF8',
-    white: '#FFFFFF',
-};
-
-export default function NotificationsPage() {
-    const { data: notificationsData, error, isLoading, mutate } = useSWR('/notifications/me', fetcher);
-    const socket = useSocket('main');
-    const [isClearing, setIsClearing] = React.useState(false);
-    const [readingId, setReadingId] = React.useState<string | null>(null);
-
-    useEffect(() => {
-        if (!socket) return;
-        const handleNewNotification = (notification: any) => {
-            mutate((prevData: any) => ({
-                notifications: [notification, ...(prevData?.notifications || [])]
-            }), false);
-            toast.success(notification.title);
-        };
-        socket.on('notification', handleNewNotification);
-        return () => { socket.off('notification', handleNewNotification); };
-    }, [socket, mutate]);
-
-    const markAllAsRead = async () => {
-        if (isClearing) return;
-        setIsClearing(true);
-        try {
-            await api.patch('/notifications/read-all');
-            mutate();
-            toast.success('Frequency Cleared');
-        } catch (err: any) {
-            toast.error('Sync failed');
-        } finally {
-            setIsClearing(false);
-        }
-    };
-
-    const markOneAsRead = async (notificationId: string) => {
-        if (readingId) return;
-        setReadingId(notificationId);
-        try {
-            await api.patch(`/notifications/${notificationId}/read`);
-            mutate();
-        } catch {
-            toast.error('Failed to acknowledge dispatch');
-        } finally {
-            setReadingId(null);
-        }
-    };
-
-    const getNotificationConfig = (type: string) => {
-        switch (type) {
-            case 'territory_lost':
-                return { icon: <Swords size={20} />, color: C.roseDeep, bg: '#FDF2F3', label: 'Sector Invasion', border: C.rose };
-            case 'achievement':
-                return { icon: <Trophy size={20} />, color: C.lavenderDeep, bg: '#F8F5FE', label: 'Rank Update', border: C.lavender };
-            case 'invasion_warning':
-                return { icon: <Zap size={20} />, color: C.peach, bg: '#FFF9F1', label: 'Field Alert', border: C.peach };
-            case 'system':
-                return { icon: <ShieldCheck size={20} />, color: C.sageDeep, bg: '#F0F7F4', label: 'System Intel', border: C.sage };
-            default:
-                return { icon: <Bell size={20} />, color: C.sky, bg: '#F1F7FD', label: 'Dispatch', border: C.sky };
-        }
-    };
-
-    const notifications = notificationsData?.notifications || [];
-
-    return (
-        <div className="min-h-screen pb-20 font-['Nunito'] bg-[#F8FAF8]">
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-12 py-6 lg:py-12">
-
-                {/* --- PREMIUM HEADER --- */}
-                <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-12 sm:mb-16 gap-4 sm:gap-6 md:gap-8">
-                    <div className="flex items-center gap-4 sm:gap-6 md:gap-8">
-                        <Link href="/dashboard" className="w-12 sm:w-14 h-12 sm:h-14 bg-white rounded-2xl border border-black/5 shadow-sm hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center group active:scale-95">
-                            <ArrowLeft size={20} className="sm:w-6 sm:h-6 text-[#1A1A2E] group-hover:-translate-x-1 transition-transform" />
-                        </Link>
-                        <div>
-                            <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
-                                <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-[#A8D5BA]">HQ Intelligence</span>
-                                <Badge variant="sage" className="px-2 py-0.5 text-[8px] sm:text-[9px] font-black" pulse>Live</Badge>
-                            </div>
-                            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold font-['Syne'] text-[#1A1A2E] tracking-tighter">
-                                Intel <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#A8D5BA] to-[#6CC89A]">Feed</span>
-                            </h1>
-                        </div>
-                    </div>
-
-                    {notifications.length > 0 && (
-                        <button
-                            onClick={markAllAsRead}
-                            disabled={isClearing}
-                            className="flex items-center gap-3 px-6 py-4 bg-white border border-black/5 rounded-2xl text-[#1A1A2E] hover:text-[#E89BA5] hover:border-[#F4B8C1]/30 transition-all shadow-sm active:scale-95 group"
-                        >
-                            {isClearing
-                                ? <Loader2 size={18} className="text-gray-300 animate-spin" />
-                                : <Trash2 size={18} className="text-gray-300 group-hover:text-[#E89BA5] transition-colors" />}
-                            <span className="text-xs font-black uppercase tracking-widest">{isClearing ? 'Clearing...' : 'Clear Uplink'}</span>
-                        </button>
-                    )}
-                </div>
-
-                {/* --- NOTIFICATIONS LIST --- */}
-                <div className="space-y-4 sm:space-y-6">
-                    {isLoading ? (
-                        <div className="py-20 sm:py-40 text-center flex flex-col items-center">
-                            <div className="relative mb-6 sm:mb-8">
-                                <motion.div
-                                    animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.2, 0.5] }}
-                                    transition={{ duration: 2, repeat: Infinity }}
-                                    className="absolute inset-0 bg-[#A8D5BA]/20 rounded-full blur-2xl"
-                                />
-                                <Loader2 className="animate-spin text-[#A8D5BA] relative z-10 sm:w-14 sm:h-14" size={40} strokeWidth={1.5} />
-                            </div>
-                            <p className="text-[11px] sm:text-sm font-black uppercase tracking-[0.3em] text-gray-400 italic">Syncing Strategic Channels...</p>
-                        </div>
-                    ) : notifications.length > 0 ? (
-                        <AnimatePresence mode="popLayout">
-                            {notifications.map((notif: any) => {
-                                const cfg = getNotificationConfig(notif.type);
-                                return (
-                                    <motion.div
-                                        layout
-                                        initial={{ opacity: 0, scale: 0.98, y: 10 }}
-                                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                                        exit={{ opacity: 0, scale: 0.98, x: 20 }}
-                                        key={notif._id}
-                                        className={`
-                                            relative bg-white p-4 sm:p-6 md:p-8 rounded-[32px] sm:rounded-[40px] border border-black/5 transition-all shadow-sm group
-                                            ${!notif.read ? 'hover:shadow-2xl hover:shadow-green-100/30 ring-4 ring-black/5' : 'opacity-60 md:hover:opacity-100'}
-                                        `}
-                                    >
-                                        <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 md:items-start">
-                                            <div className="flex-shrink-0 flex items-center justify-center">
-                                                <div className="w-16 h-16 rounded-[24px] flex items-center justify-center shadow-inner relative group-hover:scale-110 transition-transform" style={{ backgroundColor: `${cfg.color}15`, color: cfg.color }}>
-                                                    {cfg.icon}
-                                                    <div className="absolute -inset-1 rounded-[24px] border-2 border-white pointer-events-none" />
-                                                </div>
-                                            </div>
-
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center justify-between mb-3 sm:mb-4 gap-2 sm:gap-3 md:gap-4">
-                                                    <div className="flex items-center gap-2 sm:gap-3">
-                                                        <span className="px-2 sm:px-3 py-1 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-[#1A1A2E]" style={{ backgroundColor: `${cfg.color}20` }}>
-                                                            {cfg.label}
-                                                        </span>
-                                                        {!notif.read && (
-                                                            <div className="w-2 h-2 rounded-full animate-pulse shadow-sm" style={{ backgroundColor: cfg.color }} />
-                                                        )}
-                                                    </div>
-                                                    <div className="flex items-center gap-1 sm:gap-2 text-[8px] sm:text-[10px] font-black text-gray-300 uppercase tracking-widest whitespace-nowrap">
-                                                        <Clock size={10} className="sm:w-3 sm:h-3" strokeWidth={3} />
-                                                        {formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true })}
-                                                    </div>
-                                                </div>
-
-                                                <h3 className="text-lg sm:text-xl font-extrabold text-[#1A1A2E] mb-2 leading-tight font-['Syne']">
-                                                    {notif.title}
-                                                </h3>
-                                                <p className="text-xs sm:text-sm font-bold leading-relaxed text-slate-400 max-w-2xl">
-                                                    {notif.message}
-                                                </p>
-
-                                                {!notif.read && (
-<div className="mt-6 sm:mt-8 flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-3 sm:gap-6">
-                                        <motion.button
-                                            whileHover={{ scale: 1.02 }}
-                                            whileTap={{ scale: 0.98 }}
-                                            onClick={() => markOneAsRead(notif._id)}
-                                            disabled={readingId === notif._id}
-                                            className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-3.5 bg-[#1A1A2E] text-white rounded-2xl text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-[#2E7D52] transition-colors"
-                                                        >
-                                                            {readingId === notif._id ? 'Acknowledging...' : 'Acknowledge dispatch'}
-                                                        </motion.button>
-
-                                                        <Link
-                                                            href={notif.type === 'territory_lost' ? '/map' : '/dashboard'}
-                                                            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#A8D5BA] hover:text-[#6CC89A] transition-all group-investigate"
-                                                        >
-                                                            Intercept Field Data
-                                                            <ArrowRight size={14} className="group-investigate-hover:translate-x-1 transition-transform" />
-                                                        </Link>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                );
-                            })}
-                        </AnimatePresence>
-                    ) : (
-                        <div className="py-20 sm:py-40 bg-white rounded-[40px] sm:rounded-[64px] border-2 border-dashed border-slate-100 flex flex-col items-center text-center p-6 sm:p-12 shadow-sm">
-                            <div className="w-20 sm:w-28 h-20 sm:h-28 bg-[#F8FAF8] rounded-[32px] sm:rounded-[48px] flex items-center justify-center text-slate-200 mb-6 sm:mb-10 border border-black/5 shadow-inner">
-                                <Sparkles size={36} className="sm:w-12 sm:h-12 animate-pulse" />
-                            </div>
-                            <h3 className="text-xl sm:text-2xl font-black text-[#1A1A2E] mb-2 sm:mb-3 font-['Syne'] uppercase tracking-tighter">Zero Hostile Signals</h3>
-                            <p className="text-slate-400 text-[10px] sm:text-xs font-bold uppercase tracking-widest italic opacity-60 max-w-sm leading-relaxed">
-                                Scanner frequency 104.2MHz clear. No recent tactical dispatches for your sector.
-                            </p>
-                        </div>
-                    )}
-                </div>
-
-                {/* --- FOOTER STATUS --- */}
-                <div className="mt-16 pt-10 border-t border-black/5 flex justify-between items-center px-4">
-                    <div className="flex items-center gap-3">
-                        <div className="w-1.5 h-1.5 rounded-full bg-[#B5D5F5]" />
-                        <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Grid Status: Passive</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <ShieldCheck size={14} className="text-[#A8D5BA]" />
-                        <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Liaison Connected</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
+interface CampusAlert {
+  id: string;
+  type: 'buzz' | 'mystery' | 'connect' | 'battle';
+  title: string;
+  desc: string;
+  timeAgo: string;
+  link: string;
+  isRead: boolean;
 }
 
-const ArrowRight = ({ size, className }: any) => (
-    <svg
-        width={size}
-        height={size}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className={className}
-    >
-        <path d="M5 12h14m-7-7 7 7-7 7" />
-    </svg>
-);
+const INITIAL_ALERTS: CampusAlert[] = [
+  {
+    id: 'a-1',
+    type: 'buzz',
+    title: 'Hot Take Trending on Campus',
+    desc: 'Your confession about 85% competitive coders reached 380+ upvotes & 68 replies.',
+    timeAgo: '15m ago',
+    link: '/',
+    isRead: false
+  },
+  {
+    id: 'a-2',
+    type: 'mystery',
+    title: 'New Clue Decrypted in Episode 001',
+    desc: 'The Rot-13 fragment has been cracked by 42 students. 1 clue remaining until reveal.',
+    timeAgo: '1h ago',
+    link: '/mystery',
+    isRead: false
+  },
+  {
+    id: 'a-3',
+    type: 'battle',
+    title: 'KITSW Clout Lead Extended',
+    desc: 'KITSW Warangal leads NIT Warangal 16,840 to 16,120 in the Cross-Campus Pulse challenge.',
+    timeAgo: '2h ago',
+    link: '/squads',
+    isRead: true
+  },
+  {
+    id: 'a-4',
+    type: 'connect',
+    title: 'Blind Connect Vibe Match',
+    desc: 'A verified ECE student with shared interests in robotics and indie music is in queue.',
+    timeAgo: '3h ago',
+    link: '/connect',
+    isRead: true
+  }
+];
+
+export default function NotificationsPage() {
+  const [alerts, setAlerts] = useState<CampusAlert[]>(INITIAL_ALERTS);
+
+  const markAllRead = () => {
+    setAlerts((prev) => prev.map((a) => ({ ...a, isRead: true })));
+  };
+
+  return (
+    <div className="space-y-6 max-w-3xl mx-auto">
+      <div className="flex items-center justify-between pb-4 border-b border-white/5">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2.5">
+            <Bell size={22} className="text-violet-400" />
+            Campus Radar & Alerts
+          </h1>
+          <p className="text-xs text-slate-400 mt-0.5">Real-time notifications across your campus nodes.</p>
+        </div>
+
+        <button
+          onClick={markAllRead}
+          className="px-3.5 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-xs font-semibold text-slate-300 transition-colors flex items-center gap-1.5 border border-white/5"
+        >
+          <CheckCheck size={14} />
+          <span>Mark All Read</span>
+        </button>
+      </div>
+
+      <div className="space-y-3">
+        {alerts.map((alert) => (
+          <Link
+            key={alert.id}
+            href={alert.link}
+            className={`block p-4 rounded-2xl border transition-all hover:border-violet-500/30 ${
+              alert.isRead
+                ? 'bg-[#11131C] border-white/5 text-slate-400'
+                : 'bg-[#141724] border-violet-500/20 text-slate-200 shadow-md shadow-violet-950/20'
+            }`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <span className="p-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 shrink-0 mt-0.5">
+                  {alert.type === 'buzz' && <Flame size={16} />}
+                  {alert.type === 'mystery' && <Search size={16} />}
+                  {alert.type === 'battle' && <Shield size={16} />}
+                  {alert.type === 'connect' && <Users size={16} />}
+                </span>
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    {alert.title}
+                    {!alert.isRead && (
+                      <span className="w-2 h-2 rounded-full bg-violet-400 inline-block" />
+                    )}
+                  </h3>
+                  <p className="text-xs text-slate-300 mt-1 leading-relaxed">{alert.desc}</p>
+                </div>
+              </div>
+
+              <span className="text-[10px] text-slate-500 font-mono shrink-0 flex items-center gap-1">
+                <Clock size={11} />
+                {alert.timeAgo}
+              </span>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}

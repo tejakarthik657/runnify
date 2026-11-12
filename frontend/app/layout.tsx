@@ -1,42 +1,32 @@
-import '../styles/globals.css'
-import type { Metadata } from 'next'
-import { Nunito } from 'next/font/google'
-import RouteGuard from '../components/RouteGuard'
-import NavigationWrapper from '../components/NavigationWrapper'
-import { Toaster } from 'react-hot-toast'
+import '../styles/globals.css';
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import RouteGuard from '../components/RouteGuard';
+import NavigationWrapper from '../components/NavigationWrapper';
+import { Toaster } from 'react-hot-toast';
 
-const nunito = Nunito({
+const inter = Inter({
   subsets: ['latin'],
-  weight: ['400', '600', '700', '800', '900'],
-  variable: '--font-nunito'
-})
+  weight: ['400', '500', '600', '700', '800', '900'],
+  variable: '--font-inter',
+});
 
 export const metadata: Metadata = {
-  title: 'TerritoryRun // Command Center ✨ Live v2',
-  description: 'Soft competition. Hard gains.',
-}
-
-const COLORS = {
-  sageGreen: '#A8D5BA',
-  pageBg: '#F4F7F4',
-  textPrimary: '#1a1a2e',
+  title: 'BUNK — A World Inside Your College Life',
+  description: 'Escape the routine. Enter your world. A social entertainment universe built for college students.',
 };
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${nunito.variable}`}>
+    <html lang="en" className={`${inter.variable} dark`}>
       <head>
-        <style>{`
-          body { background-color: ${COLORS.pageBg}; color: ${COLORS.textPrimary}; margin: 0; font-family: 'Nunito', sans-serif; }
-          ::selection { background-color: ${COLORS.sageGreen}; color: ${COLORS.textPrimary}; }
-        `}</style>
+        <meta name="theme-color" content="#0B0D13" />
       </head>
-      <body className="bg-[#F4F7F4] text-[#1a1a2e] antialiased">
-
+      <body className="bg-[#0B0D13] text-[#F8FAFC] antialiased">
         <RouteGuard>
           <NavigationWrapper>
             <main className="min-h-screen relative overflow-x-hidden">
@@ -45,50 +35,20 @@ export default function RootLayout({
           </NavigationWrapper>
         </RouteGuard>
 
-        {/* 5.8 Notification System Styling */}
         <Toaster
           position="bottom-right"
           toastOptions={{
             style: {
-              background: '#14141F',
-              color: '#E8E8F0',
-              border: '1px solid rgba(255, 255, 255, 0.05)',
-              borderRadius: '0px',
-              fontSize: '11px',
-              fontWeight: '800',
-              textTransform: 'uppercase',
-              letterSpacing: '0.1em',
-              fontFamily: 'Inter, sans-serif',
+              background: '#131620',
+              color: '#F8FAFC',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '16px',
+              fontSize: '12px',
+              fontWeight: '600',
             },
-            success: {
-              iconTheme: {
-                primary: '#00C896',
-                secondary: '#0D0D1A',
-              },
-              style: {
-                borderLeft: '4px solid #00C896',
-              }
-            },
-            error: {
-              iconTheme: {
-                primary: '#FF2244',
-                secondary: '#0D0D1A',
-              },
-              style: {
-                borderLeft: '4px solid #FF2244',
-              }
-            }
-          }}
-        />
-
-        {/* 5.1 Global Background Texture (Optional subtle grid) */}
-        <div className="fixed inset-0 pointer-events-none opacity-[0.03] z-[-1]"
-          style={{
-            backgroundImage: `linear-gradient(to right, #6B7280 1px, transparent 1px), linear-gradient(to bottom, #6B7280 1px, transparent 1px)`,
-            backgroundSize: '40px 40px'
           }}
         />
       </body>
     </html>
-  )
+  );
 }
