@@ -60,7 +60,7 @@ async function register(req, res, next) {
 		console.log('[Registration] Body fields:', Object.keys(req.body || {}));
 		console.log('[Registration] File present:', !!req.file);
 
-		const { username, email, password, color, city } = req.body;
+		const { username, email, password, color, city, campus, branch, year, interests } = req.body;
 
 		if (!username || !email || !password) {
 			return res.status(400).json({
@@ -70,7 +70,12 @@ async function register(req, res, next) {
 		}
 
 		const passwordHash = password ? await bcrypt.hash(password, 10) : null;
-		const user = await UserService.register({ username, email, passwordHash, color, city });
+		const user = await UserService.register({ username, email, passwordHash, color, city, campus, branch, year, interests });
+		await User.updateOne(
+			{ _id: user._id },
+			{ $set: { campus: campus || city || null, branch: branch || null, year: year || null, interests: Array.isArray(interests) ? interests : [] } }
+		);
+		Object.assign(user, { campus: campus || city || null, branch: branch || null, year: year || null, interests: Array.isArray(interests) ? interests : [] });
 		const savedHomeLocation = await saveHomeLocation(user, req.body);
 
 		// Upload profile image if provided

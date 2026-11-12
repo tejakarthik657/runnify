@@ -107,6 +107,9 @@ function generateToken(userId, email, options = {}) {
     username: options.username,
     color: options.color,
     avatarUrl: options.avatarUrl,
+    campus: options.campus,
+    branch: options.branch,
+    year: options.year,
     iat: Math.floor(Date.now() / 1000)
   };
 

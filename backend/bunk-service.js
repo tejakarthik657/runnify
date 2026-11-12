@@ -1,168 +1,252 @@
-// backend/bunk-service.js
-// Dedicated backend controller & router for BUNK Campus Universe
 const express = require('express');
+const { authenticateJWT } = require('./middleware/auth');
+const { User } = require('./core/schema');
+const {
+  BunkPost,
+  BunkPoll,
+  BunkReaction,
+  BunkRoom,
+  BunkVote,
+} = require('./bunk-models');
+
 const router = express.Router();
+const REACTIONS = ['fire', 'skull', 'tea', 'cap'];
 
-let pulsePosts = [
-  {
-    id: 'post-1',
-    content: "The canteen vendor secretly gave 20% extra fries to anyone who ordered in Telugu today and honestly? Respect the culture hustle.",
-    category: 'Campus Buzz',
-    authorTag: "CSE '26 • Anonymous",
-    college: 'KITSW',
-    timeAgo: '12m ago',
-    upvotes: 218,
-    commentsCount: 34,
-    reactions: { fire: 184, skull: 45, tea: 92, cap: 4 }
-  },
-  {
-    id: 'post-2',
-    content: "Unpopular opinion: 85% of people hyping up competitive coding can't build a basic responsive landing page without 14 tutorials.",
-    category: 'Unpopular Opinion',
-    authorTag: "IT '25 • Anonymous",
-    college: 'KITSW',
-    timeAgo: '45m ago',
-    upvotes: 382,
-    commentsCount: 68,
-    reactions: { fire: 290, skull: 120, tea: 140, cap: 22 }
-  },
-  {
-    id: 'post-3',
-    content: "Did anyone else notice someone set the lab projector wallpaper to the HOD's LinkedIn post from 2014 at 7:45 AM? Who did this masterpiece?",
-    category: 'Confession',
-    authorTag: "Mech '27 • Anonymous",
-    college: 'KITSW',
-    timeAgo: '2h ago',
-    upvotes: 512,
-    commentsCount: 89,
-    reactions: { fire: 450, skull: 320, tea: 190, cap: 2 }
-  }
-];
+function getCampus(req) {
+  const campus = typeof req.query.campus === 'string' ? req.query.campus.trim() : '';
+  return campus || req.user?.campus || req.user?.city || '';
+}
 
-let dailyPoll = {
-  id: 'poll-01',
-  question: "What is the single most overrated thing about college life right now?",
-  context: "1,848 verified students from KITSW & Warangal colleges have voted.",
-  totalVotes: 1848,
-  options: [
-    { id: 'opt-1', label: 'The 75% Mandatory Attendance Trap', votes: 842, breakdown: { CSE: 48, ECE: 44, MECH: 54, CIVIL: 42 } },
-    { id: 'opt-2', label: 'Overhyped Annual College Fests', votes: 410, breakdown: { CSE: 22, ECE: 28, MECH: 18, CIVIL: 24 } },
-    { id: 'opt-3', label: 'Placement Season Hype & Fearmongering', votes: 395, breakdown: { CSE: 24, ECE: 18, MECH: 19, CIVIL: 22 } },
-    { id: 'opt-4', label: 'Four-person "Group" Projects (where 1 works)', votes: 201, breakdown: { CSE: 6, ECE: 10, MECH: 9, CIVIL: 12 } }
-  ]
-};
+function relativeTime(date) {
+  const seconds = Math.max(0, Math.floor((Date.now() - new Date(date).getTime()) / 1000));
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
 
-let mysteryEpisode = {
-  id: 'ep-001',
-  episodeNumber: 'EPISODE 001',
-  title: 'The Midnight Transmission',
-  subtitle: 'An encrypted packet intercepted by the central campus node at 00:03 AM.',
-  status: 'Active',
-  expiresIn: '08h 24m remaining',
-  clues: [
-    {
-      id: 'clue-1',
-      number: 1,
-      type: 'Terminal',
-      title: 'Decoded Packet Header',
-      content: 'SYS_SIG: "I have no voice, yet thousands speak through me every night behind Block 4."',
-      hint: 'The place where students gather when classes end and tea brews.',
-      isDiscovered: true
-    },
-    {
-      id: 'clue-2',
-      number: 2,
-      type: 'Cipher',
-      title: 'Rot-13 Fragment',
-      content: 'GBHEANZRAG BS ABQRF: "Check the third table under the banyan tree for the chalk coordinates."',
-      hint: 'Look for the coordinates carved into stone near the reading lawn.',
-      isDiscovered: true
-    }
-  ],
-  theories: [
-    {
-      id: 'th-1',
-      author: 'Backbenchers Squad',
-      branch: 'CSE',
-      theory: 'The transmission is an ARG puzzle announcing the secret midnight hackathon.',
-      upvotes: 89,
-      timeAgo: '1h ago'
-    }
-  ]
-};
-
-// Pulse Feed
-router.get('/pulse', (req, res) => {
-  res.json({ success: true, posts: pulsePosts });
-});
-
-router.post('/pulse', (req, res) => {
-  const { content, category, authorTag, college } = req.body;
-  if (!content) return res.status(400).json({ error: 'Content is required' });
-
-  const newPost = {
-    id: `post-${Date.now()}`,
-    content,
-    category: category || 'Campus Buzz',
-    authorTag: authorTag || "Student • Anonymous",
-    college: college || 'KITSW',
-    timeAgo: 'Just now',
-    upvotes: 1,
-    commentsCount: 0,
-    reactions: { fire: 1, skull: 0, tea: 0, cap: 0 }
+function serializePost(post, userReaction = null) {
+  return {
+    id: post._id.toString(),
+    content: post.content,
+    topic: post.topic,
+    authorTag: post.isShadow ? 'Shadow student' : `${post.authorId?.username || 'Verified student'} · ${post.authorId?.branch || 'Student'}`,
+    isShadow: post.isShadow,
+    college: post.campus,
+    timeAgo: relativeTime(post.createdAt),
+    reactions: post.reactions,
+    userReaction,
+    commentsCount: post.commentsCount,
   };
-  pulsePosts.unshift(newPost);
-  res.json({ success: true, post: newPost });
-});
+}
 
-// React to Pulse
-router.post('/pulse/:id/react', (req, res) => {
-  const { reaction } = req.body;
-  const post = pulsePosts.find((p) => p.id === req.params.id);
-  if (!post) return res.status(404).json({ error: 'Post not found' });
-
-  if (post.reactions[reaction] !== undefined) {
-    post.reactions[reaction] += 1;
-    post.upvotes += 1;
-  }
-  res.json({ success: true, post });
-});
-
-// Polls
-router.get('/poll', (req, res) => {
-  res.json({ success: true, poll: dailyPoll });
-});
-
-router.post('/poll/vote', (req, res) => {
-  const { optionId } = req.body;
-  const opt = dailyPoll.options.find((o) => o.id === optionId);
-  if (!opt) return res.status(404).json({ error: 'Option not found' });
-
-  opt.votes += 1;
-  dailyPoll.totalVotes += 1;
-  res.json({ success: true, poll: dailyPoll });
-});
-
-// Mystery
-router.get('/mystery', (req, res) => {
-  res.json({ success: true, episode: mysteryEpisode });
-});
-
-router.post('/mystery/theory', (req, res) => {
-  const { theory, author, branch } = req.body;
-  if (!theory) return res.status(400).json({ error: 'Theory required' });
-
-  const newTheory = {
-    id: `th-${Date.now()}`,
-    author: author || 'Anonymous Squad',
-    branch: branch || 'CSE',
-    theory,
-    upvotes: 1,
-    timeAgo: 'Just now'
+function serializePoll(poll, vote) {
+  const totalVotes = poll.options.reduce((total, option) => total + option.votes, 0);
+  return {
+    id: poll._id.toString(),
+    label: `CAMPUS PULSE · CLOSES ${new Date(poll.closesAt).toLocaleString()}`,
+    closesIn: new Date(poll.closesAt).toISOString(),
+    question: poll.question,
+    totalVotes,
+    cohortCount: totalVotes,
+    userVotedId: vote?.optionId?.toString() || null,
+    options: poll.options.map((option) => ({
+      id: option._id.toString(),
+      text: option.label,
+      votes: option.votes,
+      pctOverall: totalVotes ? Math.round((option.votes / totalVotes) * 100) : 0,
+      pctBranch: 0,
+      pctYear: 0,
+      pctAllIndia: 0,
+    })),
+    comments: [],
   };
-  mysteryEpisode.theories.unshift(newTheory);
-  res.json({ success: true, theory: newTheory });
+}
+
+router.use(authenticateJWT);
+
+router.patch('/profile', async (req, res, next) => {
+  try {
+    const updates = {};
+    if (typeof req.body.name === 'string') updates.username = req.body.name.trim();
+    if (Array.isArray(req.body.interests)) updates.interests = req.body.interests.map(String).slice(0, 20);
+    const user = await User.findByIdAndUpdate(req.userId, { $set: updates }, { new: true }).select('username city campus branch year interests');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({ user });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/bootstrap', async (req, res, next) => {
+  try {
+    const campus = getCampus(req);
+    if (!campus) return res.status(400).json({ error: 'Set a campus before loading Bunk' });
+
+    const [user, posts, poll, rooms] = await Promise.all([
+      User.findById(req.userId).select('username email city campus branch year bio avatarUrl interests'),
+      BunkPost.find({ campus }).populate('authorId', 'username branch').sort({ createdAt: -1 }).limit(50),
+      BunkPoll.findOne({ campus, closesAt: { $gt: new Date() } }).sort({ createdAt: -1 }),
+      BunkRoom.find({ campus, isLive: true }).populate('hostId', 'username').sort({ createdAt: -1 }).limit(20),
+    ]);
+
+    const reactions = posts.length
+      ? await BunkReaction.find({ userId: req.userId, postId: { $in: posts.map((post) => post._id) } }).select('postId reaction')
+      : [];
+    const reactionByPost = new Map(reactions.map((reaction) => [reaction.postId.toString(), reaction.reaction]));
+    const vote = poll ? await BunkVote.findOne({ pollId: poll._id, userId: req.userId }).select('optionId') : null;
+
+    res.json({
+      user,
+      activeCampus: campus,
+      availableCampuses: [campus],
+      todayPulse: poll ? serializePoll(poll, vote) : null,
+      discoverPosts: posts.map((post) => serializePost(post, reactionByPost.get(post._id.toString()) || null)),
+      afterHoursRooms: rooms.map((room) => ({
+        id: room._id.toString(),
+        title: room.title,
+        topic: room.topic,
+        hostName: room.hostId?.username || 'Verified student',
+        hostAvatar: room.hostId?.username?.slice(0, 1).toUpperCase() || '?',
+        listenersCount: room.listenersCount,
+        speakers: [],
+        isLive: room.isLive,
+        tags: room.tags,
+        fistbumpsCount: 0,
+        userFistbumped: false,
+      })),
+      campusClashes: [],
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/people', async (req, res, next) => {
+  try {
+    const campus = getCampus(req);
+    const people = await User.find({
+      _id: { $ne: req.userId },
+      $or: [{ campus }, { city: campus }],
+      isBanned: { $ne: true },
+    }).select('username branch year interests bio avatarUrl').sort({ lastActiveAt: -1 }).limit(50);
+    res.json({
+      people: people.map((person) => ({
+        id: person._id.toString(),
+        name: person.username,
+        branch: person.branch || 'Student',
+        year: person.year || '',
+        interests: person.interests || [],
+        bio: person.bio || '',
+        avatarUrl: person.avatarUrl || null,
+      })),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/pulse', async (req, res, next) => {
+  try {
+    const { content, topic, isShadow } = req.body;
+    const campus = getCampus(req);
+    if (!campus || typeof content !== 'string' || !content.trim()) {
+      return res.status(400).json({ error: 'Campus and content are required' });
+    }
+    const post = await BunkPost.create({
+      campus,
+      authorId: req.userId,
+      content: content.trim(),
+      topic: typeof topic === 'string' && topic.trim() ? topic.trim() : '#CampusPulse',
+      isShadow: Boolean(isShadow),
+    });
+    await post.populate('authorId', 'username branch');
+    res.status(201).json({ post: serializePost(post) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/pulse/:id/react', async (req, res, next) => {
+  try {
+    const { reaction } = req.body;
+    if (!REACTIONS.includes(reaction)) return res.status(400).json({ error: 'Unsupported reaction' });
+    const post = await BunkPost.findOne({ _id: req.params.id, campus: getCampus(req) }).populate('authorId', 'username branch');
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+
+    const current = await BunkReaction.findOne({ postId: post._id, userId: req.userId });
+    if (current?.reaction === reaction) {
+      await BunkReaction.deleteOne({ _id: current._id });
+      await BunkPost.updateOne({ _id: post._id }, { $inc: { [`reactions.${reaction}`]: -1 } });
+    } else {
+      if (current) {
+        await BunkPost.updateOne({ _id: post._id }, { $inc: { [`reactions.${current.reaction}`]: -1 } });
+        current.reaction = reaction;
+        await current.save();
+      } else {
+        await BunkReaction.create({ postId: post._id, userId: req.userId, reaction });
+      }
+      await BunkPost.updateOne({ _id: post._id }, { $inc: { [`reactions.${reaction}`]: 1 } });
+    }
+
+    const updated = await BunkPost.findById(post._id).populate('authorId', 'username branch');
+    res.json({ post: serializePost(updated, current?.reaction === reaction ? null : reaction) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/poll', async (req, res, next) => {
+  try {
+    const { question, options, closesAt } = req.body;
+    const campus = getCampus(req);
+    if (!campus || typeof question !== 'string' || !Array.isArray(options) || options.length < 2) {
+      return res.status(400).json({ error: 'Campus, question, and at least two options are required' });
+    }
+    const poll = await BunkPoll.create({
+      campus,
+      question: question.trim(),
+      options: options.map((label) => ({ label: String(label).trim() })).filter((option) => option.label),
+      closesAt: closesAt || new Date(Date.now() + 24 * 60 * 60 * 1000),
+      createdBy: req.userId,
+    });
+    res.status(201).json({ poll: serializePoll(poll, null) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/poll/vote', async (req, res, next) => {
+  try {
+    const { optionId } = req.body;
+    const poll = await BunkPoll.findOne({ _id: req.body.pollId, campus: getCampus(req), closesAt: { $gt: new Date() } });
+    if (!poll) return res.status(404).json({ error: 'Poll not found or closed' });
+    const option = poll.options.id(optionId);
+    if (!option) return res.status(400).json({ error: 'Option not found' });
+    const existing = await BunkVote.findOne({ pollId: poll._id, userId: req.userId });
+    if (existing) return res.status(409).json({ error: 'You have already voted in this pulse' });
+
+    await BunkVote.create({ pollId: poll._id, userId: req.userId, optionId });
+    option.votes += 1;
+    await poll.save();
+    res.json({ poll: serializePoll(poll, { optionId }) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/rooms', async (req, res, next) => {
+  try {
+    const { title, topic, tags = [] } = req.body;
+    const campus = getCampus(req);
+    if (!campus || !title || !topic) return res.status(400).json({ error: 'Campus, title, and topic are required' });
+    const room = await BunkRoom.create({ campus, title: title.trim(), topic: topic.trim(), tags, hostId: req.userId });
+    res.status(201).json({ room });
+  } catch (error) {
+    next(error);
+  }
 });
 
 module.exports = router;
-

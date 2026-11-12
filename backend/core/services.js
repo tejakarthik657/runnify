@@ -17,7 +17,15 @@ const {
 const { getRedis } = require('../config/redis');
 const h3js = require('h3-js');
 
-const AntiCheatEngine = require('../run-service/anticheat.engine');
+let AntiCheatEngine;
+try {
+  AntiCheatEngine = require('../run-service/anticheat.engine');
+} catch (error) {
+  // The legacy running module is optional for Bunk-only deployments.
+  AntiCheatEngine = {
+    runAntiCheat: async () => ({ verdict: 'not_evaluated', reason: 'running module unavailable' }),
+  };
+}
 
 let getIO = null;
 function ensureIO() {

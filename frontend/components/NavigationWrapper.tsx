@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import FloatingDock from './layout/FloatingDock';
@@ -9,13 +9,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useBunkStore } from '../store/bunkStore';
 import { Bell, ChevronDown, Check } from 'lucide-react';
 
-const HIDE_NAV_ROUTES: string[] = ['/landing'];
+const HIDE_NAV_ROUTES: string[] = ['/landing', '/login'];
 
 export default function NavigationWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const shouldHideNav = HIDE_NAV_ROUTES.includes(pathname);
   const { user, activeCampus, availableCampuses, setActiveCampus } = useBunkStore();
   const [showCampusDropdown, setShowCampusDropdown] = useState(false);
+
+  useEffect(() => {
+    if (!shouldHideNav && useBunkStore.getState().isLoading) {
+      void useBunkStore.getState().loadBootstrap();
+    }
+  }, [shouldHideNav]);
 
   return (
     <div className="min-h-screen bg-[#0B0C10] text-[#F8FAFC] font-sans selection:bg-[#8B5CF6] selection:text-white">

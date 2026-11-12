@@ -5,8 +5,11 @@ const express = require('express');
 const http = require('http');
 const cors = require('cors');
 const helmet = require('helmet');
+const cookieParser = require('cookie-parser');
 
 const bunkRoutes = require('../bunk-service');
+const authRoutes = require('../auth-service/routes');
+const { connectDB } = require('../config/db');
 
 const app = express();
 const server = http.createServer(app);
@@ -33,6 +36,7 @@ app.use(cors({
 }));
 
 app.use(express.json());
+app.use(cookieParser());
 
 // Health Check
 app.get('/health', (req, res) => {
@@ -46,9 +50,14 @@ app.get('/health', (req, res) => {
 
 // Bunk Campus API
 app.use('/api/bunk', bunkRoutes);
+app.use('/auth', authRoutes);
 
 const PORT = process.env.PORT || 5000;
 if (process.env.NODE_ENV !== 'test') {
+  connectDB().catch((error) => {
+    console.error('[BUNK] Database connection failed:', error.message);
+    process.exitCode = 1;
+  });
   server.listen(PORT, () => {
     console.log(`[BUNK] Backend Gateway online on port ${PORT}`);
     console.log(`[BUNK] Campus node: KITSW-Warangal`);

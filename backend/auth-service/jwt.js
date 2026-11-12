@@ -7,6 +7,9 @@ function createAuthTokens(user) {
 			username: user.username,
 			color: user.color,
 			avatarUrl: user.avatarUrl,
+			campus: user.campus || user.city,
+			branch: user.branch,
+			year: user.year,
 		}),
 		refreshToken: generateRefreshToken(user._id.toString()),
 	};

@@ -32,6 +32,8 @@ export default function HomePage() {
     todayPulse,
     discoverPosts,
     campusClashes,
+    isLoading,
+    error,
     setActiveCampus,
     voteTodayPulse,
     reactToDiscoverPost,
@@ -52,6 +54,8 @@ export default function HomePage() {
 
   return (
     <div className="space-y-8">
+      {isLoading && <div className="surface-card p-5 text-sm text-slate-400">Loading your campus...</div>}
+      {error && <div className="surface-card border-rose-500/30 p-5 text-sm text-rose-300">{error}. Sign in with a campus profile to continue.</div>}
       <section className="bunk-hero">
         <div className="relative z-10 max-w-3xl">
           <div className="eyebrow"><span className="live-dot" /> {activeCampus} / LIVE NOW</div>
@@ -94,6 +98,10 @@ export default function HomePage() {
 
       <section id="pulse" className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <article className="surface-card overflow-hidden">
+          {!todayPulse ? (
+            <div className="p-6 sm:p-8"><div className="eyebrow text-lime-300">The Pulse</div><h3 className="mt-3 text-xl font-bold text-white">Your campus has no active pulse yet.</h3><p className="mt-2 text-sm leading-6 text-slate-400">Create the first question and start a real conversation with your campus.</p></div>
+          ) : (
+          <>
           <div className="flex items-center justify-between border-b border-white/8 p-5 sm:p-6">
             <div>
               <div className="eyebrow text-lime-300">The Pulse / Daily question</div>
@@ -124,6 +132,8 @@ export default function HomePage() {
             </div>
             <div className="mt-6 flex items-center gap-2 text-xs text-slate-500"><ShieldCheck size={14} className="text-emerald-400" /> Results are private until you vote.</div>
           </div>
+          </>
+          )}
         </article>
 
         <article className="surface-card p-5 sm:p-6">
@@ -151,6 +161,7 @@ export default function HomePage() {
             <button onClick={() => setShowComposer(true)} className="icon-button" aria-label="Create a post"><Plus size={18} /></button>
           </div>
           <div className="divide-y divide-white/8">
+            {discoverPosts.length === 0 && <div className="p-6 text-sm text-slate-400">Nothing here yet. Start the first campus conversation.</div>}
             {discoverPosts.map((post) => (
               <div key={post.id} className="p-5 sm:p-6">
                 <div className="flex items-center justify-between gap-3"><span className="text-xs font-bold text-lime-300">{post.topic}</span><span className="text-[11px] text-slate-500">{post.timeAgo}</span></div>

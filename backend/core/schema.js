@@ -125,6 +125,10 @@ const UserSchema = new Schema({
   avatarUrl: { type: String, default: null },
   bio: { type: String, default: '', maxlength: 160 },
   city: { type: String, default: null, index: true },
+  campus: { type: String, default: null, trim: true, maxlength: 120, index: true },
+  branch: { type: String, default: null, trim: true, maxlength: 80 },
+  year: { type: String, default: null, trim: true, maxlength: 40 },
+  interests: { type: [String], default: [] },
   country: { type: String, default: null },
   unfoggedHexes: { type: [String], default: [], index: true },
 
@@ -214,6 +218,11 @@ UserSchema.virtual('publicProfile').get(function () {
     hexesOwned: this.privacy.hideStatsFromPublic ? null : this.hexesOwned,
     globalRank: this.globalRank,
     city: this.city,
+    campus: this.campus,
+    branch: this.branch,
+    year: this.year,
+    interests: this.interests,
+    username: this.username,
     homeLocation: this.homeLocation
       ? {
         lat: this.homeLocation.lat,
